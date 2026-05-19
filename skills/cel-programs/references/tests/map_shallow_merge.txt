@@ -1,0 +1,38 @@
+mito -data state.json src.cel
+! stderr .
+cmp stdout want.txt
+
+-- state.json --
+{
+	"cursor": {
+		"bookmark": "bm_value",
+		"next": {"after_id": "page3"}
+	}
+}
+-- src.cel --
+{
+	"clobber": state.with({
+		"cursor": {
+			"bookmark": state.cursor.bookmark,
+		},
+	}),
+	"selective": state.with({
+		"cursor": state.cursor.with({"bookmark": "new_bm"}),
+	}),
+}
+-- want.txt --
+{
+	"clobber": {
+		"cursor": {
+			"bookmark": "bm_value"
+		}
+	},
+	"selective": {
+		"cursor": {
+			"bookmark": "new_bm",
+			"next": {
+				"after_id": "page3"
+			}
+		}
+	}
+}

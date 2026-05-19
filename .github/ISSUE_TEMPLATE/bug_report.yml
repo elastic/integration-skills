@@ -1,0 +1,62 @@
+name: Bug report
+description: Report unexpected or incorrect behavior from a skill
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as you can — the more context you provide, the easier it is to reproduce and fix the issue.
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill triggered the problem?
+      description: Select the skill you were using when the bug occurred.
+      options:
+        - /research-integration
+        - /create-integration
+        - /maintain-integration
+        - /review-integration
+        - /cel-programs
+        - /ingest-pipelines
+        - /ecs-field-mappings
+        - /input-configurations
+        - /package-spec
+        - /integration-testing
+        - /elastic-package-cli
+        - /dashboard-guidelines
+        - /dashboard-review
+        - /anonymize-logs
+        - Other / unsure
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Agent environment
+      description: Which AI model and coding assistant were you using?
+      placeholder: "e.g. Windows, Claude Sonnet 4.5 in Cursor"
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe what you did and what the skill did that was wrong or unexpected.
+      placeholder: "The skill generated a CEL program that uses a pagination pattern not supported by this version of Beats..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: "The skill should have used the cursor-based pagination pattern documented in cel-pagination-patterns.md..."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else that might help — links to related issues, the vendor API docs you were using, whether this is reproducible, etc.
+      render: text

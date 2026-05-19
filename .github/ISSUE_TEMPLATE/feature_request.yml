@@ -1,0 +1,68 @@
+name: Feature request
+description: Suggest a new skill, improvement, or enhancement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe what you'd like and why — the more context you provide, the easier it is to evaluate and prioritize.
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: What type of request is this?
+      options:
+        - Improvement to an existing skill
+        - New skill
+        - New reference material or examples
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill does this relate to?
+      description: Select the most relevant skill, or "New skill" if you're proposing something new.
+      options:
+        - /research-integration
+        - /create-integration
+        - /maintain-integration
+        - /review-integration
+        - /cel-programs
+        - /ingest-pipelines
+        - /ecs-field-mappings
+        - /input-configurations
+        - /package-spec
+        - /integration-testing
+        - /elastic-package-cli
+        - /dashboard-guidelines
+        - /dashboard-review
+        - /anonymize-logs
+        - New skill
+        - Not specific to one skill
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like?
+      description: Describe the improvement or new skill you're requesting.
+      placeholder: "A new pagination pattern for APIs that use opaque continuation tokens with expiry..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What problem does this solve? What workflow would this improve?
+      placeholder: "When building integrations for vendors that use expiring cursor tokens, the current pagination patterns don't handle token refresh..."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else — links to relevant documentation, examples of the expected behavior, related issues, etc.
