@@ -1,0 +1,28 @@
+mito src.cel
+! stderr .
+cmp stdout want.txt
+
+-- src.cel --
+{
+	"single":   {"a": 1, "b": 2, "c": 3}.drop("b"),
+	"list":     {"a": 1, "b": 2, "c": 3, "d": 4}.drop(["a", "c"]),
+	"dot_path": {"a": [{"b": 1, "c": 2}]}.drop("a.b"),
+}
+-- want.txt --
+{
+	"dot_path": {
+		"a": [
+			{
+				"c": 2
+			}
+		]
+	},
+	"list": {
+		"b": 2,
+		"d": 4
+	},
+	"single": {
+		"a": 1,
+		"c": 3
+	}
+}
