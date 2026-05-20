@@ -295,7 +295,13 @@ if __name__ == "__main__":
 
 ## Relationship to CEL program design
 
-The test script and the proposed CEL program should be two implementations of the same API flow. Specifically:
+The test script is the **ground truth** for CEL program construction. The
+relationship is directional: test-api.py is the source of truth, and the
+CEL program is a **translation** from it. The script has been tested
+against a real API; even if the research brief has inaccuracies, the
+script's behaviour can be accepted as correct.
+
+Specifically:
 
 - **Same endpoints** — the script calls the same API paths the CEL program will use.
 - **Same authentication** — the script uses the same auth mechanism (API key header, OAuth2 token exchange, etc.).
@@ -303,7 +309,18 @@ The test script and the proposed CEL program should be two implementations of th
 - **Same time-based filtering** — the script uses the same time parameters and formats.
 - **Same request construction** — query parameters, headers, and body (if POST) match what the CEL program will send.
 
-The script serves as a validation tool: if it works, the CEL program should work too (modulo Elastic Agent specifics). If it fails, the failure diagnostics in the trace file help debug the issue before any CEL code is written.
+The CEL expression builder receives test-api.py as its primary input and
+translates the collection function (`run_collection()` or equivalent)
+into CEL. The research brief provides supplementary context (field
+meanings, data types, edge cases not exercised by the script), but the
+Python implementation is the specification.
+
+The script also serves as the **mock specification** (the mock is derived
+from the script's request/response flow) and the **mock validator** (the
+script must pass against the mock before CEL translation begins). When a
+`trace.json` exists from a real API run, it acts as an offline **fidelity
+witness** — comparing mock responses against the trace catches cases
+where the mock and script agree but both diverge from real API behaviour.
 
 ## Example reference
 

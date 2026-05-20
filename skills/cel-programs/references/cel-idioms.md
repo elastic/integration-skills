@@ -108,13 +108,16 @@ The input only persists cursor updates when at least one event is published. Whe
 ),
 ```
 
+Then add a `drop_event` processor in `cel.yml.hbs` to discard it before indexing:
+
 ```yaml
-drop_event.when.equals.retry: true
+processors:
+- drop_event.when.equals.retry: true
 ```
 
 The `dyn()` wrapping is required because the two branches have different compile-time types (`list(map(string,string))` vs `list(map(string,bool))`). See `cel-incremental-build.md` for the full workflow: write without `dyn()` first, add it only when `celfmt -s` reports a type mismatch, then verify both paths with mito.
 
-The alternative form uses `[{"message": "retry"}]` with `drop_event.when.equals.message: retry`. The boolean form is preferred — `retry` is a dedicated control flag that no real event would have. The `{"message": "retry"}` form avoids the type mismatch (both branches are `map(string,string)`) so `dyn()` is not needed.
+The alternative form uses `[{"message": "retry"}]` with `- drop_event.when.equals.message: retry` in `processors:`. The boolean form is preferred — `retry` is a dedicated control flag that no real event would have. The `{"message": "retry"}` form avoids the type mismatch (both branches are `map(string,string)`) so `dyn()` is not needed.
 
 ## Error handling
 

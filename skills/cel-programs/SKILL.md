@@ -233,7 +233,7 @@ Error message format: `"METHOD path: body-or-status"`. Code examples: `reference
 
 ### Placeholder events
 
-When advancing the cursor with no real events, emit a placeholder (`[{"retry": true}]`) and configure `drop_event.when.equals.retry: true` so it is discarded before indexing. Full pattern and alternatives: `references/cel-idioms.md`.
+When advancing the cursor with no real events, emit a placeholder (`[{"retry": true}]`) and add a `- drop_event.when.equals.retry: true` entry in the `processors:` section so it is discarded before indexing. Full pattern and alternatives: `references/cel-idioms.md`.
 
 ## Rate limiting and retry
 
@@ -314,7 +314,12 @@ Refer to the `anonymize-logs` skill for the full anonymization policy and placeh
 | `references/cel-rate-limiting.md` | Rate limiting policy — config-only approach, when to add `resource.rate_limit.*` and `resource.retry.*` settings |
 | `references/cel-idioms.md` | Quick-reference for common idioms, HTTP request patterns, structure conventions |
 | `references/cel-polymorphic-patterns.md` | Choosing between pure-CEL, mito lib, and config approaches for auth, headers, rate limiting — version-tagged |
+| `references/cel-expression.md` | Expression-specific reference: interface contract, translation framing (Python→CEL), incremental build phases, core structure, event output, error handling, pagination, state management, syntax rules, quality checklist |
+| `references/cel-taxonomy.md` | Taxonomy classification: pagination and state management classes, least-complexity principle, mapping to skill vocabulary, how to classify from test-api.py |
+| `references/cel-complexity-baselines.md` | Per-pattern-class complexity baselines from a ceplx survey of 316 programs, skip threshold, reviewer challenge examples, diagnostic interpretation |
+| `references/expression-builder-subagent-guidance.md` | Subagent operating manual for the **cel-expression-builder**: translates test-api.py into a validated `.cel` file + taxonomy classification. Does not touch templates, manifests, or mocks. |
+| `references/reviewer-subagent-guidance.md` | Subagent operating manual for the **cel-expression-reviewer**: checks generated CEL against complexity baselines and source fidelity, produces specific challenges or accepts |
 | `references/cel-function-reference.md` | Looking up available CEL functions per extension and their first mito version |
-| `references/builder-subagent-guidance.md` | **Always-embedded** subagent operating manual: scope boundaries, skill-load sequence, the 9-step mock-first / mito-incremental workflow with mock completeness gate, reporting contract |
+| `references/builder-subagent-guidance.md` | **Always-embedded** subagent operating manual for the **cel-program-builder** orchestrator: scope boundaries, skill-load sequence, the 9-step mock-first / mito-incremental workflow with mock completeness gate, delegation to cel-expression-builder, reporting contract |
 
 See also: [CEL input docs](https://www.elastic.co/docs/reference/beats/filebeat/filebeat-input-cel) · [Mito lib docs](https://pkg.go.dev/github.com/elastic/mito/lib) · [Mito repo](https://github.com/elastic/mito) · [CEL language spec](https://cel.dev/)

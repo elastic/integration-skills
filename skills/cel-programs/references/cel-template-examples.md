@@ -217,7 +217,6 @@ program: |
       )
     )
   )
-drop_event.when.equals.retry: true
 
 tags:
 {{#if preserve_original_event}}
@@ -229,8 +228,9 @@ tags:
 {{#contains "forwarded" tags}}
 publisher_pipeline.disable_host: true
 {{/contains}}
-{{#if processors}}
 processors:
+- drop_event.when.equals.retry: true
+{{#if processors}}
 {{processors}}
 {{/if}}
 ```
