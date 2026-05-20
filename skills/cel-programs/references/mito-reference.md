@@ -19,8 +19,12 @@ stream -version
 ## Core usage
 
 ```bash
-mito -data state.json program.cel
+mito -fb -data state.json program.cel
 ```
+
+The `-fb` flag enables filebeat-compatible config validation. Always
+use it when developing integrations — it catches constraint violations
+(auth, rate limits, state keys) that would fail at runtime.
 
 - `-data <path>` — JSON file with the initial state (exposed as `state` in CEL)
 - `<path>` — file containing the CEL program (must be last argument)
@@ -37,6 +41,7 @@ mito -data <(echo '{"url": "http://localhost:8090"}') <(echo 'get(state.url)')
 
 | Flag | Purpose |
 |------|---------|
+| `-fb` | Validate config against filebeat CEL input constraints (always use for integrations) |
 | `-data <path>` | JSON input exposed as `state` |
 | `-log_requests` | Log HTTP request/response traces to stderr |
 | `-insecure` | Disable TLS certificate verification |
@@ -147,7 +152,7 @@ mito -data state.json program.cel -dump always    # inspect full state per evalu
 mito -data state.json program.cel -insecure       # self-signed TLS
 ```
 
-Validate syntax at any point: `celfmt -s program.cel -o /dev/null`
+Validate syntax at any point: `celfmt -s -i program.cel -o /dev/null`
 
 Test with and without a `cursor` in the input state (first run vs subsequent).
 

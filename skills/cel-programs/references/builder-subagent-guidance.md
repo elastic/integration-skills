@@ -3,6 +3,13 @@
 Operating manual for a subagent building or modifying CEL programs on behalf
 of the `create-integration` or `maintain-integration` orchestrator.
 
+This subagent is an **orchestrator** for CEL integration development. Its
+primary responsibilities are mock design, mock validation, template wrapping,
+manifest configuration, and system test setup. For the CEL expression itself,
+it delegates to the **cel-expression-builder** subagent (see
+`references/expression-builder-subagent-guidance.md`), which translates
+test-api.py into a validated `.cel` file.
+
 The orchestrator embeds this entire file verbatim in your task prompt, so you
 do not need to load any skill or reference file beyond what is listed in the
 "First steps" section below.
@@ -125,22 +132,19 @@ program, and the system test infrastructure consistent from the start.
 examples, API documentation, and a clear picture of the final template, you
 MUST follow this order:
 
-1. Investigate the API
-2. Create the system test mock config (with the full two-round flow described
-   in step 3c)
+1. Investigate the API via test-api.py (the ground truth)
+2. Derive the system test mock from test-api.py's request/response flow
+   (with the full two-round flow described in step 3c)
 3. Start the mock locally
-4. If a research `test-api.py` script exists, run it against the mock to
-   verify the mock is correct
+4. Validate the mock with test-api.py (hard gate — do not proceed until
+   it passes)
 5. Verify mock completeness gate (2+ pages, terminal page, second-round
    cursor resume, optional regression guard)
-6. Write a standalone `.cel` file and `state.json` (NOT a template)
-7. Run mito against the mock **incrementally** through the phases in
-   `references/cel-incremental-build.md` (skeleton → error handling →
-   events → pagination → cursor); iterate until each phase passes before
-   adding the next
-8. ONLY THEN write `cel.yml.hbs` by wrapping the validated program in
+6. Build the CEL expression (preferred: delegate to cel-expression-builder
+   with test-api.py as the translation source)
+7. ONLY THEN write `cel.yml.hbs` by wrapping the validated program in
    Handlebars
-9. Run `celfmt -s -agent`, configure manifest vars, define field mappings,
+8. Run `celfmt -s -agent`, configure manifest vars, define field mappings,
    validate
 
 Writing the template first and trying to extract a `.cel` file from
@@ -153,33 +157,42 @@ test against the live API for highest-confidence validation, but mock-first
 development is always the primary path — it is faster, reproducible, and
 does not depend on API availability or rate limits.
 
-### Step 1 — investigate the API
+### Step 1 — investigate the API via test-api.py
 
-From the orchestrator's prompt, research brief, or API documentation,
-identify:
+**Start with the research `test-api.py` script.** This is always present
+for CEL integrations and is the ground truth — it has been tested against
+the real API. Read its collection function (`run_collection()` or
+equivalent) to identify:
 
 - Base URL and endpoint paths
 - Authentication method (header auth, query parameter auth, signed query
   params, OAuth2 client credentials, OAuth2 token refresh)
-- Pagination pattern — pick from the table in the `cel-programs` skill /
-  `references/cel-pagination-patterns.md` (offset, timestamp cursor, link
-  header, next-URL, next-token + timestamp bookmark, GraphQL cursor,
-  multi-step state machine)
+- Pagination pattern — which loop structure and termination condition does
+  the Python script use? Map it to the patterns in the `cel-programs`
+  skill / `references/cel-pagination-patterns.md`
 - Response JSON structure (where the event array lives, total count fields,
-  next-page indicators)
+  next-page indicators) — visible in the script's response navigation
 - Time-range filtering parameters
 - Batch size constraints
+- Error handling branches (status codes, missing fields, malformed responses)
 
-If the API documentation is incomplete and credentials are available, use
-`curl` or `python` to make exploratory requests against the real API to
-confirm the exact response structure, pagination behaviour, and error
-responses before designing the mock.
+The research brief provides supplementary context (field meanings, edge
+cases not exercised by the script). If the API documentation is incomplete
+and credentials are available, use `curl` or `python` to make exploratory
+requests against the real API, but the Python script remains the primary
+specification.
 
-### Step 2 — set up the system test mock API FIRST
+### Step 2 — derive the system test mock from test-api.py
 
 Before writing any CEL code, build the mock HTTP API the system test will
-use. Use the `elastic/stream` http-server — do NOT write a custom Python
-mock.
+use. The mock is **derived from** test-api.py's request/response flow, not
+independently designed from the research brief. The Python script defines
+which endpoints are called, what request shapes are sent, and what
+response structures are expected — the mock replays this interaction with
+anonymised data. If a `trace.json` exists from a real API run, use it as
+a reference for response structure and field presence.
+
+Use the `elastic/stream` http-server — do NOT write a custom Python mock.
 
 1. Define the mock service in `_dev/deploy/docker/docker-compose.yml` using
    `docker.elastic.co/observability/stream:v0.20.0`.
@@ -232,24 +245,29 @@ Either approach gives mito the exact same mock the system test will use —
 no divergence between what mito tests and what `elastic-package test system`
 tests.
 
-### Step 3b — validate the mock with the research `test-api.py` (if available)
+### Step 3b — validate the mock with test-api.py (hard gate)
 
-If the orchestrator provided a research results folder containing a
-`test-api.py` Python script that documents the expected request/response
-flow, **run it against the running mock** before writing CEL:
+**This is a hard gate, not optional.** The research `test-api.py` script
+is always present for CEL integrations. Run it against the running mock
+before writing any CEL:
 
 ```bash
-python3 test-api.py --base-url http://localhost:8090
+python3 test-api.py --base-url http://localhost:8090 --mock
 ```
 
-If the script fails against the mock, assume the mock is wrong unless there
-is an obvious flaw in the script (wrong endpoint path, missing optional
-header). Fix the mock rules to match what the script expects (missing query
-params, wrong response shape, missing auth endpoint, wrong status codes).
+If the script fails against the mock, assume the mock is wrong unless
+there is an obvious flaw in the script (wrong endpoint path, missing
+optional header). Fix the mock rules to match what the script expects
+(missing query params, wrong response shape, missing auth endpoint, wrong
+status codes).
 
-If the script passes (or no script exists), proceed to step 3c. This step
-catches mock design errors early — before you spend time building a CEL
-program against a broken mock.
+Do NOT proceed to step 3c until test-api.py passes against the mock. This
+gate ensures the mock faithfully models the API interaction that the CEL
+program will be translated from.
+
+If a `trace.json` exists from a real API run, compare the mock's responses
+against it as an additional fidelity check — field presence, response
+shape, and pagination state transitions should match.
 
 ### Step 3c — verify mock completeness gate (hard gate)
 
@@ -285,10 +303,62 @@ Sum events from all pages across both rounds — that sum is the
 
 Do NOT proceed to step 4 until the mock implements all of the above.
 
-### Step 4 — prototype with mito against the mock (incremental build, mandatory)
+### Step 4 — build the CEL expression
 
 **Every CEL program must be developed and validated through mito.** This is
 not optional. The mock from step 3 is already running.
+
+#### Preferred path — delegate to cel-expression-builder
+
+When the orchestrator provided a `test-api.py` script (which is always the
+case for new CEL integrations), launch a **cel-expression-builder** subagent
+with:
+
+- The `test-api.py` file content
+- A `state.json` with literal test values (url pointing at the running mock,
+  credentials, batch_size, initial_interval)
+- The mock URL
+- The research brief (if available)
+
+Embed the full content of
+`references/expression-builder-subagent-guidance.md` in the subagent's task
+prompt. The expression builder returns a validated `.cel` file and a taxonomy
+classification.
+
+#### Step 4b — structured review (when complexity warrants it)
+
+After receiving the `.cel` file and classification from the expression
+builder, run `ceplx -diag -json program.cel` to get complexity metrics.
+
+**Skip the review** if cognitive complexity is below the class p50 (from
+`references/cel-complexity-baselines.md`) **and** below 40.
+
+Otherwise, launch a **cel-expression-reviewer** subagent with:
+
+- The generated `.cel` file
+- The taxonomy classification
+- The `ceplx -diag -json` output
+- The `test-api.py` file content
+- The research brief
+
+Embed the full content of `references/reviewer-subagent-guidance.md` in
+the subagent's task prompt.
+
+If the reviewer returns **revise**, pass the challenges back to the
+expression builder (resume the same subagent) and ask it to address
+each challenge — either justify the current approach or produce a
+revised `.cel` file.
+
+If a revision is produced, re-run `ceplx` and compare. Select the
+version with lower complexity unless the revision drops fidelity.
+
+Proceed to step 5 with the final `.cel` file.
+
+#### Direct path — build expression yourself
+
+If the orchestrator did not provide `test-api.py`, or if you are fixing an
+existing CEL program rather than building one from scratch, build the
+expression directly following the incremental approach below.
 
 **Build incrementally — never write the full program at once.** Even if you
 "know" what the final program looks like, follow the phased ladder in
@@ -322,7 +392,7 @@ You can also validate and simplify the standalone `.cel` syntax with
 `celfmt` during this step — it works on plain `.cel` files too:
 
 ```bash
-celfmt -s program.cel -o /dev/null
+celfmt -s -i program.cel -o /dev/null
 ```
 
 If `celfmt` hangs on a standalone `.cel` file (a known issue in some
