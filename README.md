@@ -53,6 +53,7 @@ The following tools must be installed and available on `$PATH` for the agent wor
 | [celfmt](https://github.com/elastic/celfmt) | Canonical formatter and simplifier for CEL programs in agent integration configs | `go install github.com/elastic/celfmt/cmd/celfmt@latest` |
 | [stream](https://github.com/elastic/stream) | Mock service for testing integration scripts | `go install github.com/elastic/stream@latest` |
 | [mito](https://github.com/elastic/mito) | CEL debugging and playground tool for prototyping against live or mock data | `go install github.com/elastic/mito/cmd/mito@latest` |
+| [ceplx](https://github.com/efd6/ceplx) | CEL cyclomatic and cognitive complexity assessment tool | `go install github.com/efd6/ceplx/cmd/ceplx@latest` |
 | [kbdash](https://github.com/efd6/kbdash) | Extracts structured text descriptions from Kibana dashboard JSON for readable diffs | `go install github.com/efd6/kbdash@latest` |
 
 All Go tools require a working [Go](https://go.dev/dl/) installation with `$GOPATH/bin` on your `$PATH`.
