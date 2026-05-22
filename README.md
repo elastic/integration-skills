@@ -144,9 +144,9 @@ Researches a vendor, product, or feature before building an integration. Launche
 
 #### `/create-integration`
 
-Scaffolds a new Elastic integration package end-to-end: package creation, data stream scaffolding, manifest configuration, CEL program building, ingest pipeline creation, field mappings, and system testing. Also handles adding data streams to an existing package — provide the target package and stream details and the skill routes to the correct workflow automatically.
+Scaffolds a new Elastic integration package end-to-end: package creation, data stream scaffolding, manifest configuration, CEL program building, ingest pipeline creation, field mappings, and system testing. Also handles adding data streams to an existing package — automatically provides the target package, stream details, and the correct skill routes to the workflow.
 
-**Recommended flow:** run `/research-integration` first, then pass the research brief as input for highest-quality output.
+**Recommended flow:** run `/research-integration` first, then pass the research brief as input for the highest-quality output.
 
 ```bash
 /create-integration @research_results/checkpoint_harmony/ Package name: checkpoint_harmony, single data stream "event" using CEL input
