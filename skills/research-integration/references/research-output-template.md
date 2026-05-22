@@ -249,6 +249,8 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 
 ## 6. Configuration Plan
 
+> Variables listed below must come from the standard-variable tables in `references/data-collection-methods.md`, plus any documented vendor-specific variables (e.g., tenant ID for a multi-tenant API). **Never list `preserve_duplicate_custom_fields`, `event.ingested` toggles, trailing `event.original` removal flags, or any other deprecated pipeline-behavior variable here**, even if you saw them in legacy integrations under `elastic/integrations`. Pipeline behavior is the pipeline builder's concern, not configuration. The only valid `preserve_*` var is `preserve_original_event` (file/syslog inputs only, never CEL).
+
 ### 6.1 Required configuration variables
 
 | Variable | Type | Title | Description | Default | Show user |

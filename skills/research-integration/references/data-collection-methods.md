@@ -39,6 +39,8 @@ Can data be exported as flat files (CSV, JSON) and dropped to a path?
 
 ## Input types reference
 
+> **Standard variable tables are authoritative.** The "Standard configuration variables" tables below are the complete set of variables that may be proposed in the research brief's configuration plan (`configuration-plan.md` and section 6 of `research-brief.md`) for each input type. Do **not** invent additional variables based on patterns seen in legacy integrations in `elastic/integrations`. In particular, **never propose `preserve_duplicate_custom_fields`** as a configurable variable — it is a deprecated pipeline anti-pattern prohibited by `ingest-pipelines/SKILL.md`. The only `preserve_*` variable that is valid is `preserve_original_event`, listed in the tables below where applicable (filestream, TCP/UDP, and similar log-based inputs only — never for CEL). Additional product-specific variables are acceptable only when tied to a documented vendor-side requirement (e.g., a tenant ID for a multi-tenant API), not a pipeline behavior toggle.
+
 ### CEL (Common Expression Language) -- REST API collection
 
 **When to use:** The product exposes a REST API for retrieving events, logs, or metrics.

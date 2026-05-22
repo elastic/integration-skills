@@ -53,7 +53,7 @@ Delegate to the platform's **generic / general-purpose subagent** (Cursor: `gene
 
 The task prompt must include:
 
-1. **The full content of `review-integration/references/reviewer-subagent-guidance.md` embedded verbatim** at the top — this is the subagent's operating manual containing its scope, skill-load sequence (load `review-integration` skill and the domain skills/checklists it routes to), read-only operating rules, per-issue format checklist, verdict rules, and reporting contract. The subagent will **not** load this content automatically.
+1. **An instruction to read `review-integration/references/reviewer-subagent-guidance.md` as the subagent's operating manual** before doing any other work — that file contains its scope, skill-load sequence (load `review-integration` skill and the domain skills/checklists it routes to), read-only operating rules, per-issue format checklist, verdict rules, and reporting contract. Pass only the path; **do NOT read the file yourself or paste/embed its contents into the task prompt** — the subagent will load it in its own fresh context.
 2. **Package path** — absolute path to the package directory.
 3. **Review scope** — full review or focused areas/streams.
 4. **Requirements / brief** — paste key content or reference the file (the subagent cannot see your conversation).
@@ -63,7 +63,7 @@ The task prompt must include:
 
 The subagent will: read `changelog.yml` to determine new-vs-existing severity calibration, classify every in-scope file by domain (using the `review-integration` skill's classification table), load the relevant domain skills and review checklists, run its full manual inspection, and produce findings in the format defined by `review-integration/references/review-output-template.md`.
 
-The subagent already knows from its embedded guidance to: avoid re-running validation the orchestrator already reported, read every in-scope file end to end (not just diffs), apply first-version leniency from `conflict-resolutions.md`, calibrate severity per `severity-rubric.md`'s new-vs-existing tables, consolidate duplicate findings, omit empty domains, include exactly one domain tag and a code-block recommendation on every finding, and never edit any files.
+The subagent already knows from the guidance file it reads to: avoid re-running validation the orchestrator already reported, read every in-scope file end to end (not just diffs), apply first-version leniency from `conflict-resolutions.md`, calibrate severity per `severity-rubric.md`'s new-vs-existing tables, consolidate duplicate findings, omit empty domains, include exactly one domain tag and a code-block recommendation on every finding, and never edit any files.
 
 ## Phase 4: Present results
 
@@ -78,4 +78,4 @@ For severity definitions and the new-vs-existing calibration table, see `review-
 - **Do not edit any files.** This workflow is read-only.
 - Do not skip or summarize the reviewer's findings. Present them in full.
 - When automated validation commands fail, include the full error output in the report.
-- Do not load domain-specific skills yourself. The reviewer subagent loads everything it needs via the `review-integration` skill embedded in its guidance file.
+- Do not load domain-specific skills yourself. The reviewer subagent loads everything it needs via the `review-integration` skill referenced from its guidance file.

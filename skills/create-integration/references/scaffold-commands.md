@@ -171,7 +171,7 @@ For syslog (`tcp`/`udp`) streams, always retain `ssl` and `processors` vars rega
 
 ### 8. Edit agent stream templates (`*.yml.hbs`)
 
-Adjust vars and configuration for the target product. For `cel` input data streams, **do not edit the template directly here** — delegate to a subagent (see the Dispatch convention in `references/create-workflow.md` or `references/add-datastream-workflow.md`) embedding `cel-programs/references/builder-subagent-guidance.md`. That subagent owns the mock-first / mito-incremental workflow, `cel.yml.hbs` authoring, and manifest var cleanup for CEL streams.
+Adjust vars and configuration for the target product. For `cel` input data streams, **do not edit the template directly here** — delegate to a subagent (see the Dispatch convention in `references/create-workflow.md` or `references/add-datastream-workflow.md`) pointing it at `cel-programs/references/builder-subagent-guidance.md` as its operating manual. That subagent owns the mock-first / mito-incremental workflow, `cel.yml.hbs` authoring, and manifest var cleanup for CEL streams.
 
 **CEL scaffold notes**: the `cel` input scaffold generates an extremely verbose generic manifest and template (300+ lines). The CEL builder subagent strips unused vars and replaces the scaffolded program with an integration-specific one — leave the verbose scaffold in place until then rather than editing it manually here.
 

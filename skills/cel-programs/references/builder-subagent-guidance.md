@@ -10,9 +10,12 @@ it delegates to the **cel-expression-builder** subagent (see
 `references/expression-builder-subagent-guidance.md`), which translates
 test-api.py into a validated `.cel` file.
 
-The orchestrator embeds this entire file verbatim in your task prompt, so you
-do not need to load any skill or reference file beyond what is listed in the
-"First steps" section below.
+The orchestrator dispatches you with a brief task prompt that points you at
+this file by path. **Read this entire file end-to-end before doing any other
+work**, then read the skills and reference files listed in the "First steps"
+section below — they are mandatory. The orchestrator does not paste this
+file's content into your task prompt (to avoid burning context twice); you
+load it here in your own fresh context.
 
 The orchestrator's task prompt tells you **what** to build or fix, **which
 package and data stream** to work on, **the API details and sample data**, and
@@ -320,10 +323,13 @@ with:
 - The mock URL
 - The research brief (if available)
 
-Embed the full content of
-`references/expression-builder-subagent-guidance.md` in the subagent's task
-prompt. The expression builder returns a validated `.cel` file and a taxonomy
-classification.
+Point the subagent at `references/expression-builder-subagent-guidance.md`
+(relative to the `cel-programs` skill) as its operating manual and instruct
+it to read that file (plus the skill SKILL.md it lists) end-to-end before
+doing any other work. **Do NOT read the guidance file yourself or paste its
+contents into the task prompt** — pass only the path plus the task-specific
+context. The expression builder returns a validated `.cel` file and a
+taxonomy classification.
 
 #### Step 4b — structured review (when complexity warrants it)
 
@@ -341,8 +347,11 @@ Otherwise, launch a **cel-expression-reviewer** subagent with:
 - The `test-api.py` file content
 - The research brief
 
-Embed the full content of `references/reviewer-subagent-guidance.md` in
-the subagent's task prompt.
+Point the subagent at `references/reviewer-subagent-guidance.md` (relative
+to the `cel-programs` skill) as its operating manual and instruct it to
+read that file end-to-end before doing any other work. **Do NOT paste the
+guidance file's contents into the task prompt** — pass only the path plus
+the task-specific context.
 
 If the reviewer returns **revise**, pass the challenges back to the
 expression builder (resume the same subagent) and ask it to address

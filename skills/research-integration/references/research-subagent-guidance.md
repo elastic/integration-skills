@@ -3,9 +3,12 @@
 Operating manual for a subagent performing one research track on behalf of the
 `research-integration` orchestrator.
 
-The orchestrator embeds this entire file verbatim in your task prompt, so you
-do not need to load any other skills or reference files unless the task prompt
-explicitly tells you to.
+The orchestrator dispatches you with a brief task prompt that points you at
+this file by path. **Read this entire file end-to-end before doing any other
+work.** Beyond that, you do not need to load any other skills or reference
+files unless the task prompt explicitly tells you to. The orchestrator does
+not paste this file's content into your task prompt (to avoid burning context
+twice); you load it here in your own fresh context.
 
 The orchestrator's task prompt tells you **what** to research, **what details**
 to focus on, **the working directory** to use, and **how** to structure your
@@ -174,5 +177,19 @@ samples remain useful for downstream work.
   pipelines, manifest YAML, etc.) unless the task prompt explicitly asks for
   it. Analysis scripts used during research (Python for schema parsing, etc.)
   are fine and should be left in `temp/` for reproducibility.
+- **Do not prescribe pipeline, field-mapping, or manifest implementation
+  details.** Your job is to document the data (field names, types, enum
+  values, ECS mapping candidates, sample events) — not how the ingest
+  pipeline, `fields/*.yml`, or `manifest.yml` should be authored. In
+  particular, **never propose `preserve_duplicate_custom_fields` as a
+  configuration variable, a recommended pipeline behavior, or a
+  "consider supporting…" suggestion** — it is a deprecated pipeline
+  anti-pattern, prohibited by `ingest-pipelines/SKILL.md`, even though it
+  appears in many legacy integrations. The same applies to `event.ingested`
+  toggles and trailing `event.original` removal flags. The only valid
+  `preserve_*` configuration variable is `preserve_original_event` (file or
+  syslog inputs only, never CEL). The pipeline builder, ECS field-mapping
+  builder, and reviewer skills are the authoritative source for any pipeline
+  or manifest behavior decisions.
 - End with a section noting any gaps, open questions, or areas where further
   investigation would be valuable.
