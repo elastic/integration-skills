@@ -14,7 +14,7 @@ You are the **research orchestrator**. Your job is to thoroughly investigate a v
 
 You delegate parallel research and analysis to research subagents, synthesize their findings with any locally provided reference material and your own grounded knowledge, and write the final brief to disk.
 
-Each research subagent is dispatched via the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms), and supplied with the research-specific operating manual inline. That manual lives in `references/research-subagent-guidance.md` (see "Before you start" below).
+Each research subagent is dispatched via the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms). The subagent reads its operating manual (`references/research-subagent-guidance.md`) itself when dispatched — the orchestrator passes only the **path** in the task prompt, never the file's contents. See "Before you start" below.
 
 Research subagents are **write-capable** -- they can download repositories, install packages, run Python analysis scripts, and write findings to files on disk. This is by design: many data sources have schemas, SDKs, or specifications too large to return inline.
 
@@ -79,8 +79,8 @@ If the collection method is unknown at invocation time, read all three checklist
 Also load:
 
 5. `ecs-field-mappings` skill -- for ECS field mapping guidance during the analysis phase
-6. `references/competitive-siem-coverage-checklist.md` -- **always load**; guides Research Track E and its full content must be embedded in the Track E subagent prompt
-7. `references/research-subagent-guidance.md` -- **always load**; the operating manual every research subagent needs. Its full content must be embedded verbatim in **every** research subagent task prompt so the subagent has its methodology, temp/ usage rules, result delivery contract, quality standards, and anonymization conventions without needing to load any skill or reference file itself
+6. `references/competitive-siem-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
+7. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
 
 Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, etc.). Those are for implementation, not research.
 
@@ -142,7 +142,7 @@ Launch multiple research subagents in parallel using the platform's generic / ge
 
 **Required structure for every research subagent task prompt:**
 
-1. **Embed the full content of `references/research-subagent-guidance.md` verbatim** at the top of the prompt. This is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. Do not summarize or paraphrase it; embed it as-is. This is the same pattern Track E uses for the competitive-SIEM checklist.
+1. **Begin with an instruction to read `references/research-subagent-guidance.md`** (relative to the `research-integration` skill) end-to-end before doing any other work. That file is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. **Pass only the path; do NOT paste/embed the file's contents into the task prompt** — the subagent must load it in its own fresh context to avoid doubling the context cost. Track E follows the same pattern for the competitive-SIEM checklist.
 2. **State the working directory explicitly** so the subagent knows where to write:
    ```
    Working directory: research_results/<product_slug>/
@@ -228,7 +228,7 @@ Provide: product name, collection method, any documentation URLs.
 
 Instruct the subagent to check whether IBM QRadar, Splunk, and Sumo Logic have an existing integration or app for the product being researched, and to document what each covers and how it collects data.
 
-The subagent must follow the full `references/competitive-siem-coverage-checklist.md` loaded in "Before you start" — embed the **complete checklist content** verbatim in this subagent's prompt so it has full guidance without needing to read local files. (This is in addition to the always-embedded `references/research-subagent-guidance.md` from Phase 2.)
+The subagent must follow `references/competitive-siem-coverage-checklist.md` end-to-end. Point the subagent at that file **by path** and instruct it to read the entire file before doing any other work. **Do NOT paste the checklist contents into the task prompt** — the subagent will load it in its own fresh context. (This is in addition to the read-`references/research-subagent-guidance.md`-by-path directive from Phase 2.)
 
 Competitor catalog starting points to include in the prompt:
 - IBM QRadar: `https://www.ibm.com/products/qradar-siem/integrations`
@@ -246,7 +246,7 @@ For each competitor, the subagent must determine:
 
 Output: write all findings to `references/competitive-siem-coverage.md` using the structure defined in the checklist (summary table → per-competitor H2 sections → comparison notes). Return a concise inline summary with which competitors have integrations, the dominant collection method found, and the path to the written file.
 
-Provide: product name, vendor name, common aliases or abbreviations for the product, and the full content of `references/competitive-siem-coverage-checklist.md`.
+Provide: product name, vendor name, common aliases or abbreviations for the product, and the **path** to `references/competitive-siem-coverage-checklist.md` (so the subagent reads it itself — do not paste the checklist content into the prompt).
 
 ### Phase 3: Synthesize and supplement
 
@@ -356,6 +356,13 @@ After the research brief and all companion artifacts are written, generate a sta
   - **Bad:** "The CEL program should use `want_more: body.more_to_read` and store the cursor in `state.?cursor.next_cursor`."
   - **Good:** "Rate limits: 100 req/min/user. Headers: `X-Ratelimit-Limit`, `X-Ratelimit-Remaining`, `X-Ratelimit-Reset`."
   - **Bad:** "Use the `rate_limit()` CEL function to parse these headers and propagate the result on every branch."
+- **Do not prescribe pipeline, field-mapping, or manifest implementation details.** The research brief documents the *data* (field names, types, enum values, ECS mapping candidates, sample events) — not how the ingest pipeline, `fields/*.yml`, or `manifest.yml` should be authored. The pipeline builder and reviewer skills (`ingest-pipelines`, `ecs-field-mappings`, `package-spec`, `review-integration`) are the authoritative source for those decisions. Recommendations about processor choice, error-handling structure, or pipeline-level configurability will be ignored or followed incorrectly.
+  - **Specifically prohibited values in research output (configuration plans, var recommendations, architecture notes, ECS analysis, anywhere):** the `preserve_duplicate_custom_fields` flag (legacy pipeline anti-pattern, prohibited by `ingest-pipelines/SKILL.md`), `event.ingested` (managed by Elasticsearch), trailing `event.original` removal toggles, and the `preserve_duplicate_custom_fields` manifest variable / tag / conditional. **Never include these as configuration variables, recommended pipeline behaviors, or "consider supporting…" suggestions, even if they appear in legacy integrations you examined for reference patterns.** The only `preserve_*` config var that *is* valid is `preserve_original_event` (file/syslog inputs only); see the standard-var tables in `references/data-collection-methods.md`.
+  - **Good (data-only):** "The API returns both `srcip` and `source.ip` for the same value; the latter is already ECS-compliant."
+  - **Bad (prescribes pipeline behavior):** "Add a `preserve_duplicate_custom_fields` manifest var so users can keep both `srcip` and `source.ip` populated."
+  - **Good (data-only):** "Timestamps are in RFC 3339 with timezone offset."
+  - **Bad (prescribes pipeline behavior):** "Use a `date` processor with `target_field: event.start` and a fallback to `@timestamp` via `on_failure`."
+- The standard configuration variables for each input type are exhaustively listed in `references/data-collection-methods.md`. Do not propose additional configuration variables outside that authoritative set unless the vendor's API genuinely requires a new product-specific variable (e.g., a tenant ID for a multi-tenant API). Even then, the variable must be tied to a documented vendor-side requirement, not a pipeline behavior toggle.
 - If a product has multiple viable collection methods, document all of them with a recommendation and rationale, but produce detailed deep-dive material for the recommended method.
 - If research reveals the product does not expose data in a way that Elastic can ingest, say so clearly in the brief.
 

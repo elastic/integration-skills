@@ -97,9 +97,9 @@ Add "traffic" and "threat" streams to acme_firewall.
 
 Do **not** load CEL, pipeline, ECS, or field-mapping skills yourself. Delegate to subagents that load their own domain skills.
 
-All specialised work is delegated to the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms). Each task prompt must embed the relevant `*-subagent-guidance.md` file verbatim at the top — that file is the subagent's operating manual (skill-load sequence, workflow, scope, reporting contract); the subagent will not load its skill automatically. Full dispatch rules and per-step detail live in `references/create-workflow.md` and `references/add-datastream-workflow.md`.
+All specialised work is delegated to the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms). Each task prompt must **point the subagent at the relevant `*-subagent-guidance.md` file by path** and instruct it to read that file (plus the skill SKILL.md it lists in "First steps") end-to-end before doing any other work. **Do NOT read the guidance file yourself or paste its contents into the task prompt** — that doubles its context cost. Pass only the path plus the task-specific context. The subagent will load the manual itself in its own fresh context. Full dispatch rules and per-step detail live in `references/create-workflow.md` and `references/add-datastream-workflow.md`.
 
-| Embedded guidance file | When to use |
+| Subagent guidance file | When to use |
 |----------|-------------|
 | `/research-integration` skill (orchestrates its own research subagents) | Vendor/API research before building, when no research brief is provided |
 | `cel-programs/references/builder-subagent-guidance.md` | Each CEL data stream — mock API, CEL program (incremental mito build), `cel.yml.hbs` template, manifest vars, initial field mappings |

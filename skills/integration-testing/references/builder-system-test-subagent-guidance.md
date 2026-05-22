@@ -4,9 +4,12 @@ Operating manual for a subagent running `elastic-package test system` on
 behalf of the `create-integration` or `maintain-integration` orchestrator
 after pipeline work for a data stream has completed.
 
-The orchestrator embeds this entire file verbatim in your task prompt, so you
-do not need to load any skill or reference file beyond what is listed in the
-"First steps" section below.
+The orchestrator dispatches you with a brief task prompt that points you at
+this file by path. **Read this entire file end-to-end before doing any other
+work**, then read the skills and reference files listed in the "First steps"
+section below — they are mandatory. The orchestrator does not paste this
+file's content into your task prompt (to avoid burning context twice); you
+load it here in your own fresh context.
 
 The orchestrator's task prompt tells you **which package and data stream** to
 test, **which input type** is in use, and confirms the **Elastic stack is up**.
@@ -51,8 +54,8 @@ Your responsibility is strictly limited to:
   artifacts and belong to the pipeline builder.
 
 If the orchestrator's prompt asks for data-collection setup rather than
-running a system test, stop and report that the wrong guidance file was
-embedded — the setup workflow lives in
+running a system test, stop and report that the wrong guidance file path
+was supplied — the setup workflow lives in
 `integration-testing/references/builder-setup-subagent-guidance.md`.
 
 ## First steps — read the skills and their references

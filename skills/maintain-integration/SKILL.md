@@ -27,7 +27,7 @@ Use `create-integration` instead when:
 
 → **Read `references/review-workflow.md` fully before starting.**
 
-Run automated validation, delegate inspection to a subagent (see Dispatch convention in `references/review-workflow.md`) embedding `review-integration/references/reviewer-subagent-guidance.md`, present findings with no file changes.
+Run automated validation, delegate inspection to a subagent (see Dispatch convention in `references/review-workflow.md`) pointing it at `review-integration/references/reviewer-subagent-guidance.md` as its operating manual, present findings with no file changes.
 
 ### Full improvement pass (analyze → fix → re-validate)
 
@@ -56,9 +56,9 @@ Do **not** load domain-specific skills (pipelines, CEL, ECS, field mappings) int
 
 ## Subagents
 
-All specialised work is delegated to the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms). Each task prompt must embed the relevant `*-subagent-guidance.md` file verbatim at the top — that file is the subagent's operating manual (skill-load sequence, workflow, scope, reporting contract); the subagent will not load its skill automatically. Full dispatch rules and per-workflow detail live in `references/review-workflow.md` and `references/improve-workflow.md`.
+All specialised work is delegated to the platform's **generic / general-purpose subagent** (Cursor: `generalPurpose` Task agent; Claude Code: `general-purpose` Task agent; or the equivalent on other platforms). Each task prompt must **point the subagent at the relevant `*-subagent-guidance.md` file by path** and instruct it to read that file (plus the skill SKILL.md it lists in "First steps") end-to-end before doing any other work. **Do NOT read the guidance file yourself or paste its contents into the task prompt** — that doubles its context cost. Pass only the path plus the task-specific context. The subagent will load the manual itself in its own fresh context. Full dispatch rules and per-workflow detail live in `references/review-workflow.md` and `references/improve-workflow.md`.
 
-| Embedded guidance file | Use for |
+| Subagent guidance file | Use for |
 |----------|---------|
 | `review-integration/references/reviewer-subagent-guidance.md` | Thorough read-only quality inspection: classifies files by domain, loads all relevant domain skills and checklists via the `review-integration` skill, returns severity-ranked, domain-tagged findings |
 | `ingest-pipelines/references/builder-subagent-guidance.md` | Pipeline fixes: JSE00001, error handling, processor tags, ECS categorization, field definitions, test fixtures |

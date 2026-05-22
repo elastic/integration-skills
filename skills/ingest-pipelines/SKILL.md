@@ -603,5 +603,5 @@ As documented in the JSE00001 section above: do not add a `remove` processor for
 - `references/branching-patterns.md`
 - `references/error-handling-patterns.md`
 - `references/grok-recipes.md` — grok syntax, type coercion, syslog header recipes, common mistakes, pattern library link
-- `references/builder-subagent-guidance.md` — **always-embedded** subagent operating manual: scope boundaries, skill-load sequence, input data paths (CEL-first vs Direct), 9-step pipeline build workflow, "review generated output, never hand-edit expected JSON", reporting contract
+- `references/builder-subagent-guidance.md` — subagent operating manual: scope boundaries, skill-load sequence, input data paths (CEL-first vs Direct), 9-step pipeline build workflow, "review generated output, never hand-edit expected JSON", reporting contract. The orchestrator dispatches subagents by passing this file's **path** in the task prompt; the subagent reads it itself in its own fresh context. Do NOT embed/paste its contents into the task prompt.
 

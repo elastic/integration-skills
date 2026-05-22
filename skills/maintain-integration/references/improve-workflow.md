@@ -23,12 +23,12 @@ All specialised work in this workflow is delegated to the platform's **generic /
 
 Every subagent task prompt must:
 
-1. **Embed the full content of the relevant `*-subagent-guidance.md` file verbatim at the top.** That file is the subagent's operating manual — skill-load sequence, workflow, scope boundaries, and reporting contract. The subagent will **not** load its skill automatically; it relies entirely on the embedded manual.
+1. **Begin with an instruction to read the subagent's operating manual.** Point the subagent at the relevant `*-subagent-guidance.md` file **by path** and tell it to read that file (plus the skill SKILL.md it points at in its "First steps" section) end-to-end **before doing any other work**. **Do NOT read the guidance file yourself or paste/embed its content into the task prompt** — that doubles the context cost. The subagent must load the manual itself in its own fresh context. The guidance file contains the skill-load sequence, workflow, scope boundaries, and reporting contract.
 2. **Provide all context** the subagent needs (it cannot see your conversation): package path, data stream path, specific issues to fix (paste findings), sample data if relevant, and any constraints.
 
-Available manuals in this workflow:
+Available manuals in this workflow (pass these by path, do not embed):
 
-| Embedded guidance file | Use for |
+| Subagent guidance file | Use for |
 |----------|---------|
 | `review-integration/references/reviewer-subagent-guidance.md` | Read-only quality review (Phase 1 reviewer dispatch, Phase 5 final review) |
 | `ingest-pipelines/references/builder-subagent-guidance.md` | Pipeline / field / pipeline-test fixes |
@@ -48,9 +48,9 @@ elastic-package lint
 elastic-package check
 ```
 
-Then dispatch a subagent per the **Dispatch convention** above, embedding `review-integration/references/reviewer-subagent-guidance.md`, to perform the review.
+Then dispatch a subagent per the **Dispatch convention** above, instructing it to read `review-integration/references/reviewer-subagent-guidance.md` as its operating manual, to perform the review.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package path
 2. Any user-provided requirements, research brief, or focus areas
@@ -95,7 +95,7 @@ If `celfmt` reports syntax errors, fix the source before re-running. Do not proc
 
 ### Dispatch the pipeline builder
 
-Per the **Dispatch convention** above, embed `ingest-pipelines/references/builder-subagent-guidance.md`.
+Per the **Dispatch convention** above, point the subagent at `ingest-pipelines/references/builder-subagent-guidance.md` as its operating manual.
 
 Use for:
 
@@ -105,7 +105,7 @@ Use for:
 
 ### Dispatch the CEL program builder
 
-Per the **Dispatch convention** above, embed `cel-programs/references/builder-subagent-guidance.md`.
+Per the **Dispatch convention** above, point the subagent at `cel-programs/references/builder-subagent-guidance.md` as its operating manual.
 
 Use for:
 
@@ -141,9 +141,9 @@ Review the generated `*-expected.json` to confirm correctness, then re-run `elas
 
 ## Phase 5: Final review and fix loop
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `review-integration/references/reviewer-subagent-guidance.md`, for a final verification pass.
+Dispatch a subagent per the **Dispatch convention** above, instructing it to read `review-integration/references/reviewer-subagent-guidance.md` as its operating manual, for a final verification pass.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package path
 2. Summary of what was fixed
@@ -151,8 +151,8 @@ The task prompt must include (in addition to the embedded manual):
 4. Original requirements (if available)
 
 **If the reviewer returns remaining issues, do not attempt to fix them all yourself.** Re-delegate (per the **Dispatch convention**):
-- Pipeline/field/test issues: embed `ingest-pipelines/references/builder-subagent-guidance.md` with the specific issues to fix
-- CEL issues: embed `cel-programs/references/builder-subagent-guidance.md` with the specific issues to fix
+- Pipeline/field/test issues: point the subagent at `ingest-pipelines/references/builder-subagent-guidance.md` with the specific issues to fix
+- CEL issues: point the subagent at `cel-programs/references/builder-subagent-guidance.md` with the specific issues to fix
 - Only fix minor issues (manifest, changelog, docs, simple field typos) yourself
 
 After subagent fixes complete, re-run `elastic-package check` and re-launch the reviewer the same way. Repeat until the reviewer returns `APPROVED` or only `APPROVED_WITH_SUGGESTIONS` (LOW/MEDIUM) findings remain.

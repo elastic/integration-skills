@@ -8,14 +8,14 @@ All specialised work in this workflow is delegated to the platform's **generic /
 
 Every subagent task prompt must:
 
-1. **Embed the full content of the relevant `*-subagent-guidance.md` file verbatim at the top.** That file is the subagent's operating manual — it contains the skill-load sequence, workflow, scope boundaries, and reporting contract. The subagent will **not** load its skill automatically; it relies entirely on the embedded manual.
+1. **Begin with an instruction to read the subagent's operating manual.** Point the subagent at the relevant `*-subagent-guidance.md` file **by path** and tell it to read that file (plus the skill SKILL.md it points at in its "First steps" section) end-to-end **before doing any other work**. **Do NOT read the guidance file yourself or paste/embed its content into the task prompt** — that doubles the context cost. The subagent must load the manual itself in its own fresh context. The guidance file contains the skill-load sequence, workflow, scope boundaries, and reporting contract.
 2. **Provide all context** the subagent needs (it cannot see your conversation): package path, data stream path, sample data, API docs / payloads, research brief, authoritative requirement files, requirements, existing package state, API credentials when supplied.
 
 **CRITICAL: Only run ONE subagent at a time.** Process data streams sequentially — never launch multiple builder subagents (CEL, data-collection setup, pipeline, system test) in parallel. Complete all work for one data stream before starting the next.
 
-### Builder / reviewer manuals
+### Builder / reviewer manuals (pass these by path, do not embed)
 
-| Embedded guidance file | When to use | What the subagent handles |
+| Subagent guidance file | When to use | What the subagent handles |
 |----------|-------------|-----------------|
 | `/research-integration` skill (orchestrates its own research subagents) | Before building, when API/product docs need investigation and no research brief was provided | Vendor research, API docs, sample payloads, architecture recommendations. Do not launch a `deep-research` subagent directly. |
 | `cel-programs/references/builder-subagent-guidance.md` | Each CEL data stream | Mock API (docker-compose + `elastic/stream` config + system test config), incremental mito-validated CEL program, `cel.yml.hbs` template, data stream manifest vars, initial `fields/fields.yml`. Includes the mock-first workflow, mock completeness gate, and phased build ladder. |
@@ -63,9 +63,9 @@ For each data stream, follow this sequence. The steps vary by input type.
 
 #### CEL inputs
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `cel-programs/references/builder-subagent-guidance.md`.
+Dispatch a subagent per the **Dispatch convention** above, pointing it at `cel-programs/references/builder-subagent-guidance.md` as its operating manual.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
 2. API endpoint details (URL, auth method, pagination pattern, response structure).
@@ -84,9 +84,9 @@ Wait for the subagent to complete before proceeding to Step 2.
 
 #### TCP, UDP, HTTP endpoint, logfile, Kafka, Pub/Sub inputs
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `integration-testing/references/builder-setup-subagent-guidance.md`.
+Dispatch a subagent per the **Dispatch convention** above, pointing it at `integration-testing/references/builder-setup-subagent-guidance.md` as its operating manual.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
 2. Input type(s) for the data stream.
@@ -111,9 +111,9 @@ These inputs **do not have a standard docker-based system test pattern**. Skip t
 
 ### Step 2: Ingest pipeline
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `ingest-pipelines/references/builder-subagent-guidance.md`.
+Dispatch a subagent per the **Dispatch convention** above, pointing it at `ingest-pipelines/references/builder-subagent-guidance.md` as its operating manual.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
 2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow CEL-only opening processors, `ecs.version: 9.3.0`, full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
@@ -136,9 +136,9 @@ Running full system tests in the orchestrator thread burns context. **Do not exe
 
 System test configs must set **`wait_for_data_timeout: 1m`**. The CEL builder or the data-collection setup subagent should add this when creating the file; if missing, the system-test subagent will add it before running.
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `integration-testing/references/builder-system-test-subagent-guidance.md`, to run the system test.
+Dispatch a subagent per the **Dispatch convention** above, pointing it at `integration-testing/references/builder-system-test-subagent-guidance.md` as its operating manual, to run the system test.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Clarify this is a **system test run** (not a data-collection setup invocation).
 2. Absolute package path, data stream name, input type.
@@ -148,9 +148,9 @@ The task prompt must include (in addition to the embedded manual):
 
 If the system test fails, fix straightforward issues yourself or re-dispatch a subagent (per the **Dispatch convention**) based on the domain-classified report:
 
-- **Pipeline / fields / pipeline-test issues** → embed `ingest-pipelines/references/builder-subagent-guidance.md`
-- **CEL program or mock API issues** → embed `cel-programs/references/builder-subagent-guidance.md`
-- **Docker-compose / sample log / template / non-CEL test config issues** → embed `integration-testing/references/builder-setup-subagent-guidance.md`
+- **Pipeline / fields / pipeline-test issues** → point the subagent at `ingest-pipelines/references/builder-subagent-guidance.md`
+- **CEL program or mock API issues** → point the subagent at `cel-programs/references/builder-subagent-guidance.md`
+- **Docker-compose / sample log / template / non-CEL test config issues** → point the subagent at `integration-testing/references/builder-setup-subagent-guidance.md`
 
 **Never create `sample_event.json` manually.**
 
@@ -182,9 +182,9 @@ Fix any minor issues (manifest typos, formatting, changelog). For significant pi
 
 ## Phase 6: Review
 
-Dispatch a subagent per the **Dispatch convention** above, embedding `review-integration/references/reviewer-subagent-guidance.md`, to run the review.
+Dispatch a subagent per the **Dispatch convention** above, pointing it at `review-integration/references/reviewer-subagent-guidance.md` as its operating manual, to run the review.
 
-The task prompt must include (in addition to the embedded manual):
+The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package path.
 2. The original requirements / research brief.
@@ -197,14 +197,14 @@ The reviewer returns a severity-ranked list of issues with domain tags, formatte
 ## Phase 7: Fix from review
 
 - **Minor issues** (manifest fields, changelog, documentation, field file typos): fix directly.
-- **Pipeline issues**: re-dispatch a subagent (per the **Dispatch convention**) embedding `ingest-pipelines/references/builder-subagent-guidance.md` with the specific issues to fix.
+- **Pipeline issues**: re-dispatch a subagent (per the **Dispatch convention**) pointing it at `ingest-pipelines/references/builder-subagent-guidance.md` with the specific issues to fix.
 - **CEL issues**:
   - **Formatting-only** (indentation, style): run `celfmt -s` yourself:
     ```bash
     cd packages/<package_name>/data_stream/<stream>/agent/stream
     celfmt -s -agent -i cel.yml.hbs -ocel.yml.hbs
     ```
-  - **Logic issues** (error handling gaps, cursor problems, pagination bugs): re-dispatch a subagent (per the **Dispatch convention**) embedding `cel-programs/references/builder-subagent-guidance.md` with the specific issues to fix.
+  - **Logic issues** (error handling gaps, cursor problems, pagination bugs): re-dispatch a subagent (per the **Dispatch convention**) pointing it at `cel-programs/references/builder-subagent-guidance.md` with the specific issues to fix.
 
 After fixes, run `elastic-package check` again.
 
@@ -243,8 +243,8 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - **Always create `_dev/build/build.yml` immediately after scaffolding the package, before creating data streams.** Required for ECS field resolution.
 - Do not leave default placeholder values in `manifest.yml` (title, description, owner).
 - Do not create or modify `sample_event.json` manually. Only generated by `elastic-package test system`.
-- **Do not run `elastic-package test system` in the orchestrator thread** — delegate per the **Dispatch convention** embedding `integration-testing/references/builder-system-test-subagent-guidance.md`.
-- **Do not develop CEL programs or mock APIs in the orchestrator thread** — delegate per the **Dispatch convention** embedding `cel-programs/references/builder-subagent-guidance.md`.
+- **Do not run `elastic-package test system` in the orchestrator thread** — delegate per the **Dispatch convention** pointing the subagent at `integration-testing/references/builder-system-test-subagent-guidance.md`.
+- **Do not develop CEL programs or mock APIs in the orchestrator thread** — delegate per the **Dispatch convention** pointing the subagent at `cel-programs/references/builder-subagent-guidance.md`.
 - Do not create `*-expected.json` manually. Only generated by `elastic-package test pipeline --generate`.
 - Do not uncomment `{{ event "stream" }}` in the doc template until `sample_event.json` exists.
 - For CEL inputs, strip unused scaffold vars rather than leaving the verbose generic scaffold.

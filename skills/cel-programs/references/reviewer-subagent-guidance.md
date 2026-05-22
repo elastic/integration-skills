@@ -5,7 +5,12 @@ against complexity baselines and source fidelity. This is structured
 review, not deliberation — the reviewer checks against quantitative
 criteria and the reference implementation.
 
-The orchestrator embeds this file verbatim in your task prompt.
+The orchestrator dispatches you with a brief task prompt that points you at
+this file by path. **Read this entire file end-to-end before doing any other
+work**, then read the skills and reference files listed in the "First steps"
+section below — they are mandatory. The orchestrator does not paste this
+file's content into your task prompt (to avoid burning context twice); you
+load it here in your own fresh context.
 
 ## Your inputs
 

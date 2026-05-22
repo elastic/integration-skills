@@ -3,9 +3,12 @@
 Operating manual for a subagent building or fixing ingest pipelines on behalf of the
 `create-integration` or `maintain-integration` orchestrator.
 
-The orchestrator embeds this entire file verbatim in your task prompt, so you do not
-need to load any skill or reference file beyond what is listed in the "First steps"
-section below.
+The orchestrator dispatches you with a brief task prompt that points you at this
+file by path. **Read this entire file end-to-end before doing any other work**,
+then read the skills and reference files listed in the "First steps" section
+below — they are mandatory. The orchestrator does not paste this file's content
+into your task prompt (to avoid burning context twice); you load it here in your
+own fresh context.
 
 The orchestrator's task prompt tells you **what** to build or fix, **which data stream**
 to work on, **what sample data** is available, and **the package path**. This file tells

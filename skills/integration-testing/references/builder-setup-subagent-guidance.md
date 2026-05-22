@@ -5,9 +5,12 @@ Operating manual for a subagent wiring up the data-collection plumbing for a
 (invoked from `references/create-workflow.md` or
 `references/add-datastream-workflow.md`).
 
-The orchestrator embeds this entire file verbatim in your task prompt, so you do
-not need to load any skill or reference file beyond what is listed in the "First
-steps" section below.
+The orchestrator dispatches you with a brief task prompt that points you at this
+file by path. **Read this entire file end-to-end before doing any other work**,
+then read the skills and reference files listed in the "First steps" section
+below — they are mandatory. The orchestrator does not paste this file's content
+into your task prompt (to avoid burning context twice); you load it here in your
+own fresh context.
 
 The orchestrator's task prompt tells you **which package and data stream** to
 work on, **which input type(s)** to configure, **what sample data** is
@@ -52,7 +55,7 @@ test can later push sample data through the agent:
   `elastic-package test system --generate` in that later pass
 
 If the orchestrator's prompt asks for system test execution rather than
-setup, stop and report that the wrong guidance file was embedded — the
+setup, stop and report that the wrong guidance file path was supplied — the
 system-test workflow lives in
 `integration-testing/references/builder-system-test-subagent-guidance.md`.
 

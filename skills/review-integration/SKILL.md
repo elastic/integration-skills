@@ -266,7 +266,7 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 
 | File | Load condition | Content |
 |------|---------------|---------|
-| `references/reviewer-subagent-guidance.md` | **Always-embedded** subagent operating manual | Scope, skill-load sequence, read-only operating rules, per-issue format checklist, verdict rules, reporting contract for the orchestrator-dispatched reviewer |
+| `references/reviewer-subagent-guidance.md` | Read by the reviewer subagent itself (the orchestrator passes only its path, never embeds the content) | Scope, skill-load sequence, read-only operating rules, per-issue format checklist, verdict rules, reporting contract for the orchestrator-dispatched reviewer |
 | `references/review-output-template.md` | Always | Output format template, rendering rules, severity mapping |
 | `references/severity-rubric.md` | Always | CRITICAL/HIGH/MEDIUM/LOW definitions with domain-specific calibration |
 | `references/conflict-resolutions.md` | Always | Known rule conflicts and resolution decisions |
