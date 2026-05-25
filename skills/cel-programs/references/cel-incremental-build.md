@@ -347,6 +347,21 @@ For timestamp pagination:
 
 **Key rule:** keep the new code within the existing structure. Do not restructure what already works — only add the pagination layer.
 
+**Termination fidelity (when translating from test-api.py):** Before
+writing the `"want_more":` expression, find the exact `want_more`
+assignment in the Python script. Write it down as a comment in the
+`.cel` file during development. Translate each condition. For example,
+if the Python says:
+
+```python
+want_more = event_count > 0 and meta_next is not None and page < max_pages
+```
+
+then the CEL must include all three checks — not just the cursor
+presence. Dropping a condition (e.g. "the cursor will be absent on the
+last page anyway") may cause infinite loops when the API behaves
+differently from that assumption.
+
 **Validate:**
 
 ```bash
