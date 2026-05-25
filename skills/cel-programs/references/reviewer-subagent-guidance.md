@@ -83,8 +83,14 @@ Compare the CEL program against the Python collection function:
    each, state whether the CEL program handles it and how. Flag any
    Python error paths the CEL drops.
 
-2. **Pagination logic.** Compare the Python loop's termination condition
-   with the CEL `want_more` expression. Are they equivalent?
+2. **Pagination termination.** Extract the exact `want_more` boolean
+   expression from the Python script (e.g.
+   `event_count > 0 and meta_next is not None`). Extract the exact
+   `"want_more":` expression from the CEL program. List both. Compare
+   them condition by condition. Every conjunct in the Python expression
+   must have a corresponding conjunct in the CEL expression. If any
+   condition is missing, this is a **revise** finding — a dropped
+   termination condition causes infinite loops.
 
 3. **Response navigation.** Trace the Python response field access path
    (e.g., `resp["data"]["items"]`) and the CEL equivalent (e.g.,
@@ -108,11 +114,19 @@ For each issue found, write a specific challenge:
 > `if/elif/else` chain here — can this be flattened with pre-bindings
 > before `state.with()`?"
 
-**Fidelity challenge example:**
+**Fidelity challenge example (dropped error path):**
 > "The Python script checks `parsed.get('errors')` at line 368 and
 > handles GraphQL errors before navigating to `data.organization`. Your
 > CEL program does not check for GraphQL errors — it goes straight to
 > `body.data.organization`. This drops an error path."
+
+**Fidelity challenge example (dropped termination condition):**
+> "The Python script's termination condition is
+> `want_more = event_count > 0 and meta_next is not None`. The CEL
+> program's `want_more` is `has(body.meta.next)`. The `event_count > 0`
+> condition (empty data array = stop) is missing. If the API returns a
+> non-null cursor on the last page with an empty events array, the CEL
+> program may loop forever."
 
 **Unnecessary complexity challenge example:**
 > "The Python script uses `offset += page_size` with a simple

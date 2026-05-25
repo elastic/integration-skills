@@ -154,16 +154,36 @@ scratch.
 
 After phase 4, check the CEL program against test-api.py:
 - Are all error paths in the Python script represented?
-- Does the pagination logic match the Python loop's termination
-  conditions?
 - Are all response fields navigated the same way?
 - Does the cursor state capture the same information Python propagates?
 - Are there Python branches the CEL dropped, or CEL branches Python
   doesn't have?
 
+**Pagination termination — extract and compare literally.** Find the
+exact `want_more` expression in the Python script (typically a single
+boolean expression combining multiple conditions). Write it out. Then
+find the corresponding `"want_more":` expression in the CEL program.
+Write it out. Compare them term by term. Every condition in the Python
+expression must have a corresponding condition in the CEL expression.
+Common conditions to verify:
+
+- Event array non-empty (`len(events) > 0` → `size(events) > 0`)
+- Next-page indicator present (`cursor is not None` → `cursor != null`
+  or `has(body.cursor)`)
+- Page limit not exceeded (`page < max_pages` — may not apply in CEL
+  where `want_more: false` terminates naturally)
+- Total results not exceeded (`offset < total` → `offset < body.total`)
+
+If any Python condition is missing from the CEL expression, add it.
+The Python script was tested against the real API; the CEL program is
+a translation and must preserve all termination conditions. Dropping
+a condition (e.g. omitting the empty-array check because "the cursor
+will be null anyway") may cause infinite loops when the API's actual
+last-page response doesn't match assumptions.
+
 If the research brief describes additional requirements not covered by
-the script (e.g., cursor regression guards, empty-page handling), add
-them after the core translation is complete.
+the script (e.g., cursor regression guards), add them after the core
+translation is complete.
 
 ### 5. Format and return
 
@@ -183,7 +203,9 @@ Return:
 - `.as()` depth <= 5 on every execution path
 - No rate limiting or retry logic
 - Events contain only `{"message": e.encode_json()}`
-- `want_more` driven by pagination signal, not event count
+- `want_more` must match the Python script's termination condition
+  exactly — if the script checks both a pagination signal and event
+  count, the CEL must check both
 - No boolean comparisons (`== true`, `== false`)
 - No `bytes()` wrapper on `resp.Body`
 - Cursor defaults use `state.?cursor.field.orValue(...)`
