@@ -198,7 +198,7 @@ a reference for response structure and field presence.
 Use the `elastic/stream` http-server — do NOT write a custom Python mock.
 
 1. Define the mock service in `_dev/deploy/docker/docker-compose.yml` using
-   `docker.elastic.co/observability/stream:v0.20.0`.
+   `docker.elastic.co/observability/stream:v0.22.0`.
 2. Create a rule-based config file at
    `_dev/deploy/docker/files/config-<stream>.yml` that models the **complete
    API request flow** the CEL program will make. Follow the patterns and

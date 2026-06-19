@@ -158,7 +158,7 @@ Use the `elastic/stream` Docker image (`docker.elastic.co/observability/stream`)
 version: '2.3'
 services:
   <mock-name>:
-    image: docker.elastic.co/observability/stream:v0.19.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     hostname: <mock-name>
     ports:
       - 8080

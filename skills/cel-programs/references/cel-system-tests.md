@@ -69,7 +69,7 @@ CEL system tests use the `elastic/stream` docker image as a rule-based HTTP mock
 ```yaml
 services:
   <service-name>:
-    image: docker.elastic.co/observability/stream:v0.20.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     hostname: <service-name>
     ports:
       - 8090
