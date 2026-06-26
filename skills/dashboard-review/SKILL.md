@@ -68,9 +68,12 @@ change summary for each dashboard.
   `data_stream.dataset` or an equivalently specific scope. Flag
   panels that query broad index patterns (`metrics-*`, `logs-*`)
   without scoping.
-- **By-reference panels:** Panels should be embedded by value. In
-  the raw JSON, `references` entries with a `panelRefName` indicate
-  by-reference panels. Flag these.
+- **By-reference visualizations:** Visualization and lens panels
+  should be embedded by value. In the raw JSON, `references` entries
+  with a `panelRefName` indicate by-reference panels. Flag these
+  only when the reference type is `visualization`, `lens`, or `map`.
+  Saved searches (`search` type) are inherently referenced and
+  should not be flagged.
 - **Deprecated input controls:** The `input-control-vis` type is
   deprecated. Dashboard-native controls should be used instead.
 - **Package-name title prefix:** Panel titles matching
