@@ -14,7 +14,7 @@ HTTP endpoint system tests use `elastic/stream` as an HTTP client that posts NDJ
 version: '2.3'
 services:
   <package>-<stream>-webhook-http:
-    image: docker.elastic.co/observability/stream:v0.20.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     environment:
@@ -29,7 +29,7 @@ services:
 
 ```yaml
   <package>-<stream>-webhook-https:
-    image: docker.elastic.co/observability/stream:v0.20.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     environment:

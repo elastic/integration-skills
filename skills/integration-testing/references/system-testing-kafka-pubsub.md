@@ -29,7 +29,7 @@ services:
       - 9094
 
   <package>-<stream>-producer:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command:
@@ -85,7 +85,7 @@ services:
       - "8681/tcp"
 
   <package>-<stream>-publisher:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command:

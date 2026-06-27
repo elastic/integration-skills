@@ -12,7 +12,7 @@ CEL system tests require a mock HTTP API to stand in for the real vendor API. Th
 version: '2.3'
 services:
   <package>-<stream>-mock:
-    image: docker.elastic.co/observability/stream:v0.20.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./files:/files:ro
     command: http-server --addr=:8090 --config=/files/config-<stream>.yml
