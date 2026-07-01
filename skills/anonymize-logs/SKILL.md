@@ -102,7 +102,7 @@ Use consistent, realistic-looking replacements — not `REDACTED` strings, which
 | Hashed / partial token | replace with full synthetic token of same format |
 | DHCP fingerprint | `example-dhcp-fingerprint-000001` |
 | JA4 fingerprint | replace with same-length hex string |
-| Transaction / sequence / event ID (numeric) | synthetic integer of the same digit count — e.g. `10000002` |
+| Transaction / sequence / event-instance ID (numeric) | synthetic integer matching the original digit count — e.g. `48273915` → `10000002` |
 | Session / request / correlation ID | same-length synthetic string (preserve length and charset), not a descriptive name |
 
 **Consistency rule**: map identical original values to identical placeholders throughout the file. If the same IP appears 10 times, it must become the same replacement IP all 10 times — so cross-event correlations remain testable.
@@ -112,7 +112,7 @@ Use consistent, realistic-looking replacements — not `REDACTED` strings, which
 Every replacement must have the same shape as the original value. The parser and pipeline conditions depend on value format, not just field presence.
 
 - **Numeric ID → numeric ID**: `/d/123/edit` → `/d/456/edit`, not `/d/example-document-id/edit`
-- **Transaction / sequence / event ID → same-shape number**: these are *tracking identifiers*, not metrics — mask them, preserving digit count. e.g. CEF `cn1=48273915 cn2=3061847` → `cn1=10000002 cn2=1000002`
+- **Transaction / sequence / event-instance ID → same-shape number**: when the value is a per-event tracking identifier, mask it, preserving digit count. e.g. CEF `cn1=48273915 cn2=3061847` → `cn1=10000002 cn2=1000002`
 - **UUID → UUID**: a real UUID must become a synthetic UUID of the same version, not a descriptive string
 - **URL → URL**: replace only the sensitive segment (hostname, path ID) — preserve the scheme, path structure, and query string shape
   - `https://docs.google.com/drawings/d/123/edit` → `https://docs.google.com/drawings/d/000000000000/edit` (replace the ID, not the host — `docs.google.com` is a public service name, not an org identifier)
@@ -128,6 +128,7 @@ If you are unsure what shape to use, look at neighbouring values of the same fie
 
 Do not replace:
 - Protocol names, action verbs, event types, severity levels (`ALLOW`, `DENY`, `INFO`, `ERROR`)
+- Product-defined event codes/type IDs, such as Windows event IDs — these describe event semantics, not customer-specific event instances
 - HTTP status codes, port numbers, numeric metric values (counts, sizes, durations)
 - Field names and keys
 - Timestamps (format and timezone must stay intact)
