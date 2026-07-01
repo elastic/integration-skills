@@ -102,7 +102,7 @@ Use consistent, realistic-looking replacements — not `REDACTED` strings, which
 | Hashed / partial token | replace with full synthetic token of same format |
 | DHCP fingerprint | `example-dhcp-fingerprint-000001` |
 | JA4 fingerprint | replace with same-length hex string |
-| Transaction / sequence / event ID (numeric) | synthetic integer of the **same digit count** — e.g. `48273915` → `10000002` |
+| Transaction / sequence / event ID (numeric) | synthetic integer of the same digit count — e.g. `10000002` |
 | Session / request / correlation ID | same-length synthetic string (preserve length and charset), not a descriptive name |
 
 **Consistency rule**: map identical original values to identical placeholders throughout the file. If the same IP appears 10 times, it must become the same replacement IP all 10 times — so cross-event correlations remain testable.
@@ -128,7 +128,7 @@ If you are unsure what shape to use, look at neighbouring values of the same fie
 
 Do not replace:
 - Protocol names, action verbs, event types, severity levels (`ALLOW`, `DENY`, `INFO`, `ERROR`)
-- HTTP status codes, port numbers, numeric metric values (counts, sizes, durations) — but **not** transaction / sequence / event IDs, which are tracking identifiers and must be masked (see above)
+- HTTP status codes, port numbers, numeric metric values (counts, sizes, durations)
 - Field names and keys
 - Timestamps (format and timezone must stay intact)
 - Structural tokens (brackets, braces, pipes, commas, tabs)
