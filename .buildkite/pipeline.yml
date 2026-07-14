@@ -19,6 +19,13 @@ steps:
     if_changed:
       - "catalog-info.yaml"
 
+  - label: "Validate Claude Code plugin manifests"
+    command: "npx @anthropic-ai/claude-code@latest plugin validate ."
+    agents:
+      image: "docker.elastic.co/ci-agent-images/pipelib:0.27.0@sha256:d1713778d27e0b6208f59ba8761f04ef033af4c4237cb2614a09d38584c5ff88"
+    if_changed:
+      - ".claude-plugin/**"
+
   - label: ":pipeline: Upload default Pipeline"
     command: "buildkite-agent pipeline upload .buildkite/default-pipeline.yml"
     if_changed:

@@ -101,6 +101,21 @@ npx skills add elastic/integration-skills --all
 | --all | Install all skills to all agents without prompts |
 | --list | List available skills without installing |
 
+### Claude Code (plugin marketplace)
+
+If you use [Claude Code](https://claude.ai/code), you can install the skills natively through the Claude Code plugin marketplace. This path supports `autoUpdate`, so your local copy stays current whenever the skills are updated upstream.
+
+**Register the marketplace and install the plugin:**
+
+```
+/plugin marketplace add elastic/integration-skills
+/plugin install integration-skills@elastic-integration-skills
+```
+
+Once installed, skills are namespaced under the plugin name when invoked explicitly (e.g. `/integration-skills:create-integration`). They still trigger automatically from their descriptions, so you can also just describe what you want and the agent picks the right skill.
+
+**Auto-update:** After installation, Claude Code keeps the plugin current in the background. No manual `npx skills update` step needed.
+
 ### Local clone
 
 If you prefer to work from a local checkout, or your environment does not have Node.js / npx, clone the repository and copy the `skills/` folder into the config directory your agent expects:

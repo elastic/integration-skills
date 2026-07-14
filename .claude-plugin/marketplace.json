@@ -1,0 +1,12 @@
+{
+  "name": "elastic-integration-skills",
+  "owner": { "name": "Elastic" },
+  "description": "Elastic skills for Claude Code.",
+  "plugins": [
+    {
+      "name": "integration-skills",
+      "source": ".",
+      "description": "Build, review, and maintain Elastic integration packages."
+    }
+  ]
+}
