@@ -34,7 +34,7 @@ services:
     command: /bin/sh -c "cp /sample_logs/* /var/log/"
 
   <package>-<stream>-tcp:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command: log --start-signal=SIGHUP --delay=5s --addr elastic-agent:<port> -p=tcp /sample_logs/<logfile>.log

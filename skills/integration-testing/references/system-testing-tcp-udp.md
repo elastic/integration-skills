@@ -12,13 +12,13 @@ TCP/UDP system tests use `elastic/stream` as a log sender that replays sample lo
 version: '2.3'
 services:
   <package>-<stream>-tcp:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command: log --start-signal=SIGHUP --delay=5s --addr elastic-agent:<port> -p=tcp /sample_logs/<logfile>.log
 
   <package>-<stream>-udp:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command: log --start-signal=SIGHUP --delay=5s --addr elastic-agent:<port> -p=udp /sample_logs/<logfile>.log
@@ -28,7 +28,7 @@ For TLS-over-TCP, use `-p=tls --insecure`:
 
 ```yaml
   <package>-<stream>-tls:
-    image: docker.elastic.co/observability/stream:v0.18.0
+    image: docker.elastic.co/observability/stream:v0.22.0
     volumes:
       - ./sample_logs:/sample_logs:ro
     command: log --start-signal=SIGHUP --delay=5s --addr elastic-agent:<port> -p=tls --insecure /sample_logs/<logfile>.log
