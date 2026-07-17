@@ -5,8 +5,24 @@
   "plugins": [
     {
       "name": "integration-skills",
-      "source": ".",
-      "description": "Build, review, and maintain Elastic integration packages."
+      "source": "./",
+      "description": "Build, review, and maintain Elastic integration packages.",
+      "skills": [
+        "./skills/anonymize-logs",
+        "./skills/cel-programs",
+        "./skills/create-integration",
+        "./skills/dashboard-guidelines",
+        "./skills/dashboard-review",
+        "./skills/ecs-field-mappings",
+        "./skills/elastic-package-cli",
+        "./skills/ingest-pipelines",
+        "./skills/input-configurations",
+        "./skills/integration-testing",
+        "./skills/maintain-integration",
+        "./skills/package-spec",
+        "./skills/research-integration",
+        "./skills/review-integration"
+      ]
     }
   ]
 }
