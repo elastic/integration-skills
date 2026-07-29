@@ -251,3 +251,4 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - **Never include `data_stream.dataset` in `cel.yml.hbs` or as a manifest var for integration packages** (`type: integration`). The framework routes documents automatically. Only input-type packages (`type: input`) use this field. Setting it in an integration package overrides routing and causes "0 hits" in system tests.
 - Set version to `0.1.0` for new integrations.
 - Do not load domain-specific skills (CEL, pipelines, ECS, field mappings) into your own context. Delegate to subagents.
+- This workflow does not cover opening the PR. Once a PR exists, `changelog.yml`'s placeholder link (`pull/99999`) must be replaced with the real PR number and pushed before merge -- see `package-spec` skill's "Updating the changelog link after PR creation".

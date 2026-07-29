@@ -135,8 +135,27 @@ Edit `changelog.yml` directly, or use `elastic-package changelog add` (see `elas
 - Adding the entry under the wrong version or not at the top
 - Missing `link` field -- `elastic-package lint` validates that the PR/issue number is a positive integer and **rejects** `pull/0`; use a real PR number or `pull/99999` as a development placeholder and replace before merge
 - Bumping manifest/package version inconsistently with changelog intent
+- **Forgetting to swap the placeholder link back in** -- see below
 
 See `references/changelog-patterns.md` for detailed patterns, breaking-change checklist, and CI examples.
+
+## Updating the changelog link after PR creation
+
+The changelog `link` field must point to the PR that introduces the change, but the
+real PR number is only known once a PR has actually been opened -- everything up to
+that point necessarily uses the `pull/99999` placeholder from the pitfall above. This
+step is easy to skip because it happens *after* the rest of the package work is done,
+outside the usual build/test loop.
+
+Once the PR exists on GitHub:
+
+1. Get the real PR number (from `gh pr create` output or the PR URL).
+2. In `changelog.yml`, replace every placeholder link
+   (`https://github.com/elastic/integrations/pull/99999`) with
+   `https://github.com/elastic/integrations/pull/<real-number>`.
+3. Run `elastic-package lint` to confirm the link now validates.
+4. Commit and push the update to the same PR branch -- the placeholder must not be
+   present in the version that gets merged.
 
 ---
 
