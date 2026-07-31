@@ -131,6 +131,31 @@ options to emit). If federation-required vars are missing, copy their
 definitions from the `aws` package (same names, types, `show_user: false`,
 `required: false` — the var_group controls requirement).
 
+**If the audit finds NO AWS credential vars at all** (no access keys, no
+`role_arn`, no `auth.aws` block in any stream template), do not proceed
+silently and do not hard-abort. First verify whether the underlying input
+actually supports AWS authentication:
+
+1. Check the input's beats module / agent implementation: does it consume
+   `auth.aws` (or equivalent AWS credential config) at all? An input that
+   reads a local endpoint (e.g. `awsfargate/metrics` reading the ECS task
+   metadata endpoint from inside the task) makes no AWS API calls — added
+   credential vars would be dead configuration.
+2. **If the input supports AWS auth** but the package never exposed the
+   vars: **ask the user** whether to add the minimum required credential
+   var set for agentless + Federated Identity:
+   - `role_arn`, `external_id`, `supports_identity_federation`
+     (the `identity_federation` option)
+   - `access_key_id`, `secret_access_key` (the `direct_access_key` option —
+     the only other option visible in agentless mode)
+
+   On yes: add these per §1.1, emit only those two var_group options in
+   §1.2, and add the full `auth.aws` block to the stream templates per §4.
+3. **If the input does not support AWS auth**: stop with an actionable
+   report naming the input and why scaffolding vars would be dead config —
+   and flag the package for removal from the rollout scope if an issue
+   lists it.
+
 > **Unverified assumption:** the package-spec validator accepts input-level
 > var references, but Fleet UI rendering of var_groups against input-level
 > vars has not been end-to-end verified. If the UI misbehaves, fall back to
