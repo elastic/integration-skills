@@ -624,7 +624,14 @@ For **every IAM action** declared in §3, list:
 ### 9.3 End-to-end test plan (research the data path)
 
 Spell out concretely how to make the integration produce data — the AWS-side
-setup a tester must perform, not just the Kibana-side clicks:
+setup a tester must perform, not just the Kibana-side clicks. **Embed this
+plan in the integrations PR body as an `## E2E test plan` section** (not just
+in the handoff to the user): reviewers and testers must see it without
+hunting through comments, and the hold-merge gate references it. Start the
+section by naming what the run uniquely proves (e.g. that the `auth.aws`
+signer handles the program's request shape against real AWS — mocks don't
+verify signatures), and end it with a regression line covering the legacy
+credential paths the change touches.
 
 1. **Prerequisite AWS resources**: what must be enabled/created in the test
    account (the service itself, detectors/hubs/standards, source resources).
