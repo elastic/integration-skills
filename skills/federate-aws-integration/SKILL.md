@@ -184,6 +184,28 @@ actually supports AWS authentication:
 - If `deployment_modes.agentless.enabled: true` already exists on the target
   policy templates, skip §1.4.
 
+### 0.5 Find tests that assert the behavior you are about to remove
+
+Check the data stream's `_dev/test/` for tests coupled to the pre-migration
+auth behavior — they pass locally (lint/build don't run them) and then fail
+in CI:
+
+- **`scripts/`**: script tests asserting a hand-rolled credential gate's
+  error message. Precedent: `aws/config`'s `missing_credentials` test
+  asserted "access_key_id and secret_access_key required" — a message the
+  auth.aws migration deletes. Rewrite such tests to the new contract: the
+  unauthenticated request fails at the AWS API and the program surfaces its
+  own stable error wrapper as an error event (assert the wrapper prefix, not
+  the environment-dependent AWS exception text), with no data events.
+- **`policy/`**: rendered-policy snapshots that embed the old hbs output
+  (manual `Authorization`/`X-Amz-Date` transforms, creds-in-state). Any
+  snapshot containing the signing machinery goes stale the moment the hbs
+  changes — regenerate it.
+
+```bash
+grep -rl "access_key\|Authorization\|X-Amz" packages/<pkg>/data_stream/<stream>/_dev/test/
+```
+
 ---
 
 ## 1 — Package `manifest.yml` changes
