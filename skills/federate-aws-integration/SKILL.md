@@ -583,3 +583,83 @@ add a separate changelog entry for it.
 **elastic/kibana PR** (only if joining a policy group, §5):
 - [ ] Adds package to `CLOUD_CONNECTOR_PERMISSION_ALLOWLIST`
 - [ ] Links to the integrations PR
+
+**elastic/cloudbeat PR** (the §3.1 CFT mirror):
+- [ ] One PR per integration, stacked on the incremental-baseline PR
+- [ ] Links to the integrations PR whose `provider_permissions` it mirrors
+
+---
+
+## 9 — Human validation handoff (generate this, always)
+
+End every run by producing a checklist **tailored to the target package** for
+the human to work through. The sections below define what it must cover;
+research the package-specific answers — never emit generic placeholders.
+
+### 9.1 Permission claims to verify
+
+For **every IAM action** declared in §3, list:
+
+- The action, the API call it authorizes (from the CEL program / hbs / beats
+  module), and the **primary-source citation** (AWS API reference page).
+- Any action whose name differs from the API operation name, flagged
+  prominently. These are the silent killers — e.g. Security Hub's
+  `GetFindingsV2` operation authorizes as `securityhub:GetFindings`; a
+  reviewer who "corrects" it to `securityhub:GetFindingsV2` breaks the role.
+- Whether the set is least-privilege: no action the collector doesn't call,
+  no `*` wildcards, `Resource: '*'` justified (most read/list APIs are not
+  resource-scopable — say so explicitly if that's the justification).
+
+### 9.2 Cross-PR consistency to verify
+
+- The IAM actions in the integrations PR's `provider_permissions`, the
+  cloudbeat PR's CFT policy, and (once live) the IaCP-rendered template are
+  **identical sets** — a drift between them means the fallback and primary
+  paths grant different permissions.
+- `iac_template_url` version segment matches the package's Kibana floor
+  minor.
+- Merge order documented: hygiene PR (if any) → integrations PR; CFT baseline
+  → CFT per-integration PR; the fallback URL 404s until the CFT publishes.
+
+### 9.3 End-to-end test plan (research the data path)
+
+Spell out concretely how to make the integration produce data — the AWS-side
+setup a tester must perform, not just the Kibana-side clicks:
+
+1. **Prerequisite AWS resources**: what must be enabled/created in the test
+   account (the service itself, detectors/hubs/standards, source resources).
+2. **Event generation**: what has to *happen* for ingestible records to
+   exist — findings only appear if something generates them. Name the
+   fastest trigger (sample findings, a deliberately noncompliant resource,
+   a scheduled scan).
+3. **Latency expectations**: how long after the trigger until the API
+   returns data, so a tester doesn't declare failure prematurely.
+4. **Where to look in Kibana**: the exact target data stream
+   (`logs-<package>.<stream>-<namespace>` or metrics equivalent) and one
+   field to sanity-check.
+5. **Failure probes**: what an authorization failure looks like in agent
+   logs (e.g. `AccessDeniedException` naming the missing action) vs. an
+   empty-but-authorized result.
+
+Worked example for `aws_securityhub`:
+
+> 1. Enable Security Hub in the test account/region; enable at least one
+>    standard (AWS Foundational Security Best Practices) so controls run.
+> 2. Fastest data: Security Hub generates findings from the enabled
+>    standard's automated checks within ~2h of enablement; deliberately
+>    noncompliant resources (e.g. an unencrypted S3 bucket) accelerate
+>    real findings. GuardDuty sample findings also flow in if GuardDuty
+>    integration is on.
+> 3. First control-check findings typically minutes-to-hours after
+>    enabling a standard; budget 2h before concluding failure.
+> 4. Kibana: `logs-aws_securityhub.finding-*`; sanity-check
+>    `aws_securityhub.finding.class_uid` is populated.
+> 5. Auth failure: agent CEL log shows HTTP 403 with
+>    `AccessDeniedException` on `POST /findingsv2`; authorized-but-empty
+>    returns HTTP 200 with `"Findings": []`.
+
+### 9.4 Open assumptions
+
+Restate anything the run marked unverified (e.g. the Fleet UI input-level
+var_groups rendering assumption from §0.3) so the human knows what hasn't
+been proven, not just what has.
