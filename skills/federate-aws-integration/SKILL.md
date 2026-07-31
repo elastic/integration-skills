@@ -63,6 +63,26 @@ Confirm:
 
 Constraints that are too low get bumped as part of §1 — note them now.
 
+> **Escalation: the bump would abandon users on a supported stack.** If the
+> current Kibana constraint covers a stack line that the new `^9.4.0` floor
+> drops (e.g. `^8.16.5 || ^9.0.0` — all 8.x users lose updates), do NOT bump
+> silently; that is a product decision. Report it and suggest the branching
+> strategy from elastic/ingest-dev#8788 ("The Path Forward for Identity
+> Federation"), proven on the `aws` package:
+>
+> 1. Bump the package **major version** on `main`, freeing the previous
+>    major's version namespace for a backport branch.
+> 2. Cut a long-running `backport-<package>-<N>.x` branch from the last
+>    release commit. It keeps the old `format_version` and Kibana floor and
+>    carries both patch **and** minor fixes for old-stack users.
+> 3. EPR version routing does the rest: old stacks resolve the backport
+>    line, new stacks resolve `main`.
+> 4. Split the PRs: the major/spec bump lands separately from the
+>    federation (`var_groups`) change.
+>
+> This needs sign-off from every team in the package's CODEOWNERS before any
+> constraint changes.
+
 ### 0.2 Identify agentless-eligible inputs
 
 Only these input types can run agentless and therefore support federation:
@@ -77,7 +97,14 @@ Only these input types can run agentless and therefore support federation:
 For each policy template, list every input and mark it eligible (E) or
 ineligible (I). You will use this list in §2, §3, and §4.
 
-If **no** inputs are eligible, federation cannot be added — stop and report.
+If **no** inputs are eligible, federation cannot be added — stop. The report
+must be actionable, not just negative: name each blocking input type and the
+upstream dependency that would unblock it. Example, for an `aws-s3`-only
+package:
+
+> `<package>` cannot be federated: its only input is `aws-s3`, which does not
+> run agentless. Blocked until the `aws-s3` input supports agentless
+> deployments; no package-level change can work around that.
 
 ### 0.3 Audit the credential vars
 
