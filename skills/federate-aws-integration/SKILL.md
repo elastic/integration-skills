@@ -5,9 +5,10 @@ description: >
   integration package in elastic/integrations. Use when asked to "add federation
   to <package>", "enable Identity Federation on <package>", or to repeat the
   pattern proven on the `aws` package for another AWS integration. Template
-  generation is handled by the IaC Provider (IaCP) — no static CFT URL is used.
-  Produces manifest edits, provider_permissions declarations, agent-template
-  patches, a changelog entry, and a validation checklist.
+  generation is IaC Provider (IaCP)-first, with the incremental static
+  federated-identity CFT wired as the fallback via iac_template_url.
+  Produces manifest edits, provider_permissions declarations, a CFT update,
+  agent-template patches, a changelog entry, and a validation checklist.
 license: Apache-2.0
 metadata:
   author: elastic
@@ -24,16 +25,21 @@ Use this skill when tasks include:
 - Repeating the var_groups / auth.aws / provider_permissions pattern proven on the `aws` package
 - Determining whether a package's inputs are eligible for federation
 
-Template generation is IaC Provider (IaCP)-driven. The `cloud-iac-provisioner`
+Template generation is IaC Provider (IaCP)-first: the `cloud-iac-provisioner`
 service renders IAM role templates dynamically at onboard time from the
-package's declared `provider_permissions`. Do **not** add a static
-CloudFormation quick-create URL (`iac_template_url`) for packages added via
-this skill — that belongs to the older static-CFT flow.
+package's declared `provider_permissions`. The static
+`federated-identity-aws.yml` CFT (elastic/cloudbeat) is the **fallback** —
+Kibana opens it via the option's `iac_template_url` when the IaCP render
+fails (422/502). Both are fed from the same `provider_permissions`
+declarations: §3 declares them, §3.1 mirrors them into the CFT, §1.2 wires
+the fallback URL.
 
 > **Warning when reading the `aws` package as a reference:** its
 > `identity_federation` var_groups option carries an `iac_template_url`
-> pointing at a static GuardDuty CFT. That is the legacy flow — do not copy
-> that key into new packages.
+> pointing at the legacy GuardDuty-only CFT
+> (`cloudformation-cloud-connectors-guardduty-*.yml`). Do not copy that URL —
+> new packages point at the incremental `federated-identity-aws` template
+> (§1.2).
 
 ## Background
 
@@ -234,6 +240,7 @@ var_groups:
         vars: [role_arn, external_id, supports_identity_federation]
         hide_in_deployment_modes: [default]
         provider: aws
+        iac_template_url: https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=https://elastic-cspm-cft.s3.eu-central-1.amazonaws.com/cloudformation-federated-identity-aws-9.4.0.yml&param_ElasticResourceId=RESOURCE_ID
       - name: direct_access_key
         title: Direct Access Keys
         vars: [access_key_id, secret_access_key]
@@ -275,8 +282,18 @@ Rules enforced by the package-spec validator:
 - Vars referenced by a var_group **must not have `required: true`** —
   requirement is controlled by the var_group itself.
 
-Note: `iac_template_url` is intentionally omitted from `identity_federation`.
-Template generation is handled by the IaC Provider at onboard time.
+**`iac_template_url` is the fallback path.** Kibana renders via the IaC
+Provider first; when the render fails (422/502) it falls back to opening this
+quick-create URL. It uses the same S3 bucket and URL shape as the merged
+`aws` package's URL, but with the incremental `federated-identity-aws`
+template (published by cloudbeat's `publish_cft.sh` as
+`cloudformation-federated-identity-aws-<version>.yml`). Pin the version
+segment to the package's Kibana floor minor (e.g. `9.4.0`), matching the
+`aws` package convention. Keep `RESOURCE_ID` literal — Kibana substitutes it.
+
+> The fallback only works once the template is published to S3
+> (cloudbeat#7422 must merge and release first). Until then the URL 404s on
+> fallback — the integrations PR should note that dependency.
 
 ### 1.3 Bump `format_version` and conditions
 
@@ -403,6 +420,50 @@ Optional `roles` attach managed policies alongside inline permissions:
 To determine the correct IAM actions, check the input's actual API calls
 (agent stream template, CEL program, or beats module docs) — do not guess.
 Prefer the minimal read-only set.
+
+### 3.1 Mirror the permissions into the static CFT (bridge until IaCP ships)
+
+Until the IaC Provider render path is live end-to-end, the deployable
+template is the static `deploy/cloudformation/federated-identity-aws.yml` in
+elastic/cloudbeat. It grows **incrementally**: one block per federated
+integration, containing exactly the permissions that integration declared in
+§3 — never grant ahead of a declaration.
+
+For each `provider_permissions` entry with `provider: aws`:
+
+- **`permissions`** → add one inline policy resource named after the package
+  (CamelCase with an `Elastic` prefix, e.g. `ElasticAwsSecurityHub`),
+  attached to `ElasticFederatedIdentityRole`:
+
+```yaml
+  ElasticAwsSecurityHub:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ElasticAwsSecurityHub
+      Roles:
+        - !Ref ElasticFederatedIdentityRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # <package>: <description from provider_permissions>
+          - Sid: ElasticAwsSecurityHubRead
+            Effect: Allow
+            Action:
+              - securityhub:GetFindings
+            Resource: '*'
+```
+
+- **`roles`** (managed policies) → append each `id` ARN to the role's
+  `ManagedPolicyArns`, with a comment naming the declaring package.
+
+Validate with `cfn-lint` (or `pre-commit run cfn-python-lint --files
+deploy/cloudformation/federated-identity-aws.yml`).
+
+> **Current state:** the template lives on the unmerged cloudbeat PR branch
+> (`seanrathier/federated-identity-aws-cft`, cloudbeat#7422 — being reworked
+> from an all-at-once grant to this incremental model). Until it merges and
+> publishes to S3, apply this step in the local cloudbeat checkout only; the
+> integrations PR must not depend on the unpublished template.
 
 ---
 
