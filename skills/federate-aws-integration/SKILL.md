@@ -83,6 +83,16 @@ Constraints that are too low get bumped as part of §1 — note them now.
 > This needs sign-off from every team in the package's CODEOWNERS before any
 > constraint changes.
 
+> **Expect new validators to fire on old files.** A `format_version` jump can
+> activate stricter semantic validation (e.g. pipeline processors requiring
+> `tag`, `on_failure` message format) against files this skill never touches.
+> Before making any federation edits, apply only the `format_version` bump
+> and run `elastic-package lint` to size the cleanup — on `aws_securityhub`,
+> the 3.5.0 → 3.6.4 bump surfaced 514 pre-existing pipeline violations. Land
+> those as a separate mechanical "pipeline hygiene" PR first (precedent:
+> elastic/integrations#19824 for the `aws` package), then rebase the
+> federation change on top.
+
 ### 0.2 Identify agentless-eligible inputs
 
 Only these input types can run agentless and therefore support federation:
