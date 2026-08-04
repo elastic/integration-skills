@@ -24,6 +24,24 @@ Every subagent task prompt must:
 | `integration-testing/references/builder-system-test-subagent-guidance.md` | After pipeline work, for each testable data stream (CEL, tcp, udp, http_endpoint, logfile, filestream, kafka, gcp-pubsub) | Runs `elastic-package build` + `elastic-package test system --data-streams <stream> --generate`, reads failure logs, reports pass/fail and whether `sample_event.json` was produced. |
 | `review-integration/references/reviewer-subagent-guidance.md` | After all streams are built | Read-only quality review: classifies files by domain via the `review-integration` skill, runs check/lint/format validation, inspects manifest/fields/pipeline/CEL/docs/changelog, returns severity-ranked domain-tagged findings. |
 
+## Phase 0: Verify prerequisites
+
+Before creating any files, verify all required tools are present.
+
+`elastic-package` is always required:
+
+```bash
+elastic-package --help
+```
+
+If any CEL data streams are planned, also verify:
+
+```bash
+mito -version && celfmt -version && ceplx -version && stream -version
+```
+
+If CEL tools are missing, install them now — see `references/scaffold-commands.md` Preconditions for install commands. Do not skip this: missing tools produce silent degraded output (`celfmt` and `ceplx` steps are silently skipped rather than failing with a clear error) and the resulting PR will require extra review cycles.
+
 ## Phase 1: Parse context
 
 1. Extract from the user message: package name, product description, input type(s), data stream name(s), auth method, pagination pattern, and any constraints.

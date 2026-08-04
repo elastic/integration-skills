@@ -84,6 +84,8 @@ Also load:
 
 Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, etc.). Those are for implementation, not research.
 
+**Downstream tooling note:** The research workflow itself has no CEL tooling requirements. However, if the recommended collection method turns out to be API-based (CEL input), the downstream `/create-integration` run will need `mito`, `celfmt`, `ceplx`, and `stream` installed. Surface this in the Phase 8 summary so the user can verify their toolchain before switching to build mode.
+
 ## Output location
 
 Write all research output to:
