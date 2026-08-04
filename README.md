@@ -58,6 +58,8 @@ The following tools must be installed and available on `$PATH` for the agent wor
 
 All Go tools require a working [Go](https://go.dev/dl/) installation with `$GOPATH/bin` on your `$PATH`.
 
+> **Windows:** `go install github.com/elastic/stream@latest` does not compile on Windows (`unix.SignalNum` is undefined). Use the Docker image `docker.elastic.co/observability/stream` for the mock server instead. The other Go tools (`elastic-package`, `mito`, `celfmt`, `ceplx`, `kbdash`) install and run normally on Windows.
+
 ### npx (Recommended)
 
 The fastest way to install skills is with the skills CLI. No need to clone this repository — just run:
@@ -141,6 +143,17 @@ npx skills update
 ```
 
 **Working with the integrations repository:** If you are developing integrations against [`elastic/integrations`](https://github.com/elastic/integrations), run these skills from a checkout of that repo or point your agent at that tree. This gives the agent the real package layout, shared conventions, and surrounding packages for context. Several `elastic-package` commands (system tests, workspace-aware workflows) also require an integrations-style workspace to run correctly.
+
+## Recommended workflow
+
+Run `/research-integration` first to investigate the vendor's API, data formats, and field schemas, then pass the research output directly into `/create-integration`:
+
+```
+/research-integration <vendor or product name>
+/create-integration @research_results/<product_slug>/research-brief.md
+```
+
+Skipping `/research-integration` or bringing a pre-existing collector (such as a Go program to adapt into a CEL program) deviates from the optimized path and may produce lower-quality output — the build skills are tuned to consume the structured research brief format.
 
 ## Skills reference
 
