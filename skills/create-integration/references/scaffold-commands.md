@@ -91,14 +91,14 @@ dependencies:
     reference: "git@v9.3.0"
 ```
 
-Create this before creating any data streams.
+Create this before creating any data streams. For new packages, always use `git@v9.3.0`. When adding a data stream to an existing package, match the package's current ECS reference in `_dev/build/build.yml` — only bump if the new stream requires a field unavailable in that version.
 
 ### 2. Update root `manifest.yml`
 
 - Set `title`, `description`, `version` (use `0.1.0` for new integrations)
 - Set `categories` (one or two relevant values)
 - Set `owner` (github team/org)
-- Set `format_version: "3.4.2"`. The scaffold may generate a different version — always override to `3.4.2`.
+- Set `format_version: "3.4.2"`. The scaffold may generate a different version — always override to `3.4.2` for new packages. When adding to an existing package, match the package's current `format_version` instead — see `add-datastream-workflow.md` for the decision rule.
 - Set `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
 
 ### 3. Update `changelog.yml`
@@ -218,3 +218,4 @@ The scaffold may generate `default.yml` with an older `ecs.version` (e.g., `8.17
 - Manually creating `sample_event.json` or `*-expected.json`
 - Uncommenting `{{ event "stream" }}` before `sample_event.json` exists (causes build failure)
 - Leaving the verbose CEL scaffold unchanged — strip unused vars and replace placeholder CEL program
+- **Creating `LICENSE.txt` manually** — `elastic-package build` injects it automatically; committing a manually-created one is flagged in PR review
