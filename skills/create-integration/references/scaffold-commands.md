@@ -9,6 +9,29 @@ Before running scaffold commands, verify:
 2. you are in the correct directory (see working directory rules below)
 3. package/data stream name is finalized (renames later are noisy)
 
+**For integrations with CEL data streams, also verify these tools before starting:**
+
+```bash
+mito -version      # github.com/elastic/mito/cmd/mito
+celfmt -version    # github.com/elastic/mito/cmd/celfmt
+ceplx -version     # github.com/efd6/ceplx/cmd/ceplx
+stream -version    # github.com/elastic/stream/cmd/stream
+```
+
+Missing CEL tools produce silent degraded output — `celfmt` and `ceplx` steps are skipped without warning, resulting in PRs that require extra review cycles to catch what the tooling should have caught automatically. Install any missing tools before proceeding:
+
+```bash
+go install github.com/elastic/mito/cmd/mito@latest
+go install github.com/elastic/mito/cmd/celfmt@latest
+go install github.com/efd6/ceplx/cmd/ceplx@latest
+go install github.com/elastic/stream/cmd/stream@latest
+# All install to ~/go/bin/ — ensure that is on PATH
+```
+
+> **Windows:** `go install github.com/elastic/stream@latest` does not compile on Windows.
+> Use `docker.elastic.co/observability/stream` for the mock server instead.
+> See `cel-programs/references/mito-reference.md` for details.
+
 ## Working directory rules
 
 - `create package`: run from the `packages/` directory
