@@ -58,7 +58,7 @@ The following tools must be installed and available on `$PATH` for the agent wor
 
 All Go tools require a working [Go](https://go.dev/dl/) installation with `$GOPATH/bin` on your `$PATH`.
 
-> **Windows:** `go install github.com/elastic/stream@latest` does not compile on Windows (`unix.SignalNum` is undefined). Use the Docker image `docker.elastic.co/observability/stream` for the mock server instead. The other Go tools (`elastic-package`, `mito`, `celfmt`, `ceplx`, `kbdash`) install and run normally on Windows.
+> **Windows:** All Go tools install and run on Windows. The Docker image `docker.elastic.co/observability/stream` is an alternative to `go install` for the mock server if you prefer not to use Go. Bash examples using process substitution or Unix paths require manual adaptation.
 
 ### npx (Recommended)
 

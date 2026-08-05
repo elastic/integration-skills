@@ -14,11 +14,10 @@ mito -version
 stream version
 ```
 
-> **Windows:** `go install github.com/elastic/stream@latest` does not compile on
-> Windows (`unix.SignalNum` is undefined). Use the Docker image
-> `docker.elastic.co/observability/stream` instead. Examples in this reference
+> **Windows:** All tools install and run on Windows. Examples in this reference
 > that use bash process substitution (`<(echo ...)`) or Unix paths require manual
-> adaptation on Windows.
+> adaptation. The Docker image `docker.elastic.co/observability/stream` is an
+> alternative to `go install` for the mock server if you prefer not to use Go.
 
 ---
 
