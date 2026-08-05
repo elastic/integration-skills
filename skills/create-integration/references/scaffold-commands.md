@@ -28,10 +28,6 @@ go install github.com/elastic/stream/cmd/stream@latest
 # All install to ~/go/bin/ — ensure that is on PATH
 ```
 
-> **Windows:** `go install github.com/elastic/stream@latest` does not compile on Windows.
-> Use `docker.elastic.co/observability/stream` for the mock server instead.
-> See `cel-programs/references/mito-reference.md` for details.
-
 ## Working directory rules
 
 - `create package`: run from the `packages/` directory
