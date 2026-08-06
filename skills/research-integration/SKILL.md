@@ -79,7 +79,7 @@ If the collection method is unknown at invocation time, read all three checklist
 Also load:
 
 5. `ecs-field-mappings` skill -- for ECS field mapping guidance during the analysis phase
-6. `references/competitive-siem-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
+6. `references/market-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
 7. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
 
 Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, etc.). Those are for implementation, not research.
@@ -104,7 +104,7 @@ research_results/<product_slug>/
     api-spec-notes.md         # API endpoint details, request/response examples (if API)
     log-format-notes.md       # log format details, sample lines (if log-based)
     field-schema-analysis.md  # detailed field inventories written by subagents
-    competitive-siem-coverage.md  # detailed competitive SIEM analysis (always created)
+    market-coverage.md  # detailed market coverage analysis (always created)
     sample-events/            # representative sample data files
       <event_type>.json       # one file per event type or data format variant
       <event_type>.log
@@ -142,7 +142,7 @@ Launch multiple research subagents in parallel using the platform's generic / ge
 
 **Required structure for every research subagent task prompt:**
 
-1. **Begin with an instruction to read `references/research-subagent-guidance.md`** (relative to the `research-integration` skill) end-to-end before doing any other work. That file is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. **Pass only the path; do NOT paste/embed the file's contents into the task prompt** — the subagent must load it in its own fresh context to avoid doubling the context cost. Track E follows the same pattern for the competitive-SIEM checklist.
+1. **Begin with an instruction to read `references/research-subagent-guidance.md`** (relative to the `research-integration` skill) end-to-end before doing any other work. That file is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. **Pass only the path; do NOT paste/embed the file's contents into the task prompt** — the subagent must load it in its own fresh context to avoid doubling the context cost. Track E follows the same pattern for the market coverage checklist.
 2. **State the working directory explicitly** so the subagent knows where to write:
    ```
    Working directory: research_results/<product_slug>/
@@ -222,31 +222,31 @@ Instruct the subagent to investigate:
 
 Provide: product name, collection method, any documentation URLs.
 
-#### Research Track E: Competitive SIEM coverage (always launch)
+#### Research Track E: Market coverage (always launch)
 
 **Always launch this track** in parallel with the other tracks. It is not conditional on collection method.
 
 Instruct the subagent to check whether IBM QRadar, Splunk, and Sumo Logic have an existing integration or app for the product being researched, and to document what each covers and how it collects data.
 
-The subagent must follow `references/competitive-siem-coverage-checklist.md` end-to-end. Point the subagent at that file **by path** and instruct it to read the entire file before doing any other work. **Do NOT paste the checklist contents into the task prompt** — the subagent will load it in its own fresh context. (This is in addition to the read-`references/research-subagent-guidance.md`-by-path directive from Phase 2.)
+The subagent must follow `references/market-coverage-checklist.md` end-to-end. Point the subagent at that file **by path** and instruct it to read the entire file before doing any other work. **Do NOT paste the checklist contents into the task prompt** — the subagent will load it in its own fresh context. (This is in addition to the read-`references/research-subagent-guidance.md`-by-path directive from Phase 2.)
 
-Competitor catalog starting points to include in the prompt:
+Platform catalog starting points to include in the prompt:
 - IBM QRadar: `https://www.ibm.com/products/qradar-siem/integrations`
 - Splunk: `https://splunkbase.splunk.com/apps`
 - Sumo Logic: `https://www.sumologic.com/help/docs/integrations/`
 
-For each competitor, the subagent must determine:
+For each platform, the subagent must determine:
 - Whether a matching integration/app exists (exact, partial, or no match)
 - Integration/app name, publisher, direct catalog link, version, and last-updated date
 - Which data sources and event types it covers (be specific, not generic)
 - Collection method used (API pull, syslog push, agent/forwarder, cloud delivery, etc.)
 - Protocol and wire format details (CEF, LEEF, JSON, key-value, etc.) if documented
 - Support tier (vendor-maintained, platform-built, community/partner, or unsupported)
-- Notable gaps or differentiators compared to what Elastic could offer
+- Notable gaps in coverage across all platforms
 
-Output: write all findings to `references/competitive-siem-coverage.md` using the structure defined in the checklist (summary table → per-competitor H2 sections → comparison notes). Return a concise inline summary with which competitors have integrations, the dominant collection method found, and the path to the written file.
+Output: write all findings to `references/market-coverage.md` using the structure defined in the checklist (summary table → per-platform H2 sections → comparison notes). Return a concise inline summary with which platforms have integrations, the dominant collection method found, and the path to the written file.
 
-Provide: product name, vendor name, common aliases or abbreviations for the product, and the **path** to `references/competitive-siem-coverage-checklist.md` (so the subagent reads it itself — do not paste the checklist content into the prompt).
+Provide: product name, vendor name, common aliases or abbreviations for the product, and the **path** to `references/market-coverage-checklist.md` (so the subagent reads it itself — do not paste the checklist content into the prompt).
 
 ### Phase 3: Synthesize and supplement
 
@@ -259,7 +259,7 @@ After all subagents return:
 5. **Resolve conflicts** between subagent findings. When sources disagree, prefer official vendor documentation over third-party sources.
 6. **Collect sample data** -- extract or compile representative sample events from documentation, API response examples, or log format guides. Save each as a separate file in the `sample-events/` subdirectory.
 7. **Review temp/ artifacts** if needed. Subagents may have downloaded repos, SDKs, or schemas into `temp/`. You can inspect these directly if you need more detail than what the subagent summaries and reference files provide.
-8. **Read `references/competitive-siem-coverage.md`** (written by Track E). Extract the summary table and overall comparison notes — these are used directly in section 1.5 of the research brief.
+8. **Read `references/market-coverage.md`** (written by Track E). Extract the summary table and overall comparison notes — these are used directly in section 1.5 of the research brief.
 
 ### Phase 4: ECS mapping analysis
 
@@ -288,7 +288,7 @@ Compile the full research brief following the template in `references/research-o
 
 The brief must be self-contained -- a reader should be able to use it as the sole input to `/create-integration` and have everything they need.
 
-When populating **section 1.5 (Competitive SIEM Coverage)**, use the summary table extracted from `references/competitive-siem-coverage.md` in Phase 3 step 8. Include the one-line summary paragraph and the three-row competitor table inline, then add a reference pointer: `See references/competitive-siem-coverage.md for full per-vendor analysis.`
+When populating **section 1.5 (Market Coverage)**, use the summary table extracted from `references/market-coverage.md` in Phase 3 step 8. Include the one-line summary paragraph and the three-row platform table inline, then add a reference pointer: `See references/market-coverage.md for full per-platform analysis.`
 
 ### Phase 7: API test script (API/CEL collection only)
 

@@ -37,17 +37,17 @@ Every section below should be populated. If a section does not apply, include it
 
 <Does an Elastic integration already exist for this product (check `integrations/packages/` and `packages/`)? If yes, what does it cover and what gaps exist? If no, note that this is a new integration.>
 
-### 1.5 Competitive SIEM coverage
+### 1.5 Market coverage
 
-<1-2 sentence summary of the overall competitive landscape: which competitors have integrations for this product, and how comprehensive is their coverage.>
+<1-2 sentence summary of the overall market landscape: which platforms have integrations for this product, and how comprehensive is their coverage.>
 
-| Vendor | Integration name | Supported data sources | Collection method | Link |
-|--------|-----------------|----------------------|-------------------|------|
+| Platform | Integration name | Supported data sources | Collection method | Link |
+|----------|-----------------|----------------------|-------------------|------|
 | IBM QRadar | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 | Splunk | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 | Sumo Logic | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 
-See `references/competitive-siem-coverage.md` for full per-vendor analysis including support tier, version, gaps, and comparison notes.
+See `references/market-coverage.md` for full per-platform analysis including support tier, version, gaps, and comparison notes.
 
 ## 2. Data Collection Method
 
