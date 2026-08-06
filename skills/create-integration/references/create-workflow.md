@@ -37,10 +37,10 @@ elastic-package --help
 If any CEL data streams are planned, also verify:
 
 ```bash
-mito -version && celfmt -version && ceplx -version && stream -version
+for t in mito celfmt ceplx stream; do command -v "$t" >/dev/null || echo "MISSING: $t"; done
 ```
 
-If CEL tools are missing, install them now — see `references/scaffold-commands.md` Preconditions for install commands. Do not skip this: missing tools produce silent degraded output (`celfmt` and `ceplx` steps are silently skipped rather than failing with a clear error) and the resulting PR will require extra review cycles.
+If anything is reported missing, install it now with the single install loop in `references/scaffold-commands.md` Preconditions. Do not skip this: missing tools produce silent degraded output (`celfmt` and `ceplx` steps are silently skipped rather than failing with a clear error) and the resulting PR will require extra review cycles.
 
 ## Phase 1: Parse context
 
