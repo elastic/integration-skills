@@ -38,6 +38,7 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Manifest | format_version too low for features used | HIGH |
 | Manifest | conditions.kibana.version too low for agent features used | HIGH |
 | Manifest | Data stream duplicates root manifest fields | MEDIUM |
+| Changelog | `pull/99999` development placeholder link not replaced with the real PR number | MEDIUM |
 | Tests | No pipeline test fixtures | HIGH |
 | Tests | Missing test-common-config.yml | HIGH |
 | Input | Hardcoded credentials | CRITICAL |

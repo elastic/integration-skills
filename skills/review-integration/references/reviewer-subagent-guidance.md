@@ -192,6 +192,14 @@ changelog links (`pull/0`) and placeholder logos/icons are
 MEDIUM or HIGH. For subsequent versions, the same placeholders are
 real findings (MEDIUM or HIGH as appropriate).
 
+**Exception -- the `pull/99999` development placeholder.** Leniency
+does not apply to it, at any package version: flag it at **MEDIUM**.
+Unlike `pull/0`, `pull/99999` passes `elastic-package lint`, so
+nothing else catches it and it silently reaches merge as a dead
+changelog link. The fix is to replace it with the real PR number
+once the PR exists -- see the `package-spec` skill's "Updating the
+changelog link after PR creation".
+
 ### CEL-specific operating rules
 
 When CEL input is in scope, the `review-integration` skill requires
