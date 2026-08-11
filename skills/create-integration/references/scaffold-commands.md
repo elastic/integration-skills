@@ -99,7 +99,7 @@ Create this before creating any data streams. For new packages, always use `git@
 - Set `categories` (one or two relevant values)
 - Set `owner` (github team/org)
 - Set `format_version: "3.4.2"`. The scaffold may generate a different version — always override to `3.4.2` for new packages. When adding to an existing package, match the package's current `format_version` instead — see `add-datastream-workflow.md` for the decision rule.
-- Set `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
+- Set `conditions.kibana.version: "^8.19.0 || ^9.1.0"` for new packages. When adding to an existing package, match the current value instead — only bump if required.
 
 ### 3. Update `changelog.yml`
 
