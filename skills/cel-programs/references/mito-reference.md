@@ -16,8 +16,7 @@ stream version
 
 > **Windows:** All tools install and run on Windows. Examples in this reference
 > that use bash process substitution (`<(echo ...)`) or Unix paths require manual
-> adaptation. The Docker image `docker.elastic.co/observability/stream` is an
-> alternative to `go install` for the mock server if you prefer not to use Go.
+> adaptation.
 
 ---
 
