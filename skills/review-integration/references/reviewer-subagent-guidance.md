@@ -188,8 +188,9 @@ entirely rather than creating an empty one.
 `review-integration/references/conflict-resolutions.md` resolves the
 first-version-leniency conflict: for first-version packages
 (`0.0.1` / `1.0.0` with a single changelog entry), placeholder
-changelog links (`pull/0`) and placeholder logos/icons are
-**informational notes only, not findings**. Do not flag them at
+changelog links (`pull/99999` — the sanctioned placeholder;
+`elastic-package lint` rejects `pull/0`) and placeholder logos/icons
+are **informational notes only, not findings**. Do not flag them at
 MEDIUM or HIGH. For subsequent versions, the same placeholders are
 real findings (MEDIUM or HIGH as appropriate).
 

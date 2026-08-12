@@ -55,7 +55,7 @@ The domain skills state current standards as absolute rules (e.g., `ecs.version:
 |------|-----------|-----------------|
 | Processor tags on all processors | MEDIUM if missing | LOW (improvement suggestion). Tags are only enforced by `elastic-package check` at `format_version >= 3.6.0`. |
 | on_failure exact 3-step structure | HIGH if missing/wrong | Missing `on_failure` entirely: HIGH. Wrong structure/order: LOW (improvement). Full structure enforced from `format_version >= 3.6.0`. |
-| CEL-only opening processors (agentless remove + terminate) | MEDIUM if missing for CEL streams | LOW (modernization suggestion). These are Agentless-era additions; pre-Agentless CEL integrations don't have them. |
+| CEL-only opening processors (agentless remove + terminate, tagged `remove_agentless_tags`) | MEDIUM if missing on a NEW CEL stream in an agentless-enabled package (`deployment_modes.agentless.enabled: true`) or where sibling pipelines carry the block | LOW at most (modernization suggestion). Agentless-era additions; pre-Agentless CEL integrations don't have them — absence there is not a finding. |
 | JSE00001 exact 2-processor pattern | HIGH if missing | Verify `event.original` is preserved (the concept). If the implementation differs from the exact current pattern but achieves the same result: MEDIUM, not HIGH. |
 | ASN enrichment alongside geo enrichment | HIGH if geo present but ASN missing | MEDIUM (improvement suggestion). Geo+ASN pairing is a newer standard. |
 | `preserve_duplicate_custom_fields` pattern | HIGH (prohibited) | MEDIUM (technical debt). This was an officially recommended pattern before deprecation. Flag as HIGH only if the pipeline is being refactored in this change. |
@@ -96,6 +96,7 @@ For every file in scope, classify into a domain:
 | `manifest.yml` (root or data stream) | manifest |
 | `_dev/build/build.yml` | build |
 | `changelog.yml` | changelog |
+| `routing_rules.yml` | pipeline |
 | `_dev/test/pipeline/*` | tests |
 | `_dev/test/system/*` | tests |
 | `kibana/**/*.json` | dashboard |
@@ -115,6 +116,7 @@ Only load what the detected domains require. Do not load all skills for every re
 | fields | `ecs-field-mappings` SKILL.md | `checklists/field-review-checklist.md` |
 | input (CEL) | `cel-programs` SKILL.md | `checklists/cel-review-checklist.md` |
 | input (HTTPJSON) | `input-configurations` SKILL.md -> `references/httpjson-guide.md` | `checklists/httpjson-review-checklist.md` |
+| input (entity-analytics) | this skill's `references/entity-analytics-provider-matrix.md` | `checklists/entity-analytics-review-checklist.md` |
 | input (other types) | `input-configurations` SKILL.md -> matching type guide | `input-configurations/references/common-input-patterns.md` |
 | manifest + changelog | `package-spec` SKILL.md | `package-spec/references/manifest-rules.md` |
 | tests | `integration-testing` SKILL.md -> relevant testing reference | -- |
@@ -141,10 +143,13 @@ These references live in this skill's `references/` directory and provide review
 |---|---|
 | Always | `references/severity-rubric.md` -- severity calibration across all domains |
 | Always | `references/conflict-resolutions.md` -- known rule conflicts and resolution decisions |
+| Always | `references/review-output-template.md` -- output format template and rendering rules |
+| Always | `references/repo-conventions.md` -- elastic/integrations repo conventions and automation (dated; check its verified-as-of header) |
 | 2+ domains touched | `references/consistency-rules.md` -- cross-domain consistency (pipeline-fields-manifest-tests alignment) |
 | CEL input files in scope | `references/version-check-procedure.md` + `references/beats-mito-version-matrix.md` + `references/config-options-by-version.md` + `references/extensions-per-version.md` |
 | CEL input files in scope | `references/cel-validator-procedure.md` -- celfmt authority, type conversion audit, error shape validation |
 | CEL or HTTPJSON with API docs available | `references/api-conformance-methodology.md` -- cross-reference implementation vs vendor docs |
+| entity-analytics input in scope | `references/entity-analytics-provider-matrix.md` + `checklists/entity-analytics-review-checklist.md` -- provider sync/marker/deletion semantics and package checklist |
 | Any input templates in scope | `references/input-review-orchestration.md` -- review depth routing by input type |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
@@ -232,7 +237,7 @@ Every issue must include exactly one domain tag:
 | Tag | Covers |
 |-----|--------|
 | `domain:manifest` | Root or data stream manifest fields, format_version, conditions, categories, owner, policy templates |
-| `domain:changelog` | changelog.yml schema, version mismatch, missing entries, invalid links |
+| `domain:changelog` | changelog.yml schema, version mismatch, missing entries (missing = user-shipped package content changed without an entry/bump; internal metadata-only changes such as `owner.github` need none), invalid links (`pull/99999` dev placeholder is expected pre-merge — see conflict-resolutions), entry-type miscategorization only when the diff shows an observable compatibility/behavior change (re-bucketing bugfix/enhancement is editorial, not a finding) |
 | `domain:build` | `_dev/build/build.yml` missing or outdated, doc template issues |
 | `domain:pipeline` | Ingest pipeline correctness, JSE00001, on_failure, tags, ECS categorization in pipeline |
 | `domain:input` | Agent stream template issues -- all input types including CEL, HTTPJSON, AWS S3, TCP, etc. |
@@ -289,9 +294,12 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 | `references/input-review-orchestration.md` | Any input templates | Review depth routing by input type |
 | `references/transform-guide.md` | Transform in scope | Transform types, config, fields, sync, review checklist |
 | `references/cdr-transform-requirements.md` | CDR transforms | CDR latest transform requirements, destination naming, keys, retention |
+| `references/repo-conventions.md` | Always | elastic/integrations repo conventions: `group` field, Elastic Managed rename + agentless `release`, owner.type, changelog/backport automation, version-constraint hygiene (dated reference) |
+| `references/entity-analytics-provider-matrix.md` | entity-analytics in scope | Provider capability matrix (azure-ad, okta, activedirectory, jamf), legacy vs minimal-state sync/marker/deletion semantics |
 | `checklists/pipeline-review-checklist.md` | Pipeline in scope | Severity-tagged pipeline review checklist |
 | `checklists/field-review-checklist.md` | Fields in scope | Severity-tagged field mapping review checklist |
 | `checklists/cel-review-checklist.md` | CEL in scope | Severity-tagged CEL review checklist |
 | `checklists/httpjson-review-checklist.md` | HTTPJSON in scope | Severity-tagged HTTPJSON review checklist |
 | `entity-mappings/references/entity-field-catalog.md` | Entity data stream in scope (see entity detection rule) | ECS availability matrix, Must Have / Should Have field tables, disambiguation guide, field definition examples, entity field review checklist |
 | `entity-mappings/references/entity-pipeline-patterns.md` | Entity data stream in scope (see entity detection rule) | Categorization processors, `entity.id` mirroring, boolean coercion, relationship object patterns, anti-patterns, entity pipeline review checklist |
+| `checklists/entity-analytics-review-checklist.md` | entity-analytics in scope | Severity-tagged entity-analytics package review checklist |

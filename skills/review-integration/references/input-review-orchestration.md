@@ -4,10 +4,11 @@ How to route different input types through appropriate review depths.
 
 ## Review depth by input type
 
-| Input type | Public skill to load | Private skill to load | Review depth |
+| Input type | Build skill / guide to load | Review references to load | Review depth |
 |-----------|---------------------|----------------------|-------------|
 | CEL | `cel-programs` + `checklists/cel-review-checklist.md` | `review-integration` references (version matrices, validator procedure) | Deep: version matrices, validator procedure, API conformance |
 | HTTPJSON | `input-configurations` -> `httpjson-guide.md` + `checklists/httpjson-review-checklist.md` | API conformance (if docs available) | Medium: 10 validation rules, pagination, cursor persistence |
+| Entity Analytics | `checklists/entity-analytics-review-checklist.md` | `references/entity-analytics-provider-matrix.md` (provider sync/marker/deletion semantics, legacy vs minimal-state) | Medium: config-only input — checklist + provider matrix; no program review |
 | AWS S3 | `input-configurations` -> `aws-s3-guide.md` | -- | Standard: common patterns + type-specific guide |
 | HTTP Endpoint | `input-configurations` -> `http-endpoint-guide.md` | -- | Standard |
 | WebSocket | `input-configurations` -> `websocket-guide.md` | -- | Standard (check for CEL program inside WebSocket) |

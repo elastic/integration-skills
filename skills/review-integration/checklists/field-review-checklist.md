@@ -18,8 +18,8 @@
 
 ### ECS fields (ecs.yml)
 
-- [ ] Every ECS field set in the pipeline is listed in `fields/ecs.yml` using `name` + `external: ecs` -- **HIGH** if missing
-- [ ] `external: ecs` appears on every field whose name exists in ECS, regardless of which field file it is in -- **HIGH** if missing
+- [ ] ECS fields set by the pipeline whose type dynamic mapping cannot infer are declared in `fields/ecs.yml` using `name` + `external: ecs`. Declarations are required ONLY for `geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`, or where `elastic-package` fails validation -- **HIGH** for those genuine cases only
+- [ ] Standard keyword/date and standard-prefix geo ECS fields on package-spec >= 3.x packages are covered by the `ecs@mappings` component template (stack >= 8.13) -- their absence from `ecs.yml` is NOT a finding, and existing `external: ecs` declarations are NOT removable-noise findings either
 - [ ] No extra metadata on ECS fields beyond `name` and `external: ecs` (except where type/value overrides are explicitly needed) -- **LOW**
 
 ### Custom fields (fields.yml)

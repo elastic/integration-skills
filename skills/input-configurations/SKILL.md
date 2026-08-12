@@ -43,15 +43,15 @@ Detect the input type from the filename pattern in `agent/stream/` or from the d
 | HTTPJSON | `httpjson.yml.hbs` | `references/httpjson-guide.md` |
 | AWS S3 | `aws-s3.yml.hbs` | `references/aws-s3-guide.md` |
 | CloudWatch | `aws-cloudwatch.yml.hbs` | `references/aws-cloudwatch-guide.md` |
-| Azure Blob Storage | `azure-blob-storage.yml.hbs` | `references/azure-blob-guide.md` |
+| Azure Blob Storage | `azure-blob-storage.yml.hbs` | `references/azure-blob-storage-guide.md` |
 | Azure Event Hub | `azure-eventhub.yml.hbs` | `references/azure-eventhub-guide.md` |
 | GCS | `gcs.yml.hbs` | `references/gcs-guide.md` |
 | GCP Pub/Sub | `gcp-pubsub.yml.hbs` | `references/gcp-pubsub-guide.md` |
-| TCP | `tcp.yml.hbs` | `references/tcp-guide.md` |
-| UDP | `udp.yml.hbs` | `references/udp-guide.md` |
+| TCP | `tcp.yml.hbs` | `references/tcp-udp-guide.md` |
+| UDP | `udp.yml.hbs` | `references/tcp-udp-guide.md` |
 | HTTP Endpoint | `http_endpoint.yml.hbs` | `references/http-endpoint-guide.md` |
-| Filestream | `filestream.yml.hbs` | `references/filestream-guide.md` |
-| Logfile | `log.yml.hbs` | `references/logfile-guide.md` |
+| Filestream | `filestream.yml.hbs` | `references/filestream-logfile-guide.md` |
+| Logfile | `log.yml.hbs` | `references/filestream-logfile-guide.md` |
 | Journald | `journald.yml.hbs` | `references/journald-guide.md` |
 | Winlog | `winlog.yml.hbs` | `references/winlog-guide.md` |
 | WebSocket | `websocket.yml.hbs` | `references/websocket-guide.md` |
@@ -68,3 +68,15 @@ Load **only** the guide for the detected input type, not all guides.
 
 - `references/common-input-patterns.md` -- tags, processors passthrough, variable conventions, review flags (applies to ALL input types)
 - `references/httpjson-guide.md` -- HTTPJSON template syntax, structure, validation rules, pagination patterns, authentication, cursor persistence
+- `references/aws-s3-guide.md` -- S3 bucket/SQS notification collection
+- `references/aws-cloudwatch-guide.md` -- CloudWatch log group collection
+- `references/azure-blob-storage-guide.md` -- Azure Blob Storage collection
+- `references/azure-eventhub-guide.md` -- Azure Event Hub collection
+- `references/gcs-guide.md` -- Google Cloud Storage collection
+- `references/gcp-pubsub-guide.md` -- GCP Pub/Sub collection
+- `references/tcp-udp-guide.md` -- TCP and UDP (syslog-style) listeners
+- `references/http-endpoint-guide.md` -- HTTP Endpoint (webhook receiver)
+- `references/filestream-logfile-guide.md` -- Filestream and legacy Logfile inputs
+- `references/journald-guide.md` -- Journald collection
+- `references/winlog-guide.md` -- Windows Event Log collection
+- `references/websocket-guide.md` -- WebSocket streaming (may embed CEL)

@@ -5,9 +5,10 @@ Severity-tagged checklist for reviewing CEL input programs. Use for self-review 
 ## Structure
 
 - [ ] `interval: {{interval}}` uses Handlebars variable, not hardcoded -- **HIGH** if hardcoded
-- [ ] Request tracer path matches input type: `../../logs/cel/http-request-trace-*.ndjson`. Two formats: conditional `{{#if enable_request_tracer}}` (any version) or block `resource.tracer:` with `enabled:` field (v8.15.0+). Tracer should be at data stream level, not input level -- **MEDIUM** if wrong path or wrong level
+- [ ] Request tracer path matches input type: `../../logs/cel/http-request-trace-*.ndjson`. Two formats: conditional `{{#if enable_request_tracer}}` (works wherever `resource.tracer` exists, v8.9.0+) or block `resource.tracer:` with `enabled:` field (the `enabled` field itself requires v8.15.0+; see `config-options-by-version.md`). Tracer should be at data stream level, not input level -- **MEDIUM** if wrong path or wrong level
 - [ ] `state` initializes all fields the program reads -- **HIGH** if program reads uninitialized state
 - [ ] `redact.fields` lists every secret key in state. Use `redact.fields: ~` if none. Cross-check against any `secret_fields` in manifest -- **HIGH** if secrets not redacted
+- [ ] From v9.4.0, `secret_state` is available for encrypted credential state and preferred for NEW packages on >= 9.4.0 stacks. Existing redact-based packages are NOT findings -- **LOW** suggestion only when a new package's stack floor allows it
 - [ ] `max_executions` defaults to 1000 if not specified. Only flag if the default is inappropriate for the specific API (e.g., API with known infinite pagination bugs). Do NOT flag absence as a routine finding -- **LOW** if missing with no evidence of need
 
 ## State and cursor

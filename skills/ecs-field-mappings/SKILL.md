@@ -87,9 +87,11 @@ When a `constant_keyword` field is also an ECS field (e.g., `observer.vendor`), 
 
 ### `ecs.yml`
 
-**Populate this file with every ECS field the pipeline sets.** Use only `name` and `external: ecs` for each entry — no type, no description. The type is resolved from the ECS schema via `_dev/build/build.yml`.
+**Populate this file with the ECS fields the pipeline sets that dynamic mapping cannot infer.** Use only `name` and `external: ecs` for each entry — no type, no description. The type is resolved from the ECS schema via `_dev/build/build.yml`.
 
-`external: ecs` must be used whenever a field name exists in ECS ([wiki reference](https://github.com/elastic/integrations/wiki/Fleet-Package-Code-Review-Comments#defining-an-ecs-field-without-using-an-external-definition)). This applies across field files — `ecs.yml`, `base-fields.yml`, and any file that defines an ECS field. You may override properties (e.g., `type: constant_keyword`, `value:`) while still using `external: ecs` — the description is inherited from ECS. Do not use `external: ecs` in `fields.yml`, `agent.yml`, or `beats.yml` — those files define non-ECS fields.
+On package-spec >= 3.x packages (stack >= 8.13), the `ecs@mappings` component template dynamically maps standard keyword/date and standard-prefix geo ECS fields, so explicit declarations are REQUIRED only for types it cannot infer (`geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`) or where `elastic-package` validation fails. Declaring more is harmless for a builder, but is never something a reviewer should demand — and existing declarations are not removable-noise findings either (see `review-integration/references/conflict-resolutions.md`).
+
+When you DO declare a field whose name exists in ECS, `external: ecs` must be used ([wiki reference](https://github.com/elastic/integrations/wiki/Fleet-Package-Code-Review-Comments#defining-an-ecs-field-without-using-an-external-definition)). This applies across field files — `ecs.yml`, `base-fields.yml`, and any file that defines an ECS field. You may override properties (e.g., `type: constant_keyword`, `value:`) while still using `external: ecs` — the description is inherited from ECS. Do not use `external: ecs` in `fields.yml`, `agent.yml`, or `beats.yml` — those files define non-ECS fields.
 
 ```yaml
 - name: event.kind
@@ -436,7 +438,7 @@ In pipeline test expected outputs, `geo_point` fields appear as objects with `la
 }
 ```
 
-These sub-fields do not need entries in `fields.yml` — they are part of the `geo_point` type mapping. Only the `*.geo.location` field (type `geo_point`) needs to be in `ecs.yml` for non-standard parent prefixes where `ecs@mappings` does not apply.
+These sub-fields do not need entries in `fields.yml` — they are part of the `geo_point` type mapping. Only the `*.geo.location` field (type `geo_point`) needs to be in `ecs.yml` for non-standard parent prefixes where `ecs@mappings` (shipped with the stack from 8.13, applied to package-spec >= 3.x data streams) does not cover it.
 
 ## Common pipeline categorization patterns
 

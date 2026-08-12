@@ -25,3 +25,15 @@ Build skills (loaded in Step 3) are prescriptive — they teach the current reco
 **Conflict**: Build skills include both runtime requirements and authoring-process guidance. Runtime requirements (e.g., mito compatibility — mito is the library Elastic CEL programs execute on, not generic CEL) are product correctness concerns. Authoring-process rules (e.g., "write no more than 10-15 lines before testing," reference loading order, incremental development methodology) guide how to produce code, not what correct code looks like.
 
 **Resolution**: Runtime requirements from build skills are valid review concerns — a CEL program that doesn't work on mito is defective. Authoring methodology and workflow sequencing are not review findings. Review evaluates the product artifact, not how it was produced.
+
+## geoip/user_agent if-guards vs ignore_missing
+
+**Conflict**: The pipeline review checklist historically demanded an `if` existence guard on geoip and user_agent processors, but the `ingest-pipelines` skill's own canonical examples (SKILL.md enrichment section and the processor-cookbook "full pattern") use bare `ignore_missing: true`.
+
+**Resolution**: The guard is a performance improvement, not a correctness rule. Flag only geoip processors in NEW pipelines (the expensive database-lookup case), MEDIUM. Bare `ignore_missing: true` on user_agent, and on geoip in existing pipelines, is the build-skill pattern and is not a finding.
+
+## First-version leniency
+
+**Conflict**: Strict changelog-link and asset rules would flag every first-version package for placeholders that are expected during initial development.
+
+**Resolution**: For first-version packages (`0.0.1`/`1.0.0` with a single changelog entry), placeholder changelog links and placeholder logos/icons are informational notes only, not findings. The sanctioned development placeholder is `pull/99999` — `elastic-package lint` REJECTS `pull/0`, so never grant leniency to that value. Review tooling and CI keep flagging any placeholder link until it is replaced with the real PR link before merge; that is expected behavior, not noise.

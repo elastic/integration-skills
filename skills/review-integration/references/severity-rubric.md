@@ -21,7 +21,7 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Domain | Finding | Severity |
 |--------|---------|----------|
 | Pipeline | event.ingested set in pipeline | HIGH |
-| Pipeline | event.original removal at end of pipeline | HIGH |
+| Pipeline | Trailing remove of event.original PRESENT (deprecated pattern; never ask for one to be added) | HIGH |
 | Pipeline | Double-brace Mustache instead of triple | MEDIUM |
 | Pipeline | Unanchored grok pattern | MEDIUM |
 | CEL | want_more true on error path | CRITICAL |
@@ -52,7 +52,7 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Pipeline | Missing pipeline-level on_failure | HIGH | Missing entirely: HIGH. Wrong structure/order: LOW |
 | Pipeline | preserve_duplicate_custom_fields tag | HIGH | MEDIUM (technical debt; was officially recommended before deprecation) |
 | Pipeline | Missing processor tag | MEDIUM | LOW (only enforced from format_version 3.6.0) |
-| Pipeline | CEL-only opening processors missing | MEDIUM | LOW (Agentless-era; pre-Agentless integrations don't have them) |
+| Pipeline | CEL-only opening processors (`remove_agentless_tags` + terminate) missing on a NEW CEL stream in an agentless-enabled package (`deployment_modes.agentless.enabled: true`), or where sibling pipelines already carry the block | MEDIUM | LOW at most (Agentless-era additions; pre-Agentless integrations don't have them — absence there is not a finding) |
 | Pipeline | JSE00001 pattern differs from current standard | HIGH | MEDIUM (if event.original is preserved by alternate means) |
 | Pipeline | Geo enrichment without ASN companion | HIGH | MEDIUM (newer standard) |
 | Fields | base-fields.yml wrong entry count | HIGH | MEDIUM (verify minimum entries present) |

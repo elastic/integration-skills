@@ -286,7 +286,7 @@ For CDR (cloud security) integrations, see `cdr-transform-requirements.md` in th
 - [ ] Aggregation types match field semantics -- **MEDIUM**
 - [ ] Output field definitions exist with correct types -- **HIGH** if missing
 - [ ] `normalize: [array]` for array output fields -- **MEDIUM**
-- [ ] `settings.unattended: true` -- **MEDIUM** if missing
+- [ ] `settings.unattended: true` -- **MEDIUM** if missing generally; **HIGH** for CDR transforms (see `cdr-transform-requirements.md`)
 - [ ] `dest.aliases` configured with correct `move_on_creation` -- **HIGH** for CDR, **MEDIUM** for others
 - [ ] `_meta.run_as_kibana_system` set appropriately -- **LOW**
 - [ ] Transform manifest.yml has appropriate `destination_index_template` -- **MEDIUM**

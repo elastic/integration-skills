@@ -209,7 +209,7 @@ In addition to the top-level skills, you can invoke any domain skill directly wh
 | `/ingest-pipelines` | Ingest pipeline processors, grok patterns, Painless scripts, error handling |
 | `/ecs-field-mappings` | ECS field mapping strategy, event categorization, custom fields |
 | `/entity-mappings` | ECS `entity.*` fields for entity/inventory data streams, entity-vs-event classification, entity-coverage gap analysis on existing packages |
-| `/input-configurations` | Input templates for all supported input types: CEL, HTTPJSON, syslog, filestream, AWS S3, Azure Event Hub, GCP Pub/Sub, and more |
+| `/input-configurations` | Input templates for all non-CEL input types: HTTPJSON, TCP/UDP, filestream/logfile, AWS S3, CloudWatch, Azure Blob/Event Hub, GCS, GCP Pub/Sub, HTTP Endpoint, journald, winlog, WebSocket (CEL routes to `/cel-programs`) |
 | `/package-spec` | Manifest rules, changelog schema, format version features |
 | `/integration-testing` | Pipeline testing, system testing, test fixture authoring |
 | `/elastic-package-cli` | `elastic-package` CLI usage and troubleshooting |

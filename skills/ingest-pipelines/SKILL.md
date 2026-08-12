@@ -178,12 +178,14 @@ Example middle section (illustrative):
   - geoip:
       field: source.ip
       target_field: source.geo
+      if: ctx.source?.ip != null
       ignore_missing: true
       tag: enrich_source_geo
   - geoip:
       database_file: GeoLite2-ASN.mmdb
       field: source.ip
       target_field: source.as
+      if: ctx.source?.ip != null
       properties:
         - asn
         - organization_name
@@ -391,6 +393,8 @@ Step 2 (`remove`): removes the redundant `message` field when `event.original` i
 ### Do NOT add an `event.original` removal processor at the end of the pipeline
 
 Some existing integrations contain a `remove` processor that deletes `event.original` at the end of the pipeline when `preserve_original_event` is not in `tags`. **This pattern is deprecated and must not be used in new pipelines.** The removal of `event.original` for storage optimization is now handled by a separate final pipeline outside the integration. Do not copy this pattern from reference integrations that still have it — it is legacy.
+
+That stack-side final pipeline honors the `preserve_original_event` tag, so a package exposing the toggle needs NO in-pipeline remove for the toggle to work — the toggle is not a no-op without one. Never recommend adding this processor; when reviewing, its *presence* is the finding, never its absence.
 
 ### Reference
 
