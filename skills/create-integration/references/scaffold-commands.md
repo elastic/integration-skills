@@ -9,24 +9,23 @@ Before running scaffold commands, verify:
 2. you are in the correct directory (see working directory rules below)
 3. package/data stream name is finalized (renames later are noisy)
 
-**For integrations with CEL data streams, also verify these tools before starting:**
+**For integrations with CEL data streams, the CEL tools must be present before starting.** Run this one block — it is idempotent, installing only what is missing, so it serves as both the check and the install:
 
 ```bash
-mito -version      # github.com/elastic/mito/cmd/mito
-celfmt -version    # github.com/elastic/mito/cmd/celfmt
-ceplx -version     # github.com/efd6/ceplx/cmd/ceplx
-stream -version    # github.com/elastic/stream/cmd/stream
+for pkg in \
+  github.com/elastic/mito/cmd/mito \
+  github.com/elastic/celfmt/cmd/celfmt \
+  github.com/efd6/ceplx/cmd/ceplx \
+  github.com/elastic/stream; do
+  command -v "${pkg##*/}" >/dev/null || go install "$pkg@latest"
+done
 ```
 
-Missing CEL tools produce silent degraded output — `celfmt` and `ceplx` steps are skipped without warning, resulting in PRs that require extra review cycles to catch what the tooling should have caught automatically. Install any missing tools before proceeding:
+All four land in `$(go env GOPATH)/bin` (usually `~/go/bin`) — ensure that is on `PATH`.
 
-```bash
-go install github.com/elastic/mito/cmd/mito@latest
-go install github.com/elastic/mito/cmd/celfmt@latest
-go install github.com/efd6/ceplx/cmd/ceplx@latest
-go install github.com/elastic/stream/cmd/stream@latest
-# All install to ~/go/bin/ — ensure that is on PATH
-```
+Missing CEL tools produce silent degraded output — `celfmt` and `ceplx` steps are skipped without warning, resulting in PRs that require extra review cycles to catch what the tooling should have caught automatically.
+
+Always probe with `command -v`, never with `-version`: of these four only `mito` accepts a `-version` flag. `celfmt` and `ceplx` exit 2 with `flag provided but not defined: -version`, and `stream` uses a `version` subcommand, so a chained `-version` check fails even when every tool is installed.
 
 ## Working directory rules
 

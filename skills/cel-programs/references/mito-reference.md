@@ -8,10 +8,10 @@ Companion to the `cel-programs` skill. Covers everything needed to use mito for 
 
 ```bash
 go install github.com/elastic/mito/cmd/mito@latest
-go install github.com/elastic/stream/cmd/stream@latest
+go install github.com/elastic/stream@latest
 # Both install to ~/go/bin/ — ensure that is in PATH
 mito -version
-stream -version
+stream version
 ```
 
 ---
