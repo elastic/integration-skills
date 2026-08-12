@@ -14,6 +14,10 @@ mito -version
 stream version
 ```
 
+> **Windows:** All tools install and run on Windows. Examples in this reference
+> that use bash process substitution (`<(echo ...)`) or Unix paths require manual
+> adaptation.
+
 ---
 
 ## Core usage
@@ -83,6 +87,14 @@ The JSON file mirrors what the CEL input provides at runtime. Include `cursor` t
 5. `"cursor"` values in the output would be persisted across restarts in the real CEL input
 
 Control re-evaluation depth with `-max_executions`. Use `-1` to verify natural pagination termination (watch for infinite loops; interrupt with Ctrl+C).
+
+---
+
+## Known divergences from the real CEL input
+
+**`events` are not stripped between `want_more` cycles in mito — they are in the real input.**
+
+mito prints `events` from each evaluation and retains them in state for the next cycle. The real CEL input removes `events` before re-evaluating. Do not add `drop("events")` to work around this during mock testing; the beats runtime already handles the strip. Code that adds `drop("events")` looks correct against mito but is flagged as unnecessary in review.
 
 ---
 

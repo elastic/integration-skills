@@ -145,6 +145,18 @@ Apply semver aligned with user impact:
 - minor (`x.Y.z`): backward-compatible enhancements
 - major (`X.y.z`): breaking changes
 
+When a version bump is driven by a `format_version` or ECS reference upgrade rather than by the feature itself (e.g., adding a data stream to an existing package required bumping the spec version), the changelog description must say so explicitly:
+
+```yaml
+- version: "2.4.0"
+  changes:
+    - description: Add audit data stream. Bumps format_version to 3.4.2 to support <reason>.
+      type: enhancement
+      link: https://github.com/elastic/integrations/pull/12345
+```
+
+Reviewers need to assess whether the bump is justified without reading the full diff — a generic description that buries the version change is insufficient.
+
 When selecting `breaking-change`, check for:
 - field type changes (mapping conflicts for existing data)
 - field removals or renames

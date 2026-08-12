@@ -74,6 +74,8 @@ done
 
 If a tool is still missing afterward, add `$(go env GOPATH)/bin` to `PATH` and re-run the loop.
 
+> **Windows:** All Go tools install and run on Windows. Bash examples using process substitution or Unix paths require manual adaptation.
+
 ### npx (Recommended)
 
 The fastest way to install skills is with the skills CLI. No need to clone this repository — just run:
@@ -157,6 +159,17 @@ npx skills update
 ```
 
 **Working with the integrations repository:** If you are developing integrations against [`elastic/integrations`](https://github.com/elastic/integrations), run these skills from a checkout of that repo or point your agent at that tree. This gives the agent the real package layout, shared conventions, and surrounding packages for context. Several `elastic-package` commands (system tests, workspace-aware workflows) also require an integrations-style workspace to run correctly.
+
+## Recommended workflow
+
+Run `/research-integration` first to investigate the vendor's API, data formats, and field schemas, then pass the research output directly into `/create-integration`:
+
+```
+/research-integration <vendor or product name>
+/create-integration @research_results/<product_slug>/research-brief.md
+```
+
+Skipping `/research-integration` or bringing a pre-existing collector (such as a Go program to adapt into a CEL program) deviates from the optimized path and may produce lower-quality output — the build skills are tuned to consume the structured research brief format.
 
 ## Skills reference
 
