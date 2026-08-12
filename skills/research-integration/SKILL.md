@@ -336,6 +336,7 @@ After the research brief and all companion artifacts are written, generate a sta
    - Key findings or surprises
    - Gaps or areas that need user input
    - If `test-api.py` was generated: remind the user to run it against the real API (with credentials) and share the resulting archive back for development
+   - If the recommended collection method is API-based (CEL input): remind the user to verify that `mito`, `celfmt`, `ceplx`, and `stream` are installed before running `/create-integration` (see `scaffold-commands.md` Preconditions in the `create-integration` skill)
    - Suggested next step (typically `/create-integration` with the brief)
 
 ## Research quality standards

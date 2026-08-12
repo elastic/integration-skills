@@ -25,25 +25,9 @@ Every subagent task prompt must:
 
 ## Phase 0: Verify prerequisites
 
-Before making any changes, verify required tools are present.
+Before making any changes, verify required tools are present. Run the Preconditions blocks in `references/scaffold-commands.md` **verbatim** — do not improvise alternate checks or install paths. That file is the single source of truth for the `elastic-package` probe and the CEL tool Check / Install / re-Check sequence.
 
-`elastic-package` is always required:
-
-```bash
-elastic-package --help
-```
-
-If any CEL data streams are being added, also verify:
-
-```bash
-m=
-for t in mito celfmt ceplx stream; do
-  command -v "$t" >/dev/null || { echo "MISSING: $t"; m=1; }
-done
-[ -n "$m" ] || echo "all CEL tools present"
-```
-
-If anything is reported missing, install it now with the single install loop in `scaffold-commands.md` Preconditions. Do not skip this: missing tools produce silent degraded output rather than early failures.
+`elastic-package` is always required. If any CEL data streams are being added, also run the CEL Check (and Install + re-Check if anything is missing). Do not skip this: missing tools produce silent degraded output rather than early failures.
 
 ## Phase 1: Parse context and verify package
 

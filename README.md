@@ -72,6 +72,8 @@ for pkg in \
 done
 ```
 
+If a tool is still missing afterward, add `$(go env GOPATH)/bin` to `PATH` and re-run the loop.
+
 ### npx (Recommended)
 
 The fastest way to install skills is with the skills CLI. No need to clone this repository — just run:
