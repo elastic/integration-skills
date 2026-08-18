@@ -211,6 +211,7 @@ In addition to the top-level skills, you can invoke any domain skill directly wh
 | `/input-configurations` | Input templates for all supported input types: CEL, HTTPJSON, syslog, filestream, AWS S3, Azure Event Hub, GCP Pub/Sub, and more |
 | `/package-spec` | Manifest rules, changelog schema, format version features |
 | `/integration-testing` | Pipeline testing, system testing, test fixture authoring |
+| `/grok-differential-testing` | Differential review of grok pattern changes: old-vs-new regression matrix, alternation-branch coverage, backtracking checks |
 | `/elastic-package-cli` | `elastic-package` CLI usage and troubleshooting |
 | `/dashboard-guidelines` | Kibana dashboard authoring standards |
 | `/dashboard-review` | Kibana dashboard review procedures |
