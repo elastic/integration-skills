@@ -12,7 +12,7 @@ Build skills (loaded in Step 3) are prescriptive — they teach the current reco
 
 **Conflict**: The `ecs-field-mappings` skill says pipeline fields must be declared in `fields/ecs.yml`. But standard ECS keyword/date fields work via dynamic mapping and don't require explicit `external: ecs` declarations.
 
-**Resolution**: Only flag when the field type genuinely requires explicit declaration (geo_point, geo_shape, nested, flattened) or when `elastic-package` would fail validation. Standard keyword/date ECS fields are not findings.
+**Resolution**: On packages whose `conditions.kibana.version` floor is >= 8.13.0, only flag when the field type genuinely requires explicit declaration (`geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`) or when `elastic-package` would fail validation — standard keyword/date and standard-prefix geo ECS fields are not findings. If the constraint admits stacks below 8.13 (which never apply `ecs@mappings`, regardless of package-spec version), pipeline-set ECS fields still need declarations.
 
 ## rate_limit() in CEL programs
 
@@ -28,9 +28,9 @@ Build skills (loaded in Step 3) are prescriptive — they teach the current reco
 
 ## geoip/user_agent if-guards vs ignore_missing
 
-**Conflict**: The pipeline review checklist historically demanded an `if` existence guard on geoip and user_agent processors, but the `ingest-pipelines` skill's own canonical examples (SKILL.md enrichment section and the processor-cookbook "full pattern") use bare `ignore_missing: true`.
+**Conflict**: The pipeline review checklist historically demanded an `if` existence guard on geoip and user_agent processors, while the `ingest-pipelines` canonical examples historically showed bare `ignore_missing: true` (the geoip examples now carry the guard). Many shipped integrations follow the older unguarded pattern.
 
-**Resolution**: The guard is a performance improvement, not a correctness rule. Flag only geoip processors in NEW pipelines (the expensive database-lookup case), MEDIUM. Bare `ignore_missing: true` on user_agent, and on geoip in existing pipelines, is the build-skill pattern and is not a finding.
+**Resolution**: The guard is a performance improvement, not a correctness rule. New pipelines should guard geoip (the expensive database-lookup case) — flag MEDIUM. Missing guards on geoip in existing pipelines are not findings. user_agent never requires the guard; bare `ignore_missing: true` is always acceptable there.
 
 ## First-version leniency
 

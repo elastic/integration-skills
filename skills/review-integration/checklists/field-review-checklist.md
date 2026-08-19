@@ -19,7 +19,7 @@
 ### ECS fields (ecs.yml)
 
 - [ ] ECS fields set by the pipeline whose type dynamic mapping cannot infer are declared in `fields/ecs.yml` using `name` + `external: ecs`. Declarations are required ONLY for `geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`, or where `elastic-package` fails validation -- **HIGH** for those genuine cases only
-- [ ] Standard keyword/date and standard-prefix geo ECS fields on package-spec >= 3.x packages are covered by the `ecs@mappings` component template (stack >= 8.13) -- their absence from `ecs.yml` is NOT a finding, and existing `external: ecs` declarations are NOT removable-noise findings either
+- [ ] Standard keyword/date and standard-prefix geo ECS fields on packages with `conditions.kibana.version` floor >= 8.13.0 are covered by the `ecs@mappings` component template (applied by the stack from 8.13; package-spec version is not the gate) -- their absence from `ecs.yml` is NOT a finding, and existing `external: ecs` declarations are NOT removable-noise findings either. If the constraint admits stacks below 8.13, every pipeline-set ECS field still needs a declaration
 - [ ] No extra metadata on ECS fields beyond `name` and `external: ecs` (except where type/value overrides are explicitly needed) -- **LOW**
 
 ### Custom fields (fields.yml)

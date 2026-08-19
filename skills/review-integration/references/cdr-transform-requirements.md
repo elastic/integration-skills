@@ -151,7 +151,7 @@ The latest index needs explicit field definitions. Key type overrides:
   type: date               # Not covered by ecs@mappings
 ```
 
-The `ecs@mappings` component template ships with the stack from 8.13 and covers data-stream (source) indices on package-spec >= 3.x packages. For transform DESTINATION indices it applies only from stack version 8.19/9.1, when it was added to both source and destination index templates. Before 8.19, ECS fields must be explicitly mapped with `external: ecs` in the destination index fields.
+The `ecs@mappings` component template is applied by stacks >= 8.13 at install time and covers data-stream (source) indices — guaranteed for a package only when its `conditions.kibana.version` floor is >= 8.13.0 (package-spec version is not the gate). For transform DESTINATION indices it applies only from stack version 8.19/9.1, when it was added to both source and destination index templates. Before 8.19, ECS fields must be explicitly mapped with `external: ecs` in the destination index fields.
 
 ## Known CDR integrations
 

@@ -158,8 +158,14 @@ custom fields.
 
 ### 4. Define field mappings
 
-- Create or update `fields/ecs.yml` with every ECS field the pipeline sets — use
-  `name` + `external: ecs` per entry, with type/value overrides only when needed.
+- Create or update `fields/ecs.yml` with the ECS fields the pipeline sets that
+  dynamic mapping cannot infer — use `name` + `external: ecs` per entry, with
+  type/value overrides only when needed. See the `ecs-field-mappings` skill
+  (`ecs.yml` section) for the `ecs@mappings` coverage rule: on packages whose
+  `conditions.kibana.version` floor is >= 8.13.0, only `geo_point` on
+  non-standard parent prefixes, `geo_shape`, `nested`, `flattened`, or
+  validation-failure cases need declarations; below that floor, declare every
+  pipeline-set ECS field. Declaring more is harmless.
 - Create or update `fields/fields.yml` with custom integration-specific fields (non-ECS
   fields only)
 - Verify `fields/base-fields.yml` has the standard data stream routing constants

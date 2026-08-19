@@ -117,7 +117,10 @@ filter on `data_stream.dataset`, never `event.dataset`. Full checks live in
 
 Credential-shaped policy vars must carry `secret: true` (recent sweeps mask
 even indirect values like policy-variable AWS key ids, #20615). CEL programs
-on >= 9.4.0 stacks can use `secret_state` for encrypted credential state
-(#18834) — preferred for new packages, not a finding for existing redact-based
-ones. See `checklists/pipeline-review-checklist.md` (security section) and
+can use `secret_state` for encrypted credential state from beats
+v8.19.14 / v9.2.8 / v9.3.3 / v9.4.0 (#18834, beats#49207); templating Fleet
+`secret: true` vars into it needs the string-unpack fix, v8.19.16 / v9.3.5 /
+v9.4.2, never on 9.2.x (beats#50508). Preferred for new packages whose stack
+floor allows it, not a finding for existing redact-based ones. See
+`checklists/pipeline-review-checklist.md` (security section) and
 `checklists/cel-review-checklist.md`.
