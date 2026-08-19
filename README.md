@@ -212,6 +212,7 @@ In addition to the top-level skills, you can invoke any domain skill directly wh
 | `/package-spec` | Manifest rules, changelog schema, format version features |
 | `/integration-testing` | Pipeline testing, system testing, test fixture authoring |
 | `/elastic-package-cli` | `elastic-package` CLI usage and troubleshooting |
+| `/federate-aws-integration` | Enable Federated Identity (Cloud Connectors) on an agentless-eligible AWS integration package |
 | `/dashboard-guidelines` | Kibana dashboard authoring standards |
 | `/dashboard-review` | Kibana dashboard review procedures |
 | `/anonymize-logs` | Test data anonymization conventions |
