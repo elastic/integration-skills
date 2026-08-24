@@ -190,7 +190,7 @@ Do not replace:
 - Field names and keys
 - Timestamps (format and timezone must stay intact). **Do not** change timezone abbreviations, epoch values, or clock fields:
   - Do not change `Jun 27 14:06:33.189 JST` to `Jul 24 00:47:24.618 CET`
-  - Do not increment epoch timestamps by 1
+  - Do not offset or otherwise change epoch / Unix timestamps, even by a small amount. Leave numeric clock fields (eventtime, epoch millis, and similar) byte-for-byte unchanged.
   - Do not replace `JST`, `EDT`, `EST`, `Eastern`, `(GMT-3:00)Buenos Aires, Georgetown` with another zone. Date parsers key off the abbreviation; swapping JST→CET both breaks parse **and** still encodes a geography (the wrong one). Privacy for timezone abbreviations is out of scope — leave them as-is
 - Structural tokens (brackets, braces, pipes, commas, tabs)
 - Public well-known service hostnames in URLs (`docs.google.com`, `api.github.com`, etc.) when they are the **log-source vendor API** — replace the path ID if it is sensitive, not the host.
