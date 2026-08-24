@@ -37,7 +37,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### Enrichment
 
-- [ ] In NEW pipelines, geoip processors have an `if` condition checking field existence (e.g., `if: ctx.source?.ip != null`) in addition to `ignore_missing: true` -- the geoip database lookup is the expensive case worth guarding. Bare `ignore_missing: true` on user_agent, and on geoip in existing pipelines, matches the build skill's own canonical examples and is NOT a finding (see `references/conflict-resolutions.md`) -- **MEDIUM** (new pipelines, geoip only)
+- [ ] In NEW pipelines, geoip processors have an `if` condition checking field existence (e.g., `if: ctx.source?.ip != null`) in addition to `ignore_missing: true` -- the geoip database lookup is the expensive case worth guarding. Bare `ignore_missing: true` on user_agent, and on geoip in existing pipelines, is NOT a finding (see `references/conflict-resolutions.md`) -- **MEDIUM** (new pipelines, geoip only)
 - [ ] When geoip is used for geolocation (e.g., `source.geo`), there must be a companion ASN lookup using `database_file: GeoLite2-ASN.mmdb` targeting `*.as`, followed by renames `*.as.asn` to `*.as.number` and `*.as.organization_name` to `*.as.organization.name` -- **HIGH** if geo enrichment present but ASN missing
 - [ ] `related.ip` populated with every IP field the pipeline sets, one append per field, `allow_duplicates: false`, guarded by `if` condition -- **HIGH** if IP fields not in related.ip
 
