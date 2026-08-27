@@ -34,6 +34,7 @@ These features require bumping beyond the current standard. Only use them if the
 | Multiple template paths | 3.6.0 | [#1089](https://github.com/elastic/package-spec/pull/1089) |
 | Package dependencies (`requires` field) | 3.6.0 | [#1071](https://github.com/elastic/package-spec/pull/1071) |
 | OTel input type | 3.6.0 | [#1091](https://github.com/elastic/package-spec/pull/1091) |
+| `dynamic_signal_types` (otelcol only) | 3.6.0 | [#1067](https://github.com/elastic/package-spec/pull/1067), [#1091](https://github.com/elastic/package-spec/pull/1091) |
 | Input type migration | 3.6.0 | [#1021](https://github.com/elastic/package-spec/pull/1021) |
 | `var_groups` (policy template and input levels) | 3.6.1 | [#1120](https://github.com/elastic/package-spec/pull/1120) |
 | Named inputs in policy templates | 3.6.1 | [#1135](https://github.com/elastic/package-spec/pull/1135) |
@@ -44,6 +45,28 @@ These features require bumping beyond the current standard. Only use them if the
 | Transform `num_failure_retries` | 3.6.1 | [#1124](https://github.com/elastic/package-spec/issues/1124) |
 | ML modules in content packages | 3.6.2 | [#1149](https://github.com/elastic/package-spec/pull/1149) |
 | `semantic_text` field type | 3.7.0 (unreleased) | [#807](https://github.com/elastic/package-spec/pull/807) |
+
+## `dynamic_signal_types` is otelcol-only
+
+A policy template with `dynamic_signal_types: true` and no `type:` accepts every
+signal type at once — the mechanism for "one policy template, several signal
+types". It is restricted to `input: otelcol` and no released spec version lifts
+that:
+
+- `dynamic_signal_types: true` on any other input fails with
+  `policy template "<name>": dynamic_signal_types is only allowed when input is
+  'otelcol', got '<input>'`
+- `type:` must **not** be set alongside it — `type field must not be set when
+  dynamic_signal_types is true`
+- below `format_version: 3.6.0` the field is not recognised at all
+  (`Additional property dynamic_signal_types is not allowed`)
+
+Bumping the format version does not help: the restriction is unchanged through
+`3.7.0-next`, and the five packages using it in elastic/integrations
+(`otlp_input_otel`, `kafka_input_otel`, `elasticapm_input_otel`,
+`mysql_input_otel`, `sql_server_input_otel`) are all `input: otelcol`. For a
+non-otelcol input needing several signal types, see the shapes in
+`create-integration/references/package-layout.md`.
 
 ## Breaking changes at 3.6.0
 
