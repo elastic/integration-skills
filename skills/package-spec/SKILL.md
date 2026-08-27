@@ -102,6 +102,23 @@ See `references/manifest-rules.md` -> **Variable shadowing** for full rules, exa
 
 - **Use proper YAML nesting, not dotted keys** -- `elasticsearch.dynamic_dataset` as a literal key name creates a single flat key, not a nested object. Use nested `elasticsearch:` -> `dynamic_dataset:` structure.
 
+- **A green lint does not prove an input exists** -- package-spec validates the
+  policy template *type* against an enum but does **not** validate the input
+  *name*. `input: bogus_input_xyz` passes `elastic-package lint` and `check`
+  without a word, while `type: bogus_type_xyz` is rejected with
+  `must be one of the following: "metrics", "logs", "synthetics", "traces"`.
+  Confirm the input against the agent's own capabilities (the "Detected
+  available inputs and outputs" line in the agent log), not against a passing
+  build.
+
+- **The scaffolder allowlist is not the spec** -- `elastic-package create
+  data-stream --inputs` accepts only `[aws-cloudwatch aws-s3
+  azure-blob-storage azure-eventhub cel entity-analytics etw filestream
+  gcp-pubsub gcs http_endpoint journald netflow redis tcp udp winlog]`, which is
+  narrower than what the agent supports. `mqtt`, for one, is rejected by the
+  scaffolder but advertised by a 9.4.3 agent. Scaffold with an allowed type and
+  rewrite `input:` in the manifest afterwards.
+
 See `references/manifest-rules.md` for complete rules, correct/incorrect examples, and the review checklist.
 
 ---
