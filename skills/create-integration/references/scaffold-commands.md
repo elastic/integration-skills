@@ -251,6 +251,24 @@ error validating packages in directory 'packages': error checking manifest
 is not in ".github/CODEOWNERS"
 ```
 
+#### Which team to name
+
+If the owning team is already settled, name it in both places — this is what
+`docs/extend/_publish_an_integration.md` tells authors to do, and what every
+recently added package does (`temporal`, `gdacs`, `vercel`, `supabase` all name
+a real team).
+
+If the owning team is **not yet settled** — a new package whose home is the
+triaging team's call — an alternative is to add no CODEOWNERS line and set
+`owner.github: elastic/integrations-triaging` in the manifest. The repo-wide
+`/packages/` default then resolves to the same team, manifest and CODEOWNERS
+agree, and the check passes without guessing at an owner.
+
+Be aware this has **no precedent in the repo**: 0 of the 481 packages currently
+set `owner.github: elastic/integrations-triaging`. Prefer a real team whenever
+one is known, and treat the triaging default as a way to avoid inventing an
+owner, not as the norm.
+
 CODEOWNERS is repo metadata, not package content — it needs **no version bump and
 no changelog entry**. For the resolution rules behind this check, see
 `review-integration/references/repo-conventions.md`.
