@@ -171,6 +171,7 @@ For complex integrations with routing:
 - Ingest pipeline files are placed under stream `elasticsearch/ingest_pipeline/`
 - Tests live under stream `_dev/test/` and not mixed into runtime folders
 - `_dev/build/build.yml` exists with current ECS reference
+- A `.github/CODEOWNERS` entry resolves for the package path and names the same team as `owner.github` in the root manifest (enforced by `mage check`)
 
 ---
 
@@ -248,3 +249,4 @@ Same file roles as integration packages but scoped to root `fields/` (not per-st
 - Input templates are under `agent/input/`
 - Fields are coherent at root `fields/` and follow naming conventions
 - No accidental `data_stream/` structure
+- A `.github/CODEOWNERS` entry resolves for the package path and names the same team as `owner.github` in the root manifest (enforced by `mage check`)
