@@ -55,7 +55,7 @@ Spec version 3.6.0 introduced **stricter validations** that are breaking changes
 
 Packages at the current default `3.4.2` are NOT subject to these stricter validations. Bumping to 3.6.0+ adds these requirements. Only bump if the package needs a 3.6.0+ feature AND the pipeline already complies with tag and on_failure rules (which they should, per the `ingest-pipelines` skill).
 
-**Federated Identity note:** enabling Cloud Connectors requires `provider_permissions` and therefore `format_version >= 3.6.4`, so the 3.6.0 validators apply. Expect a possible hygiene PR before the federation change — see `input-configurations` -> `references/federated-identity-aws.md` §0.1.
+**Federated Identity note:** enabling Cloud Connectors requires `provider_permissions` and therefore `format_version >= 3.6.4`, so the 3.6.0 validators apply. Expect a possible hygiene PR before the federation change — see **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
 ## Upstream source
 

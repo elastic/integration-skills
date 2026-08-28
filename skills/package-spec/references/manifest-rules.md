@@ -345,3 +345,5 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] YAML uses nested structure, not dotted keys -- **MEDIUM**
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**
+- [ ] If `var_groups` includes `identity_federation`: the option has `iac_template_url` pointing at `cloudformation-federated-identity-aws-<Kibana-floor>.yml`, not the GuardDuty-only CFT -- **HIGH** when in scope (see `input-configurations` -> `references/federated-identity-aws.md`)
+- [ ] If `provider_permissions` is declared: `format_version >= 3.6.4` and IAM action names match the collector's real API calls -- **HIGH** when in scope

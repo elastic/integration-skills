@@ -2,7 +2,7 @@
 
 Schema and floors for credential selectors and IAM declarations in `manifest.yml`. This file is the package-spec authority for these constructs.
 
-For the end-to-end Federated Identity (Cloud Connectors) procedure on an AWS integration — pre-flight, stream templates, CFT mirror, PR checklists — load `input-configurations` -> `references/federated-identity-aws.md`.
+For the Federated Identity (Cloud Connectors) procedure on an AWS integration, load `input-configurations` -> `references/federated-identity-aws.md`.
 
 ## Floors
 
@@ -31,10 +31,13 @@ var_groups:
         vars: [role_arn, external_id, supports_identity_federation]
         hide_in_deployment_modes: [default]
         provider: aws
+        iac_template_url: https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=https://elastic-cspm-cft.s3.eu-central-1.amazonaws.com/cloudformation-federated-identity-aws-<KIBANA_FLOOR_MINOR>.yml&param_ElasticResourceId=RESOURCE_ID
       - name: direct_access_key
         title: Direct Access Keys
         vars: [access_key_id, secret_access_key]
 ```
+
+On `identity_federation`, `iac_template_url` is required for the CloudFormation fallback. Replace `<KIBANA_FLOOR_MINOR>` with the package Kibana floor (e.g. `9.4.0`); keep `RESOURCE_ID` literal. Do **not** copy the `aws` package GuardDuty-only CFT URL — see `input-configurations` -> `references/federated-identity-aws.md`.
 
 Validator rules:
 - Every name in `options[].vars` must exist as a var at some level (package, policy template, input, or data stream).
@@ -68,7 +71,7 @@ When a package uses Federated Identity / `auth.aws`:
 - `conditions.kibana.version: "^9.4.0"` (or higher)
 - `conditions.agent.version: "^9.4.0"` (or higher)
 
-If raising the Kibana floor would abandon a still-supported stack line (e.g. dropping 8.x), escalate — do not silent-bump. See the federation procedure §0.1.
+If raising the Kibana floor would abandon a still-supported stack line (e.g. dropping 8.x), escalate — do not silent-bump. See **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
 ## Handoff
 
@@ -76,4 +79,4 @@ If raising the Kibana floor would abandon a still-supported stack line (e.g. dro
 |------|-------|
 | Schema / floors / validators for these fields | This file + `format-version-features.md` |
 | Enable Federated Identity on an AWS package | `input-configurations` -> `references/federated-identity-aws.md` |
-| `auth.aws` / `use_cloud_connectors` in stream templates | Same federation reference (§4); CEL *program* logic stays in `cel-programs` |
+| `auth.aws` / `use_cloud_connectors` in stream templates | Same federation reference (**Stream template**); CEL *program* logic stays in `cel-programs` |

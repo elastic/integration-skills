@@ -233,7 +233,7 @@ policy_templates:
         type: <var_type>
 ```
 
-Same default `format_version` / Kibana floor as integration packages (`3.4.2` and `^8.19.0 || ^9.1.0`). Raise only when a feature requires it — for Federated Identity / `provider_permissions` use `format_version: "3.6.4"` and set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` (see `package-spec` and `input-configurations` -> `references/federated-identity-aws.md`).
+Same default `format_version` / Kibana floor as integration packages (`3.4.2` and `^8.19.0 || ^9.1.0`). Raise only when a feature the **input package** actually uses requires it (see `package-spec`). Federated Identity / Cloud Connectors is an integration-package procedure (`input-configurations` -> `references/federated-identity-aws.md`), not an input-package pattern.
 
 ### `agent/input/*.yml.hbs`
 

@@ -417,7 +417,7 @@ Sets the timeout for individual CloudWatch API calls. Increase for large log gro
 - [ ] Multiple authentication methods supported (access key, profile, role)
 - [ ] `role_arn` available for cross-account collection
 - [ ] Credential fields use `type: password` in the manifest
-- [ ] If enabling Federated Identity / Cloud Connectors, follow `references/federated-identity-aws.md` (not this flat-cred pattern alone)
+- [ ] If Federated Identity is in scope: `aws-cloudwatch.yml.hbs` uses `auth.aws` with `use_cloud_connectors` gated on `supports_identity_federation` per `references/federated-identity-aws.md` (**Stream template**); `aws-cloudwatch` is federation-eligible -- **HIGH** when in scope
 
 ### Region and positioning
 - [ ] Region is configurable via variable

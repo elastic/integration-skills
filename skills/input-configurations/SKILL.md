@@ -89,4 +89,4 @@ involved.
 - `references/journald-guide.md` -- Journald collection
 - `references/winlog-guide.md` -- Windows Event Log collection
 - `references/websocket-guide.md` -- WebSocket streaming (may embed CEL)
-- `references/federated-identity-aws.md` -- end-to-end procedure for enabling Federated Identity (Cloud Connectors) on an AWS integration: pre-flight checks, manifest edits, stream template patch, CFT mirror, and PR checklists
+- `references/federated-identity-aws.md` -- AWS Federated Identity procedure: input classification, federation vars, `auth.aws` / `use_cloud_connectors`, input gating (schema lives in `package-spec`)
