@@ -44,9 +44,11 @@ Before creating any files, verify all required tools are present. Run the Precon
 1. Verify you are in the repository root (check for `packages/` directory).
 2. Run the package scaffold and apply all post-scaffold steps per `references/scaffold-commands.md` (scaffold command, `_dev/build/build.yml` creation, manifest edits, initial validation).
 
-**Mandatory manifest version settings** — after scaffolding, verify the root `manifest.yml` has these exact values (the scaffold may generate different defaults):
+**Default manifest version settings** — after scaffolding, verify the root `manifest.yml` has these values (the scaffold may generate different defaults):
 - `format_version: "3.4.2"`
 - `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
+
+**Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, use `format_version: "3.6.4"` and set both `conditions.kibana.version` and `conditions.agent.version` to `"^9.4.0"`. Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
 
 3. **Start the Elastic stack** (needed for system tests later):
 
@@ -244,7 +246,7 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - Always use `elastic-package create` for scaffolding. Never fabricate scaffold files manually.
 - Treat all scaffold output as placeholders. A passing scaffold validation does not mean the integration logic is implemented.
 - Treat `manifest.yml` as a placeholder until aligned with implemented templates and requirements.
-- **Root `manifest.yml` must set `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"`.** The scaffold may generate different values — always override. These settings belong only in the root manifest, not in data stream manifests.
+- **Root `manifest.yml` must set `format_version` and `conditions.kibana.version` to the minimum that supports the package's features.** Default: `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"`. For Federated Identity / `provider_permissions`, use `format_version: "3.6.4"` and set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` instead (see `input-configurations` -> `references/federated-identity-aws.md`). The scaffold may generate different values — override accordingly. These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars. If a var is not used in `cel.yml.hbs`, remove it.
 - Run from the correct directory: `packages/` for package creation, `packages/<name>/` for data-stream creation.
 - Run `elastic-package build` before any system test whenever package files changed.

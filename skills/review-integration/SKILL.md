@@ -151,6 +151,7 @@ These references live in this skill's `references/` directory and provide review
 | CEL or HTTPJSON with API docs available | `references/api-conformance-methodology.md` -- cross-reference implementation vs vendor docs |
 | entity-analytics input in scope | `references/entity-analytics-provider-matrix.md` + `checklists/entity-analytics-review-checklist.md` -- provider sync/marker/deletion semantics and package checklist |
 | Any input templates in scope | `references/input-review-orchestration.md` -- review depth routing by input type |
+| Federated Identity / Cloud Connectors in scope | `input-configurations/references/federated-identity-aws.md` -- input classification, `iac_template_url`, `auth.aws` / `use_cloud_connectors`, input gating |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 
@@ -163,6 +164,13 @@ These references live in this skill's `references/` directory and provide review
 4. **Heuristic:** stream name is one of the entity-vocabulary names (users, members, devices, hosts, assets, accounts, identities, apps, groups, service_accounts, roles, resources) AND no `event.action` or `event.outcome` is set AND pipeline test fixtures carry no per-record event timestamp distinct from collection time.
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` AND the stream sets `result.evaluation` or `vulnerability.*` — this is CDR state, not entity asset. Load CDR references only.
 If any stream fires checks 1–4 (and the negative gate does not override), load both entity references for that stream.
+
+**Federated Identity detection:** Load `input-configurations/references/federated-identity-aws.md` when any of:
+1. Root `manifest.yml` has a `var_groups` option named `identity_federation`.
+2. Any `provider_permissions` entry has `provider: aws`.
+3. Any `agent/stream/*.yml.hbs` contains `use_cloud_connectors` or `supports_identity_federation`.
+
+Then apply the federation items on the manifest checklist, the CEL and HTTPJSON review checklists, and the matching input-configurations guide (CloudWatch Stream template; S3 Input gating). Federation-eligible types with no dedicated guide (e.g. `aws/metrics`) still use `federated-identity-aws.md`. Do **not** treat `auth.aws` alone (flat access keys) as federation.
 
 ---
 
@@ -292,6 +300,7 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 | `references/cel-validator-procedure.md` | CEL in scope | celfmt authority, type conversion audit, error shape validation |
 | `references/api-conformance-methodology.md` | CEL/HTTPJSON + API docs | Cross-referencing implementation vs vendor API documentation |
 | `references/input-review-orchestration.md` | Any input templates | Review depth routing by input type |
+| `input-configurations/references/federated-identity-aws.md` | Federated Identity detection (see Step 4) | AWS Cloud Connectors procedure: `iac_template_url`, `use_cloud_connectors`, input gating |
 | `references/transform-guide.md` | Transform in scope | Transform types, config, fields, sync, review checklist |
 | `references/cdr-transform-requirements.md` | CDR transforms | CDR latest transform requirements, destination naming, keys, retention |
 | `references/repo-conventions.md` | Always | elastic/integrations repo conventions: `group` field, Elastic Managed rename + agentless `release`, owner.type, changelog/backport automation, version-constraint hygiene (dated reference) |

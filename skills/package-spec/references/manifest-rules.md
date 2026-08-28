@@ -296,7 +296,7 @@ The most common occurrence is the `elasticsearch` section in data stream manifes
 
 The `format_version` field in `manifest.yml` declares which package spec version the package conforms to. Always use the **minimum version that supports the features the package actually uses**, not the latest available spec version.
 
-The current standard is `"3.4.2"`.
+The current **default** is `"3.4.2"`. Higher versions are correct when the package uses features that require them.
 
 ### Why minimum matters
 
@@ -318,6 +318,10 @@ Only bump when the package uses a feature introduced in a newer spec version:
 | `lifecycle` field | 3.0.0 |
 | Secret variables (`secret: true`) | 3.0.0 |
 | `elasticsearch.source_mode` | 3.0.3 |
+| `var_groups` | 3.6.1 |
+| `provider_permissions` | 3.6.4 |
+
+See `format-version-features.md` for the full 3.5.0+ table, and `var-groups-and-provider-permissions.md` for schema details.
 
 ### When bumping is justified
 
@@ -327,6 +331,8 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 2. Does the package use any feature that requires this version?
 3. Could a lower version work?
 4. If the PR bumps `format_version`, does it also introduce a feature that requires the bump?
+
+**Worked example — Federated Identity:** introducing `provider_permissions` (and usually `var_groups`) requires `format_version: "3.6.4"`. That jump activates 3.6.0 pipeline tag / `on_failure` validators on files the federation change may not touch — apply only the bump first, run `elastic-package lint`, and land hygiene as a separate PR if needed before the federation change.
 
 ---
 
@@ -339,3 +345,5 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] YAML uses nested structure, not dotted keys -- **MEDIUM**
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**
+- [ ] If `var_groups` includes `identity_federation`: the option has `iac_template_url` pointing at `cloudformation-federated-identity-aws-<Kibana-floor>.yml`, not the GuardDuty-only CFT -- **HIGH** when in scope (see `input-configurations` -> `references/federated-identity-aws.md`)
+- [ ] If `provider_permissions` is declared: `format_version >= 3.6.4` and IAM action names match the collector's real API calls -- **HIGH** when in scope

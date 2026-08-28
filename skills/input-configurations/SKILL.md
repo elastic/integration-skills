@@ -4,8 +4,10 @@ description: >-
   Input template configuration for Elastic integrations. Covers agent stream
   templates (agent/stream/*.yml.hbs) for all non-CEL input types: HTTPJSON,
   AWS S3, CloudWatch, Azure Blob, Azure EventHub, GCS, GCP Pub/Sub, TCP, UDP,
-  HTTP Endpoint, Filestream, Logfile, Journald, Winlog, and WebSocket. For CEL
-  input programs, use the cel-programs skill instead.
+  HTTP Endpoint, Filestream, Logfile, Journald, Winlog, and WebSocket. Also
+  covers Federated Identity (Cloud Connectors) for agentless AWS integrations,
+  including the auth.aws / use_cloud_connectors block on CEL stream templates.
+  For CEL program logic, use the cel-programs skill.
 license: Apache-2.0
 metadata:
   author: elastic
@@ -22,13 +24,15 @@ Load this skill whenever tasks include:
 - wiring up cloud storage inputs (AWS S3, GCS, Azure Blob, Azure EventHub)
 - setting up network inputs (TCP, UDP, HTTP Endpoint, WebSocket)
 - configuring file-based inputs (Filestream, Logfile, Journald, Winlog)
+- enabling Federated Identity (Cloud Connectors) on an AWS integration package
 
 ## When not to use
 
 Do not use this skill as the primary guide for:
-- CEL program development (`cel-programs`) -- CEL templates have their own structure, state model, and mito workflow
+- CEL *program* development (`cel-programs`) -- CEL program structure, state model, and mito workflow. Exception: the `auth.aws` / `use_cloud_connectors` template block for Federated Identity is owned here via `references/federated-identity-aws.md`
 - ingest pipeline processor design (`ingest-pipelines`)
 - field mappings and ECS compliance (`ecs-field-mappings`)
+- `var_groups` / `provider_permissions` *schema* and `format_version` floors alone (`package-spec`) -- use this skill for the end-to-end federation procedure that applies them
 
 ## Mandatory first read
 
@@ -58,9 +62,14 @@ Detect the input type from the filename pattern in `agent/stream/` or from the d
 
 Load **only** the guide for the detected input type, not all guides.
 
+For **Federated Identity** tasks (any eligible input type, including `cel`), load
+`references/federated-identity-aws.md` regardless of which input type is
+involved.
+
 ## Handoff
 
-- For **CEL programs** (`cel.yml.hbs`), hand off to the `cel-programs` skill.
+- For **CEL program logic**, hand off to the `cel-programs` skill. Keep this skill loaded for Federated Identity `auth.aws` / `use_cloud_connectors` edits on `cel.yml.hbs`.
+- For **manifest schema** (`var_groups`, `provider_permissions`, `format_version` / conditions floors), hand off to the `package-spec` skill (`references/var-groups-and-provider-permissions.md`).
 - For **pipeline issues** discovered while reviewing input templates, hand off to the `ingest-pipelines` skill.
 - For **field mapping issues** found in template variable wiring, hand off to the `ecs-field-mappings` skill.
 
@@ -80,3 +89,4 @@ Load **only** the guide for the detected input type, not all guides.
 - `references/journald-guide.md` -- Journald collection
 - `references/winlog-guide.md` -- Windows Event Log collection
 - `references/websocket-guide.md` -- WebSocket streaming (may embed CEL)
+- `references/federated-identity-aws.md` -- AWS Federated Identity procedure: input classification, federation vars, `auth.aws` / `use_cloud_connectors`, input gating (schema lives in `package-spec`)

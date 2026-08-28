@@ -22,3 +22,7 @@ WebSocket and HTTP Endpoint inputs can contain embedded CEL programs (detected b
 ## Common patterns (always)
 
 Always load `input-configurations/references/common-input-patterns.md` regardless of type. Check: tags, forwarded/disable_host coupling, processors passthrough, no hardcoded values.
+
+## Federated Identity (when detected)
+
+When `review-integration` Federated Identity detection fires, also load `input-configurations/references/federated-identity-aws.md` regardless of input type (including CEL). Check: `iac_template_url` uses `cloudformation-federated-identity-aws-<version>.yml` (not the GuardDuty-only CFT); `use_cloud_connectors` only on federation-eligible inputs; agentless-but-not-federation inputs (e.g. `aws-s3`) use `hide_in_var_group_options`, not `deployment_modes: ["default"]`.

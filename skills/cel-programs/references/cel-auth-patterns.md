@@ -85,7 +85,7 @@ state.url.trim_right("/") + "/ingestion/rules/save_result_set/?" + {
 
 Auth mechanisms at the config level differ in scope — this is critical for choosing request style:
 
-- `**auth.digest**`, `**auth.oauth2**`, `**auth.file**`, `**auth.aws**` — applied to **all requests** including `.do_request()`. No CEL-side auth logic needed.
+- `**auth.digest**`, `**auth.oauth2**`, `**auth.file**`, `**auth.aws**` — applied to **all requests** including `.do_request()`. No CEL-side auth logic needed. For Cloud Connectors / `use_cloud_connectors` and package-level Federated Identity setup, see `input-configurations` -> `references/federated-identity-aws.md`.
 - `**auth.basic`**, `**auth.token**` — applied only to **direct calls** (`get()`, `post()`, `head()`), **not** `.do_request()`. Prefer direct calls with these. If `.do_request()` is needed (e.g. for custom headers beyond auth), use `basic_authentication(user, pass)` on the request map instead of manual header construction.
 
 **Prefer input-level auth** over in-program token fetching. Use in-program auth only when the API requires non-standard authentication (session cookies, HMAC signing, custom token endpoints not supported by `auth.oauth2`).

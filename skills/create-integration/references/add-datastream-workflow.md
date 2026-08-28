@@ -230,6 +230,7 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - **`format_version`, `conditions.kibana.version`, and ECS reference — match existing package versions, do not bump unconditionally:**
   - **New package:** always use `format_version: "3.4.2"`, `conditions.kibana.version: "^8.19.0 || ^9.1.0"`, and `_dev/build/build.yml` ECS reference `git@v9.3.0`.
   - **Adding to an existing shipped package:** match the package's current `format_version`, `conditions.kibana.version`, and `_dev/build/build.yml` ECS reference. Only bump if the new stream requires a feature or field unavailable in the current versions (check `package-spec/references/format-version-features.md`). Bumping unconditionally inflates the diff beyond the feature being added. If you do bump, call it out explicitly in the changelog entry. See the `package-spec` skill for the minimum-version principle.
+  - **Federated Identity / `provider_permissions`:** this is a justifying feature. Use `format_version: "3.6.4"` and set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` (see `input-configurations` -> `references/federated-identity-aws.md`). Call the bump out in the changelog.
   - These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars (package-level and data stream-level). If a var is not used in `cel.yml.hbs`, remove it.
 - Run from inside the target package directory (`packages/<name>/`).

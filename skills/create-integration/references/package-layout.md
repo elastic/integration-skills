@@ -85,6 +85,7 @@ Notes:
 - Keep `name` stable; package identity and folder name alignment matter.
 - Integration templates generally define `inputs:` as a list.
 - Each input entry maps to one or more stream templates under data streams.
+- `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"` are the **defaults**. If the package needs a higher floor (e.g. Federated Identity / `provider_permissions` → `format_version: "3.6.4"` with both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"`), follow `package-spec` and `input-configurations` -> `references/federated-identity-aws.md` instead of forcing these defaults.
 
 ### Data stream `manifest.yml` pattern
 
@@ -231,6 +232,8 @@ policy_templates:
       - name: <var_name>
         type: <var_type>
 ```
+
+Same default `format_version` / Kibana floor as integration packages (`3.4.2` and `^8.19.0 || ^9.1.0`). Raise only when a feature the **input package** actually uses requires it (see `package-spec`). Federated Identity / Cloud Connectors is an integration-package procedure (`input-configurations` -> `references/federated-identity-aws.md`), not an input-package pattern.
 
 ### `agent/input/*.yml.hbs`
 

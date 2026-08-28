@@ -2,10 +2,11 @@
 name: package-spec
 description: >-
   Package specification compliance for Elastic integration packages. Covers
-  manifest structure (format_version, conditions, variables, routing rules),
-  changelog schema and semantic version bumps, and alignment with the upstream
-  elastic/package-spec. Use when building or reviewing manifest.yml, changelog.yml,
-  or debugging elastic-package lint/check errors on package metadata.
+  manifest structure (format_version, conditions, variables, var_groups,
+  provider_permissions, routing rules), changelog schema and semantic version
+  bumps, and alignment with the upstream elastic/package-spec. Use when building
+  or reviewing manifest.yml, changelog.yml, or debugging elastic-package
+  lint/check errors on package metadata.
 license: Apache-2.0
 metadata:
   author: elastic
@@ -26,6 +27,7 @@ Use this skill when tasks include:
 - adding or validating `changelog.yml` entries
 - selecting the correct change type and semantic version bump
 - configuring policy templates, inputs, and variable declarations
+- declaring `var_groups` or `provider_permissions` (schema and floors)
 - debugging `elastic-package lint` or `elastic-package check` errors on manifests or changelogs
 - reviewing variable scoping across package, policy template, input, and data stream levels
 - validating Handlebars template variables against manifest declarations
@@ -35,6 +37,7 @@ Use this skill when tasks include:
 ## When NOT to use
 
 - Package scaffolding and directory layout (`create-integration`)
+- End-to-end Federated Identity / Cloud Connectors enablement on an AWS package (`input-configurations` -> `references/federated-identity-aws.md`)
 - Ingest pipeline design (`ingest-pipelines`)
 - Field mapping and ECS compliance (`ecs-field-mappings`)
 - CEL programs (`cel-programs`)
@@ -42,13 +45,13 @@ Use this skill when tasks include:
 
 ## Handoff
 
-For package directory layout and required files, see `create-integration` -> `references/package-layout.md`. For `elastic-package` CLI commands and troubleshooting, see `elastic-package-cli`.
+For package directory layout and required files, see `create-integration` -> `references/package-layout.md`. For `elastic-package` CLI commands and troubleshooting, see `elastic-package-cli`. For enabling Federated Identity (Cloud Connectors) on an AWS integration, see `input-configurations` -> `references/federated-identity-aws.md`.
 
 ---
 
 ## format_version
 
-The `format_version` field in `manifest.yml` declares which [elastic/package-spec](https://github.com/elastic/package-spec) version the package conforms to. The current standard for new packages is `"3.4.2"`.
+The `format_version` field in `manifest.yml` declares which [elastic/package-spec](https://github.com/elastic/package-spec) version the package conforms to. The current **default** for new packages is `"3.4.2"`.
 
 **Use the minimum version that supports the features the package actually uses**, not the latest available spec version. Bumping without needing new features:
 - forces users to run a newer Kibana than necessary
@@ -66,6 +69,10 @@ Only bump when the package uses a feature introduced in a newer spec version:
 | `lifecycle` field | 3.0.0 |
 | Secret variables (`secret: true`) | 3.0.0 |
 | `elasticsearch.source_mode` | 3.0.3 |
+| `var_groups` | 3.6.1 |
+| `provider_permissions` (Federated Identity IAM declarations) | 3.6.4 |
+
+**Justified exception — Federated Identity:** packages that declare `provider_permissions` (and typically `var_groups`) must use `format_version: "3.6.4"`. That bump activates 3.6.0+ pipeline validators; land pipeline hygiene first if lint surfaces pre-existing violations. See `references/var-groups-and-provider-permissions.md` and `input-configurations` -> `references/federated-identity-aws.md`.
 
 See `references/format-version-features.md` for the full feature-to-version table including recent spec additions (3.6.0+), and `references/manifest-rules.md` for the review procedure.
 
@@ -73,9 +80,11 @@ See `references/format-version-features.md` for the full feature-to-version tabl
 
 ## conditions.kibana.version
 
-The current standard constraint is `"^8.19.0 || ^9.1.0"`. This is set in the **root** `manifest.yml` only -- data stream manifests must NOT set their own `conditions`.
+The current **default** constraint is `"^8.19.0 || ^9.1.0"`. This is set in the **root** `manifest.yml` only -- data stream manifests must NOT set their own `conditions`.
 
 When an integration uses features that require a newer agent (e.g., CEL functions introduced in v9.3.0), the constraint must be adjusted accordingly. For systematic version verification of CEL features, see the `review-integration` skill's version check references.
+
+**Justified exception — Federated Identity / `auth.aws`:** set both `conditions.kibana.version` and `conditions.agent.version` to `"^9.4.0"` (or higher). If the current Kibana constraint still covers an 8.x line that `^9.4.0` would drop, do **not** bump silently — escalate per **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
 ---
 
@@ -194,3 +203,4 @@ See `references/format-version-features.md` for the curated feature-to-version t
 | `references/manifest-rules.md` | Full rules for format_version selection, variable shadowing, Handlebars variable declarations, routing rules, YAML structure, and severity-tagged review checklist |
 | `references/changelog-patterns.md` | Changelog entry patterns, semver rules, breaking-change checklist, CI examples |
 | `references/format-version-features.md` | Feature-to-version table sourced from elastic/package-spec, including recent spec additions |
+| `references/var-groups-and-provider-permissions.md` | Schema for `var_groups` and `provider_permissions`, floors, validators; handoff to Federated Identity procedure |

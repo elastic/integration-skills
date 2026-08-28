@@ -128,6 +128,8 @@ access_key_id: AKIAIOSFODNN7EXAMPLE
 
 Templates should support multiple authentication methods: access key pair, credential profile, session token, and IAM role assumption. Users running on EC2/ECS with instance roles may not provide any explicit credentials.
 
+> **Federated Identity / Cloud Connectors:** these flat credential fields are the standard agent-based pattern. For agentless Identity Federation (`auth.aws`, `use_cloud_connectors`, `var_groups`, `provider_permissions`), follow `references/federated-identity-aws.md`. `aws-cloudwatch` is federation-eligible when used in an agentless package.
+
 ### 3. Region must be configurable
 
 ```yaml
@@ -415,6 +417,7 @@ Sets the timeout for individual CloudWatch API calls. Increase for large log gro
 - [ ] Multiple authentication methods supported (access key, profile, role)
 - [ ] `role_arn` available for cross-account collection
 - [ ] Credential fields use `type: password` in the manifest
+- [ ] If Federated Identity is in scope: `aws-cloudwatch.yml.hbs` uses `auth.aws` with `use_cloud_connectors` gated on `supports_identity_federation` per `references/federated-identity-aws.md` (**Stream template**); `aws-cloudwatch` is federation-eligible -- **HIGH** when in scope
 
 ### Region and positioning
 - [ ] Region is configurable via variable
