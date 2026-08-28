@@ -52,6 +52,8 @@ Use this reference for understanding package topology, required files, and manif
   validation.yml                  # optional package-level validation config
 ```
 
+`LICENSE.txt` is not listed — it is injected at build time by `elastic-package build`. Do not create or commit it manually.
+
 ### Root `manifest.yml` pattern
 
 ```yaml

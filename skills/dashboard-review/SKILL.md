@@ -83,6 +83,23 @@ change summary for each dashboard.
 - **High panel count:** If a dashboard has more than roughly 20
   panels, note it. The guidelines recommend splitting across
   dashboards and linking with drilldowns.
+- **Queries on `event.dataset` instead of `data_stream.dataset`:**
+  Saved-object queries (dashboards, saved searches, packaged ML job
+  datafeeds) must filter on `data_stream.dataset`. Some inputs
+  (e.g. packetbeat) never set `event.dataset`, so an
+  `event.dataset` filter silently matches nothing. Flag every
+  saved-object query in a diff that renames or re-maps fields.
+- **YAML dashboard sources out of sync:** When a package keeps YAML
+  dashboard sources in `_dev/shared/kibana/*.yaml` (compiled to
+  `kibana/dashboard/*.json` with kb-dashboard), BOTH must be
+  committed and in sync. Flag JSON-only edits when a YAML source
+  exists for that dashboard.
+- **Regeneration diffs:** A recompile PR is expected to change only
+  `state.adHocDataViews`, `state.internalReferences`, and per-layer
+  `index` keys (the ES|QL/Discover fix on Kibana 9.3+). Diffs beyond
+  those keys in a "regenerate" PR deserve inspection.
+- **Missing Kibana asset tags:** New content-pack dashboards are
+  expected to carry Kibana asset tags — note their absence (LOW).
 
 Only report issues that actually exist — skip passing checks. For
 pre-existing violations in unchanged panels, mention them once

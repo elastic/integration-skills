@@ -15,6 +15,7 @@
         "./skills/dashboard-review",
         "./skills/ecs-field-mappings",
         "./skills/elastic-package-cli",
+        "./skills/entity-mappings",
         "./skills/ingest-pipelines",
         "./skills/input-configurations",
         "./skills/integration-testing",

@@ -45,7 +45,7 @@ Keep `default.yml` readable and focused. Move large format-specific logic into s
 
 ## ECS version
 
-Set the pipeline ECS reference version explicitly at the top of `processors` (after any introductory processors you already use). **Use `9.3.0`** — do not pin an older ECS version.
+Set the pipeline ECS reference version explicitly at the top of `processors` (after any introductory processors you already use). **Use `9.3.0`** — do not pin an older ECS version. **Exception:** when the orchestrator specifies this is an entity data stream (`event.kind: asset`), use `9.5.0` instead — entity leaf fields (`entity.attributes.*`, `entity.lifecycle.*`, `entity.relationships.*`) do not exist at `9.3.0` and cause `field is undefined` build failures at that pin.
 
 ```yaml
   - set:
@@ -178,12 +178,14 @@ Example middle section (illustrative):
   - geoip:
       field: source.ip
       target_field: source.geo
+      if: ctx.source?.ip != null
       ignore_missing: true
       tag: enrich_source_geo
   - geoip:
       database_file: GeoLite2-ASN.mmdb
       field: source.ip
       target_field: source.as
+      if: ctx.source?.ip != null
       properties:
         - asn
         - organization_name
@@ -391,6 +393,8 @@ Step 2 (`remove`): removes the redundant `message` field when `event.original` i
 ### Do NOT add an `event.original` removal processor at the end of the pipeline
 
 Some existing integrations contain a `remove` processor that deletes `event.original` at the end of the pipeline when `preserve_original_event` is not in `tags`. **This pattern is deprecated and must not be used in new pipelines.** The removal of `event.original` for storage optimization is now handled by a separate final pipeline outside the integration. Do not copy this pattern from reference integrations that still have it — it is legacy.
+
+That stack-side final pipeline honors the `preserve_original_event` tag, so a package exposing the toggle needs NO in-pipeline remove for the toggle to work — the toggle is not a no-op without one. Never recommend adding this processor; when reviewing, its *presence* is the finding, never its absence.
 
 ### Reference
 
@@ -604,4 +608,6 @@ As documented in the JSE00001 section above: do not add a `remove` processor for
 - `references/error-handling-patterns.md`
 - `references/grok-recipes.md` — grok syntax, type coercion, syslog header recipes, common mistakes, pattern library link
 - `references/builder-subagent-guidance.md` — subagent operating manual: scope boundaries, skill-load sequence, input data paths (CEL-first vs Direct), 9-step pipeline build workflow, "review generated output, never hand-edit expected JSON", reporting contract. The orchestrator dispatches subagents by passing this file's **path** in the task prompt; the subagent reads it itself in its own fresh context. Do NOT embed/paste its contents into the task prompt.
+- `references/cdr-pipeline-requirements.md` — cloud security / CDR integrations only (`cloudsecurity_cdr` category): event categorization, Must Have / Should Have fields, processor patterns, review checklist
+- `entity-mappings/references/entity-pipeline-patterns.md` — entity/inventory data streams only (`event.kind: asset`): categorization processors, `entity.id` mirroring, boolean coercion, relationship objects, anti-patterns, pipeline review checklist
 

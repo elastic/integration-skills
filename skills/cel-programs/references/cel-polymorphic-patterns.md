@@ -81,7 +81,7 @@ Prefer `sprintf` over string concatenation for readability when targeting v8.18.
 | Feature | Description | Minimum version |
 |---|---|---|
 | `allowed_environment` | Whitelists environment variable names accessible via the `env` global in CEL | v8.16.0 |
-| `secret_state` | Unconditional redaction of named state keys in logs and diagnostics | v9.4.0 (unreleased) |
+| `secret_state` | Unconditional redaction of named state keys in logs and diagnostics | v8.19.14 / v9.2.8 / v9.3.3 / v9.4.0 |
 
 Before `secret_state`, secrets stored in `state` require explicit `redact` config entries for log redaction.
 

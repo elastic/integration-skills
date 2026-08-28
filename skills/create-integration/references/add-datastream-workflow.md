@@ -23,6 +23,12 @@ Every subagent task prompt must:
 | `integration-testing/references/builder-system-test-subagent-guidance.md` | After pipeline work, for each testable data stream (CEL, tcp, udp, http_endpoint, logfile, filestream, kafka, gcp-pubsub) | Runs `elastic-package build` + `elastic-package test system --data-streams <stream> --generate`, reports pass/fail and whether `sample_event.json` was produced. |
 | `review-integration/references/reviewer-subagent-guidance.md` | After all streams are built (optional) | Read-only quality review: classifies files by domain via the `review-integration` skill, runs check/lint/format validation, inspects manifest/fields/pipeline/CEL/docs/changelog, returns severity-ranked domain-tagged findings. |
 
+## Phase 0: Verify prerequisites
+
+Before making any changes, verify required tools are present. Run the Preconditions blocks in `references/scaffold-commands.md` **verbatim** — do not improvise alternate checks or install paths. That file is the single source of truth for the `elastic-package` probe and the CEL tool Check / Install / re-Check sequence.
+
+`elastic-package` is always required. If any CEL data streams are being added, also run the CEL Check (and Install + re-Check if anything is missing). Do not skip this: missing tools produce silent degraded output rather than early failures.
+
 ## Phase 1: Parse context and verify package
 
 1. Extract from the user message: target package, stream name(s), stream type, input type(s), and any constraints.
@@ -30,6 +36,7 @@ Every subagent task prompt must:
 3. Verify the target package exists at `packages/<package_name>/` and read its root `manifest.yml` to understand existing structure (existing data streams, policy template inputs, shared vars).
 4. If package name is ambiguous or missing, ask before proceeding.
 5. Default stream type to `logs` unless explicitly specified as `metrics`.
+6. For each planned data stream, classify it as an **event stream** or an **entity stream** using `entity-mappings/references/entity-datastream-classification.md`. Record the decision and the represented `entity.type`. This changes the Step 2 dispatch (entity reference paths passed or not), the stream name convention (`members` / `users` / `devices` etc.), and the required ECS pin.
 
 ## Phase 2: Scaffold the data stream
 
@@ -126,6 +133,7 @@ The task prompt must include (in addition to the read-the-manual directive):
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
 6. Expected ECS categorization if known.
+7. **If this is an entity data stream** (classified in Phase 1 using `entity-mappings/references/entity-datastream-classification.md`): say so explicitly, pass the paths `entity-mappings/references/entity-field-catalog.md` and `entity-mappings/references/entity-pipeline-patterns.md`, and tell the subagent to set `ecs.version: 9.5.0` and `dependencies.ecs.reference: "git@v9.5.0"` in `_dev/build/build.yml`. Pass **paths only** — do not embed file contents.
 
 The subagent will: design and implement the ingest pipeline, define field mappings, create pipeline test fixtures, run `elastic-package test pipeline --generate`, and verify the generated expected output.
 
@@ -219,7 +227,11 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - Always use `elastic-package create data-stream` for scaffolding. Never fabricate stream directories manually.
 - Treat all scaffold output as placeholders only. A passing scaffold validation does not mean the data stream implementation is complete.
 - Treat package-level and data stream `manifest.yml` as placeholders until aligned with implemented templates and requirements.
-- **Verify root `manifest.yml` sets `format_version` and `conditions.kibana.version` to the minimum that supports the package's features.** Default: `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"`. For Federated Identity / `provider_permissions`, use `format_version: "3.6.4"` and set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` instead (see `input-configurations` -> `references/federated-identity-aws.md`). If the existing package has different values without a justifying feature, update them toward the default. These settings belong only in the root manifest, not in data stream manifests.
+- **`format_version`, `conditions.kibana.version`, and ECS reference — match existing package versions, do not bump unconditionally:**
+  - **New package:** always use `format_version: "3.4.2"`, `conditions.kibana.version: "^8.19.0 || ^9.1.0"`, and `_dev/build/build.yml` ECS reference `git@v9.3.0`.
+  - **Adding to an existing shipped package:** match the package's current `format_version`, `conditions.kibana.version`, and `_dev/build/build.yml` ECS reference. Only bump if the new stream requires a feature or field unavailable in the current versions (check `package-spec/references/format-version-features.md`). Bumping unconditionally inflates the diff beyond the feature being added. If you do bump, call it out explicitly in the changelog entry. See the `package-spec` skill for the minimum-version principle.
+  - **Federated Identity / `provider_permissions`:** this is a justifying feature. Use `format_version: "3.6.4"` and set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` (see `input-configurations` -> `references/federated-identity-aws.md`). Call the bump out in the changelog.
+  - These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars (package-level and data stream-level). If a var is not used in `cel.yml.hbs`, remove it.
 - Run from inside the target package directory (`packages/<name>/`).
 - Run `elastic-package build` before any system test whenever package files changed.
@@ -229,5 +241,6 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - Do not create `*-expected.json` manually. It is only generated by `elastic-package test pipeline --generate`.
 - For CEL inputs, strip unused scaffold vars.
 - Choose `--inputs` based on the product's data delivery method. Allowed values: `aws-cloudwatch`, `aws-s3`, `azure-blob-storage`, `azure-eventhub`, `cel`, `entity-analytics`, `etw`, `filestream`, `gcp-pubsub`, `gcs`, `http_endpoint`, `journald`, `netflow`, `redis`, `tcp`, `udp`, `winlog`.
-- Do not load domain-specific skills (CEL, pipelines, ECS, field mappings) into your own context. Delegate to the subagents that already have that knowledge.
+- Do not load domain-specific skills (CEL, pipelines, ECS, field mappings, entity-mappings) into your own context. Delegate to the subagents that already have that knowledge.
+- **Entity data streams**: set `event.kind: asset`, never `event`. The `entity.*` leaf fields (`entity.attributes.*`, `entity.lifecycle.*`, `entity.relationships.*`) require `git@v9.5.0` in `_dev/build/build.yml` with a matching `ecs.version: 9.5.0` in the pipeline; at `git@v9.3.0` they are undefined. Never apply entity fields to event log or CDR findings streams.
 - **Never include `data_stream.dataset` in `cel.yml.hbs` or as a manifest var for integration packages** (`type: integration`). The framework routes documents automatically.

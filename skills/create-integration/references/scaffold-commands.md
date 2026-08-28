@@ -5,9 +5,41 @@ Use this reference for scaffolding packages and data streams and applying the re
 ## Preconditions
 
 Before running scaffold commands, verify:
-1. `elastic-package` is available (`elastic-package --help`)
+1. `elastic-package` is available on `$PATH`
 2. you are in the correct directory (see working directory rules below)
 3. package/data stream name is finalized (renames later are noisy)
+
+```bash
+command -v elastic-package >/dev/null || { echo "MISSING: elastic-package"; exit 1; }
+```
+
+**For integrations with CEL data streams, the CEL tools must be present before starting.** Missing tools produce silent degraded output — `celfmt` and `ceplx` steps are skipped without warning, resulting in PRs that require extra review cycles to catch what the tooling should have caught automatically.
+
+Always probe with `command -v`, never with `-version`: of these four only `mito` accepts a `-version` flag. `celfmt` and `ceplx` exit 2 with `flag provided but not defined: -version`, and `stream` uses a `version` subcommand, so a chained `-version` check fails even when every tool is installed.
+
+**Check** (exits non-zero if anything is missing):
+
+```bash
+m=
+for t in mito celfmt ceplx stream; do
+  command -v "$t" >/dev/null || { echo "MISSING: $t"; m=1; }
+done
+[ -z "$m" ] && echo "all CEL tools present" || exit 1
+```
+
+**Install** missing tools (idempotent — skips what is already present):
+
+```bash
+for pkg in \
+  github.com/elastic/mito/cmd/mito \
+  github.com/elastic/celfmt/cmd/celfmt \
+  github.com/efd6/ceplx/cmd/ceplx \
+  github.com/elastic/stream; do
+  command -v "${pkg##*/}" >/dev/null || go install "$pkg@latest"
+done
+```
+
+All four land in `$(go env GOPATH)/bin` (usually `~/go/bin`). After Install, **re-run the Check block above**. If Check still fails, `$(go env GOPATH)/bin` is not on `PATH` — add it and retry.
 
 ## Working directory rules
 
@@ -91,15 +123,15 @@ dependencies:
     reference: "git@v9.3.0"
 ```
 
-Create this before creating any data streams.
+Create this before creating any data streams. For new packages, always use `git@v9.3.0`. When adding a data stream to an existing package, match the package's current ECS reference in `_dev/build/build.yml` — only bump if the new stream requires a field unavailable in that version.
 
 ### 2. Update root `manifest.yml`
 
 - Set `title`, `description`, `version` (use `0.1.0` for new integrations)
 - Set `categories` (one or two relevant values)
 - Set `owner` (github team/org)
-- Set `format_version: "3.4.2"` by default. The scaffold may generate a different version — override to `3.4.2` unless the package needs a higher floor (e.g. Federated Identity / `provider_permissions` requires `3.6.4`; see `package-spec` and `input-configurations` -> `references/federated-identity-aws.md`).
-- Set `conditions.kibana.version: "^8.19.0 || ^9.1.0"` by default. For Federated Identity / `auth.aws`, set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` instead.
+- Set `format_version: "3.4.2"` for new packages. The scaffold may generate a different version — always override to `3.4.2` unless the package needs a higher floor (e.g. Federated Identity / `provider_permissions` requires `3.6.4`; see `package-spec` and `input-configurations` -> `references/federated-identity-aws.md`). When adding to an existing package, match the package's current `format_version` instead — see `add-datastream-workflow.md` for the decision rule.
+- Set `conditions.kibana.version: "^8.19.0 || ^9.1.0"` for new packages. For Federated Identity / `auth.aws`, set both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"` instead. When adding to an existing package, match the current value instead — only bump if required.
 
 ### 3. Update `changelog.yml`
 
@@ -218,3 +250,4 @@ The scaffold may generate `default.yml` with an older `ecs.version` (e.g., `8.17
 - Manually creating `sample_event.json` or `*-expected.json`
 - Uncommenting `{{ event "stream" }}` before `sample_event.json` exists (causes build failure)
 - Leaving the verbose CEL scaffold unchanged — strip unused vars and replace placeholder CEL program
+- **Creating `LICENSE.txt` manually** — `elastic-package build` injects it automatically; committing a manually-created one is flagged in PR review

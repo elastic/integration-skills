@@ -110,11 +110,13 @@ When the pipeline has IP address fields, always apply **both** the geo lookup an
 - geoip:
     field: source.ip
     target_field: source.geo
+    if: ctx.source?.ip != null
     ignore_missing: true
     tag: enrich_source_geo
 - geoip:
     field: destination.ip
     target_field: destination.geo
+    if: ctx.destination?.ip != null
     ignore_missing: true
     tag: enrich_destination_geo
 
@@ -123,6 +125,7 @@ When the pipeline has IP address fields, always apply **both** the geo lookup an
     database_file: GeoLite2-ASN.mmdb
     field: source.ip
     target_field: source.as
+    if: ctx.source?.ip != null
     properties:
       - asn
       - organization_name
@@ -132,6 +135,7 @@ When the pipeline has IP address fields, always apply **both** the geo lookup an
     database_file: GeoLite2-ASN.mmdb
     field: destination.ip
     target_field: destination.as
+    if: ctx.destination?.ip != null
     properties:
       - asn
       - organization_name
@@ -428,9 +432,9 @@ Processors vary dramatically in cost. Order pipelines so cheap operations run fi
 | Slow | `script` | Painless compilation + execution; avoid when a built-in suffices. |
 | Expensive | `geoip`, `user_agent` | Database/cache lookups on every invocation. |
 
-### Always guard `geoip` and `user_agent` with an `if` condition
+### Guard `geoip` with an `if` condition in new pipelines
 
-Even with `ignore_missing: true`, the `geoip` processor performs expensive database setup and lookup before checking whether the source field exists. This is an Elasticsearch performance issue where the missing-field check happens too late in the execution path. Always add an `if` condition to check field existence before the processor runs:
+Even with `ignore_missing: true`, the `geoip` processor performs expensive database setup and lookup before checking whether the source field exists. This is an Elasticsearch performance issue where the missing-field check happens too late in the execution path. In new pipelines, add an `if` condition to check field existence before the processor runs. For `user_agent` the guard is optional — the lookup is cheaper and bare `ignore_missing: true` is acceptable. In existing pipelines a missing guard is not worth churn on its own (see `review-integration/references/conflict-resolutions.md`):
 
 ```yaml
 - geoip:

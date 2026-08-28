@@ -33,6 +33,7 @@ body:
         - /cel-programs
         - /ingest-pipelines
         - /ecs-field-mappings
+        - /entity-mappings
         - /input-configurations
         - /package-spec
         - /integration-testing

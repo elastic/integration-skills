@@ -58,6 +58,24 @@ The following tools must be installed and available on `$PATH` for the agent wor
 
 All Go tools require a working [Go](https://go.dev/dl/) installation with `$GOPATH/bin` on your `$PATH`.
 
+To install every Go tool at once (idempotent — skips what you already have):
+
+```bash
+for pkg in \
+  github.com/elastic/elastic-package \
+  github.com/elastic/celfmt/cmd/celfmt \
+  github.com/elastic/stream \
+  github.com/elastic/mito/cmd/mito \
+  github.com/efd6/ceplx/cmd/ceplx \
+  github.com/efd6/kbdash; do
+  command -v "${pkg##*/}" >/dev/null || go install "$pkg@latest"
+done
+```
+
+If a tool is still missing afterward, add `$(go env GOPATH)/bin` to `PATH` and re-run the loop.
+
+> **Windows:** All Go tools install and run on Windows. Bash examples using process substitution or Unix paths require manual adaptation.
+
 ### npx (Recommended)
 
 The fastest way to install skills is with the skills CLI. No need to clone this repository — just run:
@@ -142,6 +160,17 @@ npx skills update
 
 **Working with the integrations repository:** If you are developing integrations against [`elastic/integrations`](https://github.com/elastic/integrations), run these skills from a checkout of that repo or point your agent at that tree. This gives the agent the real package layout, shared conventions, and surrounding packages for context. Several `elastic-package` commands (system tests, workspace-aware workflows) also require an integrations-style workspace to run correctly.
 
+## Recommended workflow
+
+Run `/research-integration` first to investigate the vendor's API, data formats, and field schemas, then pass the research output directly into `/create-integration`:
+
+```
+/research-integration <vendor or product name>
+/create-integration @research_results/<product_slug>/research-brief.md
+```
+
+Skipping `/research-integration` or bringing a pre-existing collector (such as a Go program to adapt into a CEL program) deviates from the optimized path and may produce lower-quality output — the build skills are tuned to consume the structured research brief format.
+
 ## Skills reference
 
 ### Top-level skills
@@ -179,7 +208,8 @@ In addition to the top-level skills, you can invoke any domain skill directly wh
 | `/cel-programs` | CEL program authoring, pagination patterns, auth patterns, rate limiting, error handling |
 | `/ingest-pipelines` | Ingest pipeline processors, grok patterns, Painless scripts, error handling |
 | `/ecs-field-mappings` | ECS field mapping strategy, event categorization, custom fields |
-| `/input-configurations` | Input templates for supported input types (HTTPJSON, AWS S3, CloudWatch, Azure Event Hub, GCP Pub/Sub, and more), plus Federated Identity (Cloud Connectors) for agentless AWS integrations |
+| `/entity-mappings` | ECS `entity.*` fields for entity/inventory data streams, entity-vs-event classification, entity-coverage gap analysis on existing packages |
+| `/input-configurations` | Input templates for all non-CEL input types: HTTPJSON, TCP/UDP, filestream/logfile, AWS S3, CloudWatch, Azure Blob/Event Hub, GCS, GCP Pub/Sub, HTTP Endpoint, journald, winlog, WebSocket (CEL routes to `/cel-programs`), plus Federated Identity (Cloud Connectors) for agentless AWS integrations |
 | `/package-spec` | Manifest rules, changelog schema, format version features, `var_groups` / `provider_permissions` |
 | `/integration-testing` | Pipeline testing, system testing, test fixture authoring |
 | `/elastic-package-cli` | `elastic-package` CLI usage and troubleshooting |

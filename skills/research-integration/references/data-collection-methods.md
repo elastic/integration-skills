@@ -8,7 +8,7 @@ Use this to determine which collection method fits the product being researched 
 
 ```
 Does the vendor expose a REST/HTTP API for retrieving events?
-  YES → CEL input (or httpjson for simple cases)
+  YES → CEL input
   NO ↓
 
 Does the product write local log files?
@@ -40,6 +40,8 @@ Can data be exported as flat files (CSV, JSON) and dropped to a path?
 ## Input types reference
 
 > **Standard variable tables are authoritative.** The "Standard configuration variables" tables below are the complete set of variables that may be proposed in the research brief's configuration plan (`configuration-plan.md` and section 6 of `research-brief.md`) for each input type. Do **not** invent additional variables based on patterns seen in legacy integrations in `elastic/integrations`. In particular, **never propose `preserve_duplicate_custom_fields`** as a configurable variable — it is a deprecated pipeline anti-pattern prohibited by `ingest-pipelines/SKILL.md`. The only `preserve_*` variable that is valid is `preserve_original_event`, listed in the tables below where applicable (filestream, TCP/UDP, and similar log-based inputs only — never for CEL). Additional product-specific variables are acceptable only when tied to a documented vendor-side requirement (e.g., a tenant ID for a multi-tenant API), not a pipeline behavior toggle.
+
+> **httpjson is deprecated.** The `httpjson` input type is not listed here because it is **deprecated in favour of CEL** and must not be used for new data streams. Any existing data stream that uses `httpjson` should not be referenced as a pattern for new work. If you encounter an existing package where some streams use `httpjson`, recommend `cel` for any new stream regardless. Never include `httpjson` as a recommended or alternative input type in a research brief.
 
 ### CEL (Common Expression Language) -- REST API collection
 

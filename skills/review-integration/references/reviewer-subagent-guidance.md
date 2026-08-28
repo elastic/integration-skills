@@ -102,7 +102,8 @@ references to load for the scope you are reviewing.
      (`severity-rubric.md` and `conflict-resolutions.md` always;
      `consistency-rules.md` whenever 2+ domains are touched; CEL
      references when CEL input is in scope; CDR references when
-     `cloudsecurity_cdr` appears in root manifest categories; etc.)
+     `cloudsecurity_cdr` appears in root manifest categories; entity references when the
+     Step 4 entity-data-stream detection fires; etc.)
 
 Do not assume the skills will load automatically. Read each file you
 identify before you begin inspection — the SKILL.md summaries alone
@@ -187,10 +188,19 @@ entirely rather than creating an empty one.
 `review-integration/references/conflict-resolutions.md` resolves the
 first-version-leniency conflict: for first-version packages
 (`0.0.1` / `1.0.0` with a single changelog entry), placeholder
-changelog links (`pull/0`) and placeholder logos/icons are
-**informational notes only, not findings**. Do not flag them at
+changelog links (`pull/99999` — the sanctioned placeholder;
+`elastic-package lint` rejects `pull/0`) and placeholder logos/icons
+are **informational notes only, not findings**. Do not flag them at
 MEDIUM or HIGH. For subsequent versions, the same placeholders are
 real findings (MEDIUM or HIGH as appropriate).
+
+**Exception -- the `pull/99999` development placeholder.** Leniency
+does not apply to it, at any package version: flag it at **MEDIUM**.
+Unlike `pull/0`, `pull/99999` passes `elastic-package lint`, so
+nothing else catches it and it silently reaches merge as a dead
+changelog link. The fix is to replace it with the real PR number
+once the PR exists -- see the `package-spec` skill's "Updating the
+changelog link after PR creation".
 
 ### CEL-specific operating rules
 

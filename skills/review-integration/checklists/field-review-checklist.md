@@ -3,7 +3,7 @@
 ### Build configuration
 
 - [ ] `_dev/build/build.yml` exists when any field files are present -- **HIGH** if missing
-- [ ] ECS reference pinned to `git@v9.3.0` -- **HIGH** if wrong version
+- [ ] ECS reference pinned to `git@v9.3.0` for standard integrations, or `git@v9.5.0` for packages with entity data streams (those using `event.kind: asset`) -- **HIGH** if wrong version; must match `ecs.version` set in the pipeline
 - [ ] ECS pin consistent with `ecs.version` set in pipeline -- **HIGH** if mismatch
 
 ### base-fields.yml
@@ -18,8 +18,8 @@
 
 ### ECS fields (ecs.yml)
 
-- [ ] Every ECS field set in the pipeline is listed in `fields/ecs.yml` using `name` + `external: ecs` -- **HIGH** if missing
-- [ ] `external: ecs` appears on every field whose name exists in ECS, regardless of which field file it is in -- **HIGH** if missing
+- [ ] ECS fields set by the pipeline are declared in `fields/ecs.yml` using `name` + `external: ecs`. When the `conditions.kibana.version` floor is >= 8.13.0, declarations are required ONLY for `geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`, or where `elastic-package` fails validation; if the constraint admits stacks below 8.13, EVERY pipeline-set ECS field needs a declaration -- **HIGH** if missing in either case
+- [ ] Standard keyword/date and standard-prefix geo ECS fields on packages with `conditions.kibana.version` floor >= 8.13.0 are covered by the `ecs@mappings` component template (applied by the stack from 8.13; package-spec version is not the gate) -- their absence from `ecs.yml` is NOT a finding, and existing `external: ecs` declarations are NOT removable-noise findings either
 - [ ] No extra metadata on ECS fields beyond `name` and `external: ecs` (except where type/value overrides are explicitly needed) -- **LOW**
 
 ### Custom fields (fields.yml)
@@ -42,6 +42,7 @@
 - [ ] `event.type`: only allowed values (access, admin, allowed, change, connection, creation, deletion, denied, device, end, error, group, indicator, info, installation, protocol, start, user) -- **HIGH** if invalid
 - [ ] `event.outcome`: only `failure`, `success`, `unknown` -- **HIGH** if invalid
 - [ ] Values are semantically appropriate for the data source -- **MEDIUM**
+- [ ] `event.kind: asset` and entity/inventory data streams (one-document-per-entity snapshots of users, hosts, devices, apps) go together: entity streams set `asset` (not `event` or `state`), and `asset` never appears on event logs, metric streams, or findings streams -- **MEDIUM** either way
 
 ### When reviewing a diff
 

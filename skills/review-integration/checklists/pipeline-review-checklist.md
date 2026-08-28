@@ -24,7 +24,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### ECS version
 
-- [ ] Pipeline sets `ecs.version: 9.3.0` -- **HIGH** if older version
+- [ ] Pipeline sets `ecs.version: 9.3.0` for standard streams, or `ecs.version: 9.5.0` for entity data streams (those with `event.kind: asset`) -- **HIGH** if wrong version; must match the `build.yml` ECS pin
 
 ### Processor-level checks
 
@@ -37,7 +37,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### Enrichment
 
-- [ ] geoip and user_agent processors have an `if` condition checking field existence (e.g., `if: ctx.source?.ip != null`), not just `ignore_missing: true`. The `ignore_missing` option checks too late and still incurs lookup cost -- **MEDIUM**
+- [ ] In NEW pipelines, geoip processors have an `if` condition checking field existence (e.g., `if: ctx.source?.ip != null`) in addition to `ignore_missing: true` -- the geoip database lookup is the expensive case worth guarding. Bare `ignore_missing: true` on user_agent, and on geoip in existing pipelines, is NOT a finding (see `references/conflict-resolutions.md`) -- **MEDIUM** (new pipelines, geoip only)
 - [ ] When geoip is used for geolocation (e.g., `source.geo`), there must be a companion ASN lookup using `database_file: GeoLite2-ASN.mmdb` targeting `*.as`, followed by renames `*.as.asn` to `*.as.number` and `*.as.organization_name` to `*.as.organization.name` -- **HIGH** if geo enrichment present but ASN missing
 - [ ] `related.ip` populated with every IP field the pipeline sets, one append per field, `allow_duplicates: false`, guarded by `if` condition -- **HIGH** if IP fields not in related.ip
 
@@ -49,7 +49,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### CEL-only opening processors
 
-- [ ] If stream uses CEL input: `remove` processor for agentless metadata (`organization`, `division`, `team`) when all are strings, followed by `terminate` processor on collector error placeholder shape -- **MEDIUM** if missing for CEL streams
+- [ ] CEL-opening Agentless block (`remove` processor for agentless metadata `organization`/`division`/`team` when all are strings, tagged `remove_agentless_tags`, followed by `terminate` processor on the collector-error placeholder shape): required only on NEW CEL data streams in packages whose manifest enables agentless deployment (`deployment_modes.agentless.enabled: true`), or where sibling pipelines in the same package already carry the block (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
 - [ ] These processors must NOT be present for non-CEL streams -- **MEDIUM** if present for wrong input type
 
 ### Performance
@@ -60,6 +60,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 ### Security
 
 - [ ] No hardcoded sensitive values in processors -- **CRITICAL**
+- [ ] Credential-shaped policy vars referenced by the stream (tokens, secrets, passwords, API keys) are declared with `secret: true` in the manifest -- **HIGH** if plain
 
 ### When reviewing a diff
 

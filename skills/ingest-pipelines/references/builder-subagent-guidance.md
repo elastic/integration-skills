@@ -69,6 +69,7 @@ processor examples, test fixture formats, and field mapping patterns you need.
      `event.category` / `event.type` combinations
    - **`references/mapping-type-matrix.md`** — field type selection for custom fields
    - **`references/root-and-core-fields.md`** — ECS root and core field definitions
+   - **`entity-mappings/references/entity-pipeline-patterns.md` and `entity-mappings/references/entity-field-catalog.md`** — read these **only if** the orchestrator's task prompt states this is an entity data stream, or the data is an inventory/snapshot of users, hosts, devices, groups, or apps rather than a timeline of events. If the entity pin is required (`git@v9.5.0`), the orchestrator's prompt will say so explicitly — do not change the pin otherwise.
 
 3. **`integration-testing` skill** — then **read `references/pipeline-testing.md`
    fully**: test fixture format, config files, expected output generation,
@@ -157,8 +158,14 @@ custom fields.
 
 ### 4. Define field mappings
 
-- Create or update `fields/ecs.yml` with every ECS field the pipeline sets — use
-  `name` + `external: ecs` per entry, with type/value overrides only when needed.
+- Create or update `fields/ecs.yml` with the ECS fields the pipeline sets that
+  dynamic mapping cannot infer — use `name` + `external: ecs` per entry, with
+  type/value overrides only when needed. See the `ecs-field-mappings` skill
+  (`ecs.yml` section) for the `ecs@mappings` coverage rule: on packages whose
+  `conditions.kibana.version` floor is >= 8.13.0, only `geo_point` on
+  non-standard parent prefixes, `geo_shape`, `nested`, `flattened`, or
+  validation-failure cases need declarations; below that floor, declare every
+  pipeline-set ECS field. Declaring more is harmless.
 - Create or update `fields/fields.yml` with custom integration-specific fields (non-ECS
   fields only)
 - Verify `fields/base-fields.yml` has the standard data stream routing constants
@@ -167,7 +174,9 @@ custom fields.
 - If the input emits Beats/Filebeat-specific fields (`input.type`, `log.offset`,
   `log.flags`) not present in `base-fields.yml`, add them to `fields/beats.yml`
 - Ensure `_dev/build/build.yml` exists at the package root with
-  `dependencies.ecs.reference: "git@v9.3.0"`
+  `dependencies.ecs.reference: "git@v9.3.0"` for standard streams, or `"git@v9.5.0"` for
+  entity data streams (those with `event.kind: asset`). The orchestrator will specify which
+  to use. Do not change an existing pin without being told to.
 - Follow the field mapping guidance from the `ecs-field-mappings` skill
 
 ### 5. Create test fixtures

@@ -79,10 +79,13 @@ If the collection method is unknown at invocation time, read all three checklist
 Also load:
 
 5. `ecs-field-mappings` skill -- for ECS field mapping guidance during the analysis phase
-6. `references/competitive-siem-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
-7. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
+6. `entity-mappings/references/entity-datastream-classification.md` -- read this yourself so you can classify each proposed data stream as event vs entity (apply the research-time rule in that file). **Do NOT load the rest of the `entity-mappings` skill** — the field catalog and pipeline patterns are implementation material and must not be loaded during research.
+7. `references/market-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
+8. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
 
-Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, etc.). Those are for implementation, not research.
+Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, entity-mappings field catalog, etc.). Those are for implementation, not research.
+
+**Downstream tooling note:** The research workflow itself has no CEL tooling requirements. However, if the recommended collection method turns out to be API-based (CEL input), the downstream `/create-integration` run will need `mito`, `celfmt`, `ceplx`, and `stream` installed. Surface this in the Phase 8 summary so the user can verify their toolchain before switching to build mode.
 
 ## Output location
 
@@ -104,13 +107,15 @@ research_results/<product_slug>/
     api-spec-notes.md         # API endpoint details, request/response examples (if API)
     log-format-notes.md       # log format details, sample lines (if log-based)
     field-schema-analysis.md  # detailed field inventories written by subagents
-    competitive-siem-coverage.md  # detailed competitive SIEM analysis (always created)
+    market-coverage.md  # detailed market coverage analysis (always created)
+    entity-coverage.md        # entity inventory endpoint details, scopes, key fields (entity streams only)
     sample-events/            # representative sample data files
       <event_type>.json       # one file per event type or data format variant
       <event_type>.log
   temp/                       # downloaded raw artifacts (repos, SDKs, schemas, scripts)
     <descriptive-subfolder>/  # e.g., vendor-sdk/, schema-files/, openapi-spec/
   ecs-mapping-analysis.md     # initial ECS field mapping analysis
+  entity-mapping-analysis.md  # entity.* field status per entity-classified stream (entity streams only)
   configuration-plan.md       # planned integration configuration variables
 ```
 
@@ -130,7 +135,7 @@ Not all files are required -- create only what applies to the product's collecti
 
 ### Phase 2: Parallel research
 
-Launch multiple research subagents in parallel using the platform's generic / general-purpose subagent (see the dispatch description at the top of this skill). Each subagent focuses on a specific research track. **You should launch as many parallel subagents as makes sense for the product -- typically 2-4 subagents, plus the always-on Track E.**
+Launch multiple research subagents in parallel using the platform's generic / general-purpose subagent (see the dispatch description at the top of this skill). Each subagent focuses on a specific research track. **You should launch as many parallel subagents as makes sense for the product -- typically 2-4 subagents, plus the always-on Track E, and Track F when any data stream was classified as entity in Before you start.**
 
 **IMPORTANT -- subagent context and capabilities:**
 
@@ -142,7 +147,7 @@ Launch multiple research subagents in parallel using the platform's generic / ge
 
 **Required structure for every research subagent task prompt:**
 
-1. **Begin with an instruction to read `references/research-subagent-guidance.md`** (relative to the `research-integration` skill) end-to-end before doing any other work. That file is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. **Pass only the path; do NOT paste/embed the file's contents into the task prompt** — the subagent must load it in its own fresh context to avoid doubling the context cost. Track E follows the same pattern for the competitive-SIEM checklist.
+1. **Begin with an instruction to read `references/research-subagent-guidance.md`** (relative to the `research-integration` skill) end-to-end before doing any other work. That file is the subagent's operating manual — methodology, `temp/` usage, Python analysis idiom, result delivery contract, quality standards, and anonymization conventions. **Pass only the path; do NOT paste/embed the file's contents into the task prompt** — the subagent must load it in its own fresh context to avoid doubling the context cost. Track E follows the same pattern for the market coverage checklist.
 2. **State the working directory explicitly** so the subagent knows where to write:
    ```
    Working directory: research_results/<product_slug>/
@@ -222,31 +227,59 @@ Instruct the subagent to investigate:
 
 Provide: product name, collection method, any documentation URLs.
 
-#### Research Track E: Competitive SIEM coverage (always launch)
+#### Research Track E: Market coverage (always launch)
 
 **Always launch this track** in parallel with the other tracks. It is not conditional on collection method.
 
 Instruct the subagent to check whether IBM QRadar, Splunk, and Sumo Logic have an existing integration or app for the product being researched, and to document what each covers and how it collects data.
 
-The subagent must follow `references/competitive-siem-coverage-checklist.md` end-to-end. Point the subagent at that file **by path** and instruct it to read the entire file before doing any other work. **Do NOT paste the checklist contents into the task prompt** — the subagent will load it in its own fresh context. (This is in addition to the read-`references/research-subagent-guidance.md`-by-path directive from Phase 2.)
+The subagent must follow `references/market-coverage-checklist.md` end-to-end. Point the subagent at that file **by path** and instruct it to read the entire file before doing any other work. **Do NOT paste the checklist contents into the task prompt** — the subagent will load it in its own fresh context. (This is in addition to the read-`references/research-subagent-guidance.md`-by-path directive from Phase 2.)
 
-Competitor catalog starting points to include in the prompt:
+Platform catalog starting points to include in the prompt:
 - IBM QRadar: `https://www.ibm.com/products/qradar-siem/integrations`
 - Splunk: `https://splunkbase.splunk.com/apps`
 - Sumo Logic: `https://www.sumologic.com/help/docs/integrations/`
 
-For each competitor, the subagent must determine:
+For each platform, the subagent must determine:
 - Whether a matching integration/app exists (exact, partial, or no match)
 - Integration/app name, publisher, direct catalog link, version, and last-updated date
 - Which data sources and event types it covers (be specific, not generic)
 - Collection method used (API pull, syslog push, agent/forwarder, cloud delivery, etc.)
 - Protocol and wire format details (CEF, LEEF, JSON, key-value, etc.) if documented
 - Support tier (vendor-maintained, platform-built, community/partner, or unsupported)
-- Notable gaps or differentiators compared to what Elastic could offer
+- Notable gaps in coverage across all platforms
 
-Output: write all findings to `references/competitive-siem-coverage.md` using the structure defined in the checklist (summary table → per-competitor H2 sections → comparison notes). Return a concise inline summary with which competitors have integrations, the dominant collection method found, and the path to the written file.
+Output: write all findings to `references/market-coverage.md` using the structure defined in the checklist (summary table → per-platform H2 sections → comparison notes). Return a concise inline summary with which platforms have integrations, the dominant collection method found, and the path to the written file.
 
-Provide: product name, vendor name, common aliases or abbreviations for the product, and the **path** to `references/competitive-siem-coverage-checklist.md` (so the subagent reads it itself — do not paste the checklist content into the prompt).
+Provide: product name, vendor name, common aliases or abbreviations for the product, and the **path** to `references/market-coverage-checklist.md` (so the subagent reads it itself — do not paste the checklist content into the prompt).
+
+#### Research Track F: Entity inventory coverage (conditional — launch only for entity-classified streams)
+
+**Launch this track only when you classified at least one proposed data stream as an entity stream during `## Before you start`.** Run it in parallel with the other tracks.
+
+Instruct the subagent to investigate each entity-classified stream:
+
+- **List-style endpoints** — which API endpoints return whole populations of subjects (users, members, groups, devices, apps) without requiring a time-based filter. The absence of an incremental time filter is the key signal; document explicitly whether one is available.
+- **Per-record schema** — field names, types, and descriptions for each field on a single record from those endpoints. Focus on identity, state, permissions, group membership, MFA status, and ownership fields.
+- **Required scopes/permissions** — which OAuth scopes, API permissions, or RBAC roles are needed to call these endpoints. List each scope and what it unlocks. This feeds directly into the integration's manifest `var` list and the research brief's section 6 (Configuration plan).
+- **Stable primary key** — which field serves as the stable, durable identifier for each entity across collection cycles (e.g. `id`, `login`, `email`). If none exists, document the composite key.
+- **MFA/permission/manager/ownership attributes** — identify which fields carry security-relevant state that warrants mapping to ECS `entity.attributes.*` (e.g. `hasTwoFactorEnabled`, `siteAdmin`, `managedBy`, `roles`, `permissions`).
+- **Incremental time filter availability** — can the endpoint accept a `since` / `updated_after` / `modified_since` parameter? If yes, document the parameter and its semantics. If no, document that the endpoint must be re-called in full each cycle.
+
+**Output rules for the Track F subagent:**
+
+- Describe the data; do not design the pipeline or field definitions.
+- **Implementation complexity is not a reason to exclude an entity field from scope.** If collecting a field requires an additional API call, a different endpoint, or an extra OAuth scope, document that clearly (endpoint path, response structure, required scopes) — it is planning information for the build phase. Only report a field as unavailable when the vendor API provably cannot return the data at all.
+- **Do not invent `entity.*` field names.** Only fields that exist in ECS at the pinned version are valid. For source fields with no ECS equivalent, flag them as custom field candidates under `<integration_name>.<datastream_name>.<field_name>` — do not place them under any ECS prefix.
+- Write findings to `references/entity-coverage.md` with one section per entity-classified stream.
+- Return a concise inline summary listing each stream's stable key, the scopes required, and the top entity-relevant fields found.
+
+**Task prompt must include** (in addition to the `research-subagent-guidance.md` read-by-path directive):
+
+1. Product name and the names of the entity-classified streams you identified.
+2. API documentation URLs for the list-style endpoints (from Track A/B findings, or user-provided).
+3. The **path** to `entity-mappings/references/entity-datastream-classification.md` so the subagent can apply the research-time classification signals when assessing each endpoint. Pass the path only; do not embed the file contents.
+4. Working directory.
 
 ### Phase 3: Synthesize and supplement
 
@@ -259,7 +292,7 @@ After all subagents return:
 5. **Resolve conflicts** between subagent findings. When sources disagree, prefer official vendor documentation over third-party sources.
 6. **Collect sample data** -- extract or compile representative sample events from documentation, API response examples, or log format guides. Save each as a separate file in the `sample-events/` subdirectory.
 7. **Review temp/ artifacts** if needed. Subagents may have downloaded repos, SDKs, or schemas into `temp/`. You can inspect these directly if you need more detail than what the subagent summaries and reference files provide.
-8. **Read `references/competitive-siem-coverage.md`** (written by Track E). Extract the summary table and overall comparison notes — these are used directly in section 1.5 of the research brief.
+8. **Read `references/market-coverage.md`** (written by Track E). Extract the summary table and overall comparison notes — these are used directly in section 1.5 of the research brief.
 
 ### Phase 4: ECS mapping analysis
 
@@ -272,6 +305,21 @@ Using the ECS reference skill loaded earlier, perform an initial field mapping a
 2. Identify which `event.kind`, `event.category`, `event.type`, and `event.outcome` values apply to each event type.
 3. Note any fields that are strong candidates for `related.ip`, `related.user`, `related.hosts`, or `related.hash` enrichment.
 4. Write the analysis to `ecs-mapping-analysis.md`.
+5. **For each entity-classified stream** (those with `event.kind: asset`, identified in `## Before you start`): using the field data from Track F, produce:
+   - The represented `entity.type` (from the 12 allowed values listed in `entity-mappings/references/entity-datastream-classification.md` — already loaded during `## Before you start`).
+   - The source field that maps to `entity.id` (the stable primary key from Track F).
+   - A per-field status table for each ECS `entity.*` field the Track F findings touch:
+
+     | ECS field | Status | Source field | Notes |
+     |---|---|---|---|
+     | `entity.id` | ✅ direct | `id` | stable across cycles |
+     | `user.entity.attributes.mfa_enabled` | 🔄 derived | `hasTwoFactorEnabled` | boolean conversion needed |
+     | `entity.relationships.*` | 🔍 investigate | — | vendor docs ambiguous |
+     | `entity.attributes.permissions` | ⛔ N/A | — | no per-user permission list in API |
+
+     Status key: ✅ direct mapping · 🔄 derived/transformed · 🔍 needs investigation · ⛔ not available.
+
+   Write this to `entity-mapping-analysis.md` alongside `ecs-mapping-analysis.md`. **Findings only — no processors, no field YAML, no `external: ecs` declarations.** Those belong in the build phase.
 
 ### Phase 5: Configuration planning
 
@@ -288,7 +336,7 @@ Compile the full research brief following the template in `references/research-o
 
 The brief must be self-contained -- a reader should be able to use it as the sole input to `/create-integration` and have everything they need.
 
-When populating **section 1.5 (Competitive SIEM Coverage)**, use the summary table extracted from `references/competitive-siem-coverage.md` in Phase 3 step 8. Include the one-line summary paragraph and the three-row competitor table inline, then add a reference pointer: `See references/competitive-siem-coverage.md for full per-vendor analysis.`
+When populating **section 1.5 (Market Coverage)**, use the summary table extracted from `references/market-coverage.md` in Phase 3 step 8. Include the one-line summary paragraph and the three-row platform table inline, then add a reference pointer: `See references/market-coverage.md for full per-platform analysis.`
 
 ### Phase 7: API test script (API/CEL collection only)
 
@@ -334,6 +382,7 @@ After the research brief and all companion artifacts are written, generate a sta
    - Key findings or surprises
    - Gaps or areas that need user input
    - If `test-api.py` was generated: remind the user to run it against the real API (with credentials) and share the resulting archive back for development
+   - If the recommended collection method is API-based (CEL input): remind the user to verify that `mito`, `celfmt`, `ceplx`, and `stream` are installed before running `/create-integration` (see `scaffold-commands.md` Preconditions in the `create-integration` skill)
    - Suggested next step (typically `/create-integration` with the brief)
 
 ## Research quality standards
@@ -363,6 +412,17 @@ After the research brief and all companion artifacts are written, generate a sta
   - **Good (data-only):** "Timestamps are in RFC 3339 with timezone offset."
   - **Bad (prescribes pipeline behavior):** "Use a `date` processor with `target_field: event.start` and a fallback to `@timestamp` via `on_failure`."
 - The standard configuration variables for each input type are exhaustively listed in `references/data-collection-methods.md`. Do not propose additional configuration variables outside that authoritative set unless the vendor's API genuinely requires a new product-specific variable (e.g., a tenant ID for a multi-tenant API). Even then, the variable must be tied to a documented vendor-side requirement, not a pipeline behavior toggle.
+- **Do not invent ECS field names.** In both the general ECS mapping analysis (Phase 4 steps 1–4) and the entity field coverage (Phase 4 step 5), only propose mappings to ECS fields that actually exist in the ECS schema at the pinned version. If a source field has no ECS equivalent, list it as a custom field under the integration's own namespace: `<integration_name>.<datastream_name>.<field_name>` (e.g., `github.members.is_employee` for a GitHub members stream). **Never** place a non-ECS field under `entity.attributes.*`, `user.*`, `host.*`, or any other ECS prefix as if it were a real ECS field — if ECS adds a conflicting field later, the integration breaks silently.
+  - **Good:** "Source field `isEmployee` has no ECS equivalent → `github.members.is_employee` (custom field)."
+  - **Bad:** "Source field `isEmployee` → `entity.attributes.is_employee`."
+  - **Good:** "Source field `siteAdmin` has no ECS equivalent → `github.members.site_admin` (custom field). Consider `user.roles` if the value can be expressed as a named role."
+  - **Bad:** "Source field `siteAdmin` → `entity.attributes.site_admin`."
+- **Do not prescribe entity field mapping or pipeline implementation details in Track F or Phase 4 step 5.** The entity analysis documents what the data looks like and which ECS fields are candidates; it does not design the ingest pipeline, emit field YAML, or specify processor types. The `entity-mappings` and `ingest-pipelines` skills are the authority on those decisions.
+  - **Good:** "`membersWithRole` returns `hasTwoFactorEnabled` per member — a candidate for `user.entity.attributes.mfa_enabled`."
+  - **Bad:** "Add a `convert` processor with `type: boolean` targeting `user.entity.attributes.mfa_enabled`."
+  - **Good:** "The API returns `role` as a string — a candidate for `user.roles` (an array of user role objects, may need splitting)."
+  - **Bad:** "Use a `foreach` processor over `role.split(',')` to populate `user.roles`."
+- **Never recommend `httpjson` as an input type.** The `httpjson` input is deprecated in favour of CEL. For any REST/HTTP API, recommend `cel` regardless of how simple the API is or what input type existing streams in the same package use. An existing `httpjson` stream in the same package is a legacy pattern, not a template. Do not reference it as justification for using `httpjson` in new streams.
 - If a product has multiple viable collection methods, document all of them with a recommendation and rationale, but produce detailed deep-dive material for the recommended method.
 - If research reveals the product does not expose data in a way that Elastic can ingest, say so clearly in the brief.
 

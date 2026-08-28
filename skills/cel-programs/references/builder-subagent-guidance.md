@@ -503,7 +503,8 @@ Edit `data_stream/<stream>/manifest.yml`:
   are the raw fields before pipeline processing.
 - Do **not** create `fields/ecs.yml` — that is the pipeline builder's
   responsibility, and ECS root fields are provided automatically by
-  `ecs@mappings` (8.13+).
+  `ecs@mappings` (applied by stacks >= 8.13 at install time; guaranteed
+  only when `conditions.kibana.version` floor is >= 8.13.0).
 - Verify `fields/base-fields.yml` exists with the standard data stream
   fields (all six entries use `external: ecs`; override `type`/`value`
   only for `event.module` and `event.dataset`).

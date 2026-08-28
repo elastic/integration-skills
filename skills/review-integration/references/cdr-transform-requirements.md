@@ -151,11 +151,13 @@ The latest index needs explicit field definitions. Key type overrides:
   type: date               # Not covered by ecs@mappings
 ```
 
-From stack version 8.19/9.1, the `ecs@mappings` component template applies to both source and destination index templates. Before 8.19, ECS fields must be explicitly mapped with `external: ecs` in the destination index fields.
+The `ecs@mappings` component template is applied by stacks >= 8.13 at install time and covers data-stream (source) indices — guaranteed for a package only when its `conditions.kibana.version` floor is >= 8.13.0 (package-spec version is not the gate). For transform DESTINATION indices it applies only from stack version 8.19/9.1, when it was added to both source and destination index templates. Before 8.19, ECS fields must be explicitly mapped with `external: ecs` in the destination index fields.
 
 ## Known CDR integrations
 
 Packages with `cloudsecurity_cdr` manifest category: `aws_securityhub`, `cloud_asset_inventory`, `cloud_security_posture`, `google_scc`, `m365_defender`, `microsoft_defender_cloud`, `microsoft_defender_endpoint`, `prisma_cloud`, `qualys_vmdr`, `rapid7_insightvm`, `snyk`, `tenable_io`, `tetragon`, `wiz`
+
+This list is a point-in-time snapshot and will drift. The root `manifest.yml` categories are authoritative (see the CDR detection rule in `review-integration/SKILL.md`) — always verify against the manifest, never against this list alone.
 
 ## CDR transform review checklist
 

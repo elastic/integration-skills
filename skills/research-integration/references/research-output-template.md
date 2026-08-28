@@ -37,17 +37,17 @@ Every section below should be populated. If a section does not apply, include it
 
 <Does an Elastic integration already exist for this product (check `integrations/packages/` and `packages/`)? If yes, what does it cover and what gaps exist? If no, note that this is a new integration.>
 
-### 1.5 Competitive SIEM coverage
+### 1.5 Market coverage
 
-<1-2 sentence summary of the overall competitive landscape: which competitors have integrations for this product, and how comprehensive is their coverage.>
+<1-2 sentence summary of the overall market landscape: which platforms have integrations for this product, and how comprehensive is their coverage.>
 
-| Vendor | Integration name | Supported data sources | Collection method | Link |
-|--------|-----------------|----------------------|-------------------|------|
+| Platform | Integration name | Supported data sources | Collection method | Link |
+|----------|-----------------|----------------------|-------------------|------|
 | IBM QRadar | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 | Splunk | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 | Sumo Logic | <name or "No integration found"> | <data sources covered, or N/A> | <API / syslog / agent / N/A> | <URL or N/A> |
 
-See `references/competitive-siem-coverage.md` for full per-vendor analysis including support tier, version, gaps, and comparison notes.
+See `references/market-coverage.md` for full per-platform analysis including support tier, version, gaps, and comparison notes.
 
 ## 2. Data Collection Method
 
@@ -229,10 +229,12 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 
 ### 5.2 Field mappings
 
+> **Custom field namespace rule:** only propose mappings to ECS fields that actually exist. For source fields with no ECS equivalent, use `<integration_name>.<datastream_name>.<field_name>` — never invent an ECS path (e.g. never write `entity.attributes.is_employee` if that field is not in ECS; write `github.members.is_employee` instead). This applies equally to all ECS prefixes: `entity.attributes.*`, `user.*`, `host.*`, etc.
+
 | Source field | ECS field | Notes |
 |-------------|-----------|-------|
 | <vendor_field> | <ecs_field> | <mapping notes, type conversion needed, etc.> |
-| <vendor_field> | <package_name.vendor_field> | custom field, no ECS equivalent |
+| <vendor_field> | `<package_name>.<datastream_name>.<field>` | custom field, no ECS equivalent |
 
 ### 5.3 Related field enrichment
 
@@ -246,6 +248,34 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 ### 5.4 Geo enrichment candidates
 
 <List IP address fields that are candidates for GeoIP enrichment and the appropriate ECS parent (source.geo, destination.geo, etc.)>
+
+### 5.5 Entity field coverage
+
+> N/A — no entity data streams identified. (Remove this line and populate the table below when one or more data streams are classified as entity streams.)
+
+For each entity-classified data stream (those with `event.kind: asset`):
+
+**Entity type per stream:**
+
+| Data stream | entity.type | entity.id source field | Stable key? |
+|-------------|-------------|------------------------|-------------|
+| <stream_name> | <e.g., user> | <e.g., id, login, email> | <yes / composite: field1+field2> |
+
+**ECS entity field coverage:**
+
+| ECS field | Status | Source field | Notes |
+|-----------|--------|-------------|-------|
+| `entity.id` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | <notes> |
+| `entity.name` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | <notes> |
+| `entity.type` | ✅ / 🔄 / 🔍 / ⛔ | <source_field or hardcoded value> | <notes> |
+| `entity.source` | ✅ / 🔄 / 🔍 / ⛔ | <source_field or hardcoded> | <notes> |
+| `entity.last_seen_timestamp` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | v9.4.0+ only |
+| `entity.attributes.*` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | v9.4.0+ only; specify which attributes |
+| `entity.relationships.*` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | v9.4.0+ only; alpha; specify relationship keys |
+
+Status key: ✅ direct mapping · 🔄 derived/transformed · 🔍 needs investigation · ⛔ not available.
+
+See `entity-mapping-analysis.md` for the full per-field analysis and `references/entity-coverage.md` for the raw entity endpoint findings.
 
 ## 6. Configuration Plan
 
@@ -275,9 +305,9 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 
 ### 7.2 Data streams
 
-| Data stream name | Input type | Source | Description |
-|-----------------|------------|--------|-------------|
-| <stream_name> | <input_type> | <endpoint/file/topic> | <what it collects> |
+| Data stream name | Input type | Stream kind | Source | Description |
+|-----------------|------------|-------------|--------|-------------|
+| <stream_name> | <input_type> | event \| entity | <endpoint/file/topic> | <what it collects> |
 
 ### 7.3 Architecture rationale
 
@@ -311,9 +341,9 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 ## Usage notes
 
 - Sections 1-4 form the factual research foundation.
-- Section 5 (ECS mapping) is an analysis layer that requires the ECS reference skill.
+- Section 5 (ECS mapping) is an analysis layer that requires the ECS reference skill. Section 5.5 (Entity field coverage) applies only to entity-classified streams; populate it when section 7.2 shows any stream as `entity`.
 - Section 6 (Configuration) bridges research to implementation planning.
-- Section 7 (Architecture) is the integration design recommendation.
+- Section 7 (Architecture) is the integration design recommendation. The `Stream kind` column in section 7.2 carries the entity/event classification forward to `/create-integration`.
 - Section 8 (Open questions) captures what still needs human judgment.
 - Section 9 (Attribution) provides traceability for all claims.
 
@@ -325,6 +355,8 @@ The research brief is the primary output, but it is supported by additional file
 
 - **`test-api.py`** -- *(API/CEL collection only)* Standalone Python script that exercises the exact API flow proposed for the CEL integration. Tests connectivity, authentication, pagination, and response structure. Run it against the real vendor API and share the resulting archive for development. See `references/test-api-script-spec.md` in the skill directory for the full specification.
 - **`references/`** -- Curated research artifacts: detailed field analyses, API spec notes, sample events. These are polished enough for downstream consumers.
+- **`references/entity-coverage.md`** -- *(entity streams only)* Entity inventory endpoint details, required scopes/permissions, per-record schema, stable key, and MFA/permission/ownership attributes found by Track F. Written by the Track F subagent.
+- **`entity-mapping-analysis.md`** -- *(entity streams only)* Per-field ECS entity coverage table (✅/🔄/🔍/⛔ status) alongside `ecs-mapping-analysis.md`. Written during Phase 4 step 5. **No processors or field YAML** — findings only.
 - **`temp/`** -- Raw downloaded artifacts: cloned repos, SDK sources, large schema files, analysis scripts. Retained as reference for the human and for reproducibility. Not cleaned up unless disk space is critical.
 
 When the brief references detailed findings that are too large to include inline, it should point to the appropriate file in `references/` or `temp/` with a path and one-line description.

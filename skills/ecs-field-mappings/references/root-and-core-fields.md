@@ -111,5 +111,5 @@ Some inputs also emit `log.flags` or `log.file.*` sub-fields — add them here w
 - Prefer ECS fields whenever semantics match to keep cross-integration queries simple.
 - If no ECS field exists for your data, add namespaced custom fields under your package namespace in `fields.yml`.
 - Keep categorization fields (`event.*`) within allowed ECS values.
-- List every ECS field the pipeline sets in `ecs.yml` with `name` + `external: ecs`.
+- List the ECS fields the pipeline sets that dynamic mapping cannot infer in `ecs.yml` with `name` + `external: ecs` — see the `ecs.yml` section in SKILL.md for the `ecs@mappings` coverage rule (`conditions.kibana.version` >= 8.13.0 gate). Declaring more is harmless; packages admitting stacks below 8.13 still need every pipeline-set ECS field declared.
 - Ensure `_dev/build/build.yml` exists with `dependencies.ecs.reference: "git@v9.3.0"`.

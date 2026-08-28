@@ -15,13 +15,13 @@ Use this guide when selecting `event.kind`, `event.category`, `event.type`, and 
 | Value | Use when | Notes |
 | --- | --- | --- |
 | `alert` | External detection/alert event | Used for alerts from external security systems. |
-| `asset` | Inventory/entity snapshot records | Asset and identity inventory style records. |
+| `asset` | Entity/inventory snapshot records | One document per entity per collection cycle — users, hosts, devices, apps, services. Use when the document *describes the entity itself* rather than recording an event. See `entity-mappings` skill. |
 | `enrichment` | Enrichment/context feeds | IOC/context datasets that enrich other events. |
 | `event` | General event/log | Most common value for integration logs. |
 | `metric` | Numeric measurements | Time series metrics such as cpu/memory/rate. |
 | `pipeline_error` | Ingest/parsing failure | Use in ingest `on_failure` paths. |
 | `signal` | Reserved for Kibana alerting framework | Do not set this in data ingestion pipelines. |
-| `state` | Non-numeric state snapshots | For periodic categorical state measurements. |
+| `state` | Periodic categorical state of an observation | A finding or posture result *about* a resource at a point in time (e.g. CDR misconfiguration/vulnerability findings). Use `asset` instead when the document describes the entity itself across all cycles. |
 
 ## `event.category` allowed values and typical `event.type` pairings
 
@@ -111,4 +111,28 @@ Do not set `event.outcome` for purely informational or metric/state events where
 - `event.category`: `["file"]`
 - `event.type`: `["info"]`
 - `event.outcome`: not set
+
+### User entity snapshot (org membership / identity inventory)
+
+One document per organization member per collection cycle. Use this when the data represents *who exists* in a system, not *what happened*.
+
+- `event.kind`: `asset`
+- `event.category`: `["iam"]`
+- `event.type`: `["user", "info"]`
+- `event.outcome`: not set
+- `entity.type`: `["user"]`
+- `entity.id`: matches `user.id`
+- `user.name`, `user.id`, `user.email`: populated from source data
+
+### Host / device entity snapshot
+
+One document per device per collection cycle.
+
+- `event.kind`: `asset`
+- `event.category`: `["host"]`
+- `event.type`: `["info"]`
+- `event.outcome`: not set
+- `entity.type`: `["host"]`
+- `entity.id`: matches `host.id`
+- `host.name`, `host.id`: populated from source data
 

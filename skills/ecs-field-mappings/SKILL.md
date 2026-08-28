@@ -87,9 +87,11 @@ When a `constant_keyword` field is also an ECS field (e.g., `observer.vendor`), 
 
 ### `ecs.yml`
 
-**Populate this file with every ECS field the pipeline sets.** Use only `name` and `external: ecs` for each entry — no type, no description. The type is resolved from the ECS schema via `_dev/build/build.yml`.
+**Populate this file with the ECS fields the pipeline sets that dynamic mapping cannot infer.** Use only `name` and `external: ecs` for each entry — no type, no description. The type is resolved from the ECS schema via `_dev/build/build.yml`.
 
-`external: ecs` must be used whenever a field name exists in ECS ([wiki reference](https://github.com/elastic/integrations/wiki/Fleet-Package-Code-Review-Comments#defining-an-ecs-field-without-using-an-external-definition)). This applies across field files — `ecs.yml`, `base-fields.yml`, and any file that defines an ECS field. You may override properties (e.g., `type: constant_keyword`, `value:`) while still using `external: ecs` — the description is inherited from ECS. Do not use `external: ecs` in `fields.yml`, `agent.yml`, or `beats.yml` — those files define non-ECS fields.
+On packages whose `conditions.kibana.version` floor is >= 8.13.0, the `ecs@mappings` component template dynamically maps standard keyword/date and standard-prefix geo ECS fields, so explicit declarations are REQUIRED only for types it cannot infer (`geo_point` on non-standard parent prefixes, `geo_shape`, `nested`, `flattened`) or where `elastic-package` validation fails. The gate is the kibana version constraint, not the package-spec version — `ecs@mappings` is applied by the stack at install time from 8.13 onward, and a spec-3.x package that still admits 8.11/8.12 installs does not get it there, so such packages still need every pipeline-set ECS field declared. Declaring more is harmless for a builder, but is never something a reviewer should demand — and existing declarations are not removable-noise findings either (see `review-integration/references/conflict-resolutions.md`).
+
+When you DO declare a field whose name exists in ECS, `external: ecs` must be used ([wiki reference](https://github.com/elastic/integrations/wiki/Fleet-Package-Code-Review-Comments#defining-an-ecs-field-without-using-an-external-definition)). This applies across field files — `ecs.yml`, `base-fields.yml`, and any file that defines an ECS field. You may override properties (e.g., `type: constant_keyword`, `value:`) while still using `external: ecs` — the description is inherited from ECS. Do not use `external: ecs` in `fields.yml`, `agent.yml`, or `beats.yml` — those files define non-ECS fields.
 
 ```yaml
 - name: event.kind
@@ -212,7 +214,7 @@ Prefer ECS fields whenever semantics match. If no ECS field exists for the data,
 - `event.type`: `access`, `admin`, `allowed`, `change`, `connection`, `creation`, `deletion`, `denied`, `device`, `end`, `error`, `group`, `indicator`, `info`, `installation`, `protocol`, `start`, `user`
 
 Decision workflow:
-1. `event.kind`: `event` for normal logs, `metric` for measurements, `state` for snapshots, `pipeline_error` in `on_failure`
+1. `event.kind`: `event` for normal logs, `metric` for measurements, `state` for periodic categorical observations *about* a thing (e.g. CDR posture/compliance findings), `asset` for entity/inventory snapshot records — one document per entity per collection cycle (see `entity-mappings` skill), `pipeline_error` in `on_failure`
 2. `event.category`: one or more values (array) for the broad domain
 3. `event.type`: one or more values (array) for operation style
 4. `event.outcome`: only when a clear success/failure/unknown applies; omit for informational/metric events
@@ -283,6 +285,8 @@ When using `geoip` for geolocation, always also perform an ASN lookup using `Geo
 See the `ingest-pipelines` skill → `references/processor-cookbook.md` for the full geo+ASN pattern with both source and destination.
 
 **`os`** — nested under: `host.os`, `observer.os`, `user_agent.os`
+
+**`entity`** (beta; leaf fields require ECS `v9.4.0+`) — nested under: `user.entity`, `host.entity`, `service.entity`, `cloud.entity`, `orchestrator.entity`, root `entity`, `entity.target`. Never invent `device.entity.*` — not a valid parent. For entity data streams (i.e. those with `event.kind: asset`), see the `entity-mappings` skill for the full field catalog, pipeline patterns, and ECS availability matrix.
 
 ### Nested (array-of-objects) ECS fields
 
@@ -434,7 +438,7 @@ In pipeline test expected outputs, `geo_point` fields appear as objects with `la
 }
 ```
 
-These sub-fields do not need entries in `fields.yml` — they are part of the `geo_point` type mapping. Only the `*.geo.location` field (type `geo_point`) needs to be in `ecs.yml` for non-standard parent prefixes where `ecs@mappings` does not apply.
+These sub-fields do not need entries in `fields.yml` — they are part of the `geo_point` type mapping. Only the `*.geo.location` field (type `geo_point`) needs to be in `ecs.yml` for non-standard parent prefixes where `ecs@mappings` (applied by stacks >= 8.13 at install time; guaranteed only when `conditions.kibana.version` floor is >= 8.13.0) does not cover it.
 
 ## Common pipeline categorization patterns
 
@@ -498,6 +502,7 @@ Fix the root cause. Do not work around it by:
 - **`geo.*` at document root** — unmapped; always nest under a parent entity
 - **`event.category` or `event.type` set as scalar** — must use `append` processor, not `set`
 - **`nested` ECS field mapped as parallel arrays** — `email.attachments`, `threat.enrichments`, and similar `nested` fields must be arrays of objects, not objects with parallel scalar arrays; see the *Nested (array-of-objects) ECS fields* section above
+- **`entity.attributes.*` / `entity.relationships.*` with `external: ecs` at `git@v9.3.0`** — these leaf fields do not exist at ECS v9.3.0 (`attributes` is a bare `object`; `entity_reference` fieldset is absent). They first appear at v9.4.0. Using `external: ecs` on them at `git@v9.3.0` causes `field is undefined` errors. Packages with entity data streams must pin `git@v9.5.0` in `_dev/build/build.yml` and match `ecs.version: 9.5.0` in the pipeline. See the `entity-mappings` skill.
 
 ## Validation loop
 
@@ -513,4 +518,6 @@ elastic-package test pipeline --data-streams <stream>
 - `references/categorization-cheatsheet.md`
 - `references/root-and-core-fields.md`
 - `references/fieldset-links.md`
+- `references/cdr-field-requirements.md` — cloud security / CDR integrations only (`cloudsecurity_cdr` category)
+- `entity-mappings/references/entity-field-catalog.md` — ECS `entity.*` fields; entity/inventory data streams only
 - [ECS field reference](https://www.elastic.co/docs/reference/ecs/ecs-field-reference)

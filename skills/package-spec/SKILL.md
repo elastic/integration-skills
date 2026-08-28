@@ -135,6 +135,21 @@ Each entry requires `description`, `type`, and `link`. Valid types: `enhancement
 - **minor** (`x.Y.z`): new content -- new data streams, new fields, new features
 - **major** (`X.y.z`): breaking changes -- field type changes or removals on existing integrations, ECS mapping conflicts, required config/auth changes that break existing policies, data stream restructuring, default behavior changes that alter collected or normalized data
 
+### When a bump is NOT required
+
+Internal metadata-only changes that do not alter what ships to users need **no version bump and no changelog entry**: `owner.github` reassignment, CODEOWNERS updates, CI/dev-tooling files outside the built package. Reviewers must not flag the absence of a bump for such diffs.
+
+Related bump conventions from elastic/integrations practice (see `review-integration/references/repo-conventions.md` for the dated details):
+
+- `owner.type` changes ARE published package metadata -- **minor** bump.
+- Adding the top-level `group:` manifest field -- **patch** bump + changelog entry.
+- Bot-authored `requires:` dependency bumps arrive with their own patch bump and changelog entry; never ask a human to redo or justify them.
+- `kibana.version` constraint updates are NOT breaking changes.
+
+### Changelog `type` calibration (for reviewers)
+
+Flag an entry's `type` only when the diff or the entry's own description shows an observable compatibility or behavior change: dropped stack support, dataset/field rename or removal, field type change, default-behavior change, policy-breaking config moves. Re-bucketing between `bugfix` and `enhancement`, or splitting/merging entries, is editorial judgment for the author -- not a review finding.
+
 ## Adding changelog entries
 
 Edit `changelog.yml` directly, or use `elastic-package changelog add` (see `elastic-package-cli` skill for command flags and `--next patch|minor|major` usage).
@@ -142,10 +157,29 @@ Edit `changelog.yml` directly, or use `elastic-package changelog add` (see `elas
 ## Common changelog pitfalls
 
 - Adding the entry under the wrong version or not at the top
-- Missing `link` field -- `elastic-package lint` validates that the PR/issue number is a positive integer and **rejects** `pull/0`; use a real PR number or `pull/99999` as a development placeholder and replace before merge
+- Missing `link` field -- `elastic-package lint` validates that the PR/issue number is a positive integer and **rejects** `pull/0`; use a real PR number or `pull/99999` as a development placeholder and replace before merge. Review tooling and CI will keep flagging any placeholder link until it is replaced -- that is expected pre-merge behavior, not noise
 - Bumping manifest/package version inconsistently with changelog intent
+- **Forgetting to swap the placeholder link back in** -- see below
 
 See `references/changelog-patterns.md` for detailed patterns, breaking-change checklist, and CI examples.
+
+## Updating the changelog link after PR creation
+
+The changelog `link` field must point to the PR that introduces the change, but the
+real PR number is only known once a PR has actually been opened -- everything up to
+that point necessarily uses the `pull/99999` placeholder from the pitfall above. This
+step is easy to skip because it happens *after* the rest of the package work is done,
+outside the usual build/test loop.
+
+Once the PR exists on GitHub:
+
+1. Get the real PR number (from `gh pr create` output or the PR URL).
+2. In `changelog.yml`, replace every placeholder link
+   (`https://github.com/elastic/integrations/pull/99999`) with
+   `https://github.com/elastic/integrations/pull/<real-number>`.
+3. Run `elastic-package lint` to confirm the link now validates.
+4. Commit and push the update to the same PR branch -- the placeholder must not be
+   present in the version that gets merged.
 
 ---
 

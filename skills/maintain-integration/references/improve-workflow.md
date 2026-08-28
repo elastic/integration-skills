@@ -205,5 +205,6 @@ After subagent fixes complete, re-run `elastic-package check` and re-launch the 
 - When fixing pipelines, preserve existing processor logic that works correctly.
 - When adding field mappings, follow the ECS mapping strategy already in use by the package.
 - Update `changelog.yml` when the changes are user-visible (follow `package-spec` skill).
+- Once the PR for these changes exists, replace `changelog.yml`'s placeholder link (`pull/99999`) with the real PR number and push before merge -- see `package-spec` skill's "Updating the changelog link after PR creation".
 - If a fix requires decisions the user hasn't made (auth method, field naming, categorization), mark it as a TODO rather than guessing.
 - Do not load domain-specific skills (CEL, pipelines, ECS, field mappings) into your own context. Delegate to subagents.

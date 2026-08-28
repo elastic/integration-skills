@@ -4,7 +4,7 @@ Rules that span multiple skills. Each rule specifies which files to compare.
 
 ## Pipeline to fields consistency
 
-- Every field SET by a pipeline processor (rename target, set target, append target, convert target) must have a declaration in `fields/ecs.yml` (if ECS) or `fields/fields.yml` (if custom).
+- Every field SET by a pipeline processor (rename target, set target, append target, convert target) must have a declaration in `fields/ecs.yml` (if ECS) or `fields/fields.yml` (if custom) -- EXCEPT standard keyword/date and standard-prefix geo ECS fields on packages whose `conditions.kibana.version` floor is >= 8.13.0, which the `ecs@mappings` component template (applied by the stack at install time from 8.13; package-spec version is not the gate) maps dynamically. For those packages, declarations are required only for types dynamic mapping cannot infer (geo_point on non-standard prefixes, geo_shape, nested, flattened) or where `elastic-package` fails validation (see `conflict-resolutions.md`).
 - Every field DECLARED in field files should be written by the pipeline. Declared-but-never-written fields indicate stale declarations or missing pipeline logic.
 - Field types must match: a field extracted as a number must not be declared as `keyword` unless specifically needed for range queries.
 
