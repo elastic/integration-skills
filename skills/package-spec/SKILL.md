@@ -128,7 +128,7 @@ Each entry requires `description`, `type`, and `link`. Valid types: `enhancement
 
 ### When a bump is NOT required
 
-Internal metadata-only changes that do not alter what ships to users need **no version bump and no changelog entry**: `owner.github` reassignment, CODEOWNERS updates, CI/dev-tooling files outside the built package. Reviewers must not flag the absence of a bump for such diffs.
+Internal metadata-only changes that do not alter what ships to users need **no version bump and no changelog entry**: `owner.github` reassignment, CODEOWNERS updates, CI/dev-tooling files outside the built package. Reviewers must not flag the absence of a bump for such diffs. Note that a CODEOWNERS entry is nonetheless *required* for every package and must match `owner.github` — see `create-integration/references/scaffold-commands.md`.
 
 Related bump conventions from elastic/integrations practice (see `review-integration/references/repo-conventions.md` for the dated details):
 
