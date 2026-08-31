@@ -74,8 +74,14 @@ only if its `owner.github` is `elastic/integrations-triaging`.
   `/packages/<name>/data_stream/<ds>` entries — `checkDataStreams` rejects
   partial per-data-stream ownership ("shares ownership across data streams but
   these ones lack owners"). All or none.
-- FLAG (independently of the above): any explicit data stream entry listing more
-  than one owner — rejected whether ownership is split or complete.
+- FLAG (independently of the above): an explicit **data stream** entry listing
+  more than one owner — `checkDataStreams` rejects it whether ownership is split
+  or complete. This restriction is scoped to `data_stream` lines only.
+- DO NOT FLAG: a **package-level** line naming several teams
+  (`/packages/<name> @elastic/team-a @elastic/team-b`) — valid and common (207
+  such lines at the verified commit, none of them for data streams).
+  `checkManifest` matches `owner.github` against *any* owner on the resolved
+  line, so it only has to appear among them.
 - DO NOT FLAG: a missing version bump or changelog entry for a CODEOWNERS change
   (repo metadata — see `package-spec/SKILL.md`); the choice of owning team
   itself, which is the triaging team's call.

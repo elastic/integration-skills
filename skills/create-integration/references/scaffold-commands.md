@@ -236,21 +236,14 @@ The scaffold may generate `default.yml` with an older `ecs.version` (e.g., `8.17
 
 ### 11. Add a CODEOWNERS entry (new packages only)
 
-`elastic/integrations` validates package ownership in `mage check`
-(`dev/codeowners`), which Buildkite runs unconditionally on every PR
-(`.buildkite/pipeline.yml` step `check` → `.buildkite/scripts/check_sources.sh`).
-For every package it requires all three of:
+A new package needs an explicit line in `.github/CODEOWNERS` naming the same team
+as the root manifest's `owner.github`:
 
-1. `.github/CODEOWNERS` resolves an owner for the package path. Resolution walks
-   up parent directories, and `.github/CODEOWNERS` carries the repo-wide default
-   `/packages/ @elastic/integrations-triaging`, so this step always resolves for
-   anything under `packages/`.
-2. The root `manifest.yml` sets `owner.github`.
-3. The two agree: `owner.github` must appear as `@<value>` in the resolved line.
+```
+/packages/<package_name> @elastic/<team-name>
+```
 
-**Rule 3 is the one a new package actually trips.** Because rule 1 always falls
-back to the triaging default, a package with no explicit line of its own but an
-`owner.github` naming a real team mismatches, and the build fails with:
+Without it, `mage check` (run by Buildkite on every PR) fails with:
 
 ```
 error validating packages in directory 'packages': error checking manifest
@@ -258,15 +251,9 @@ error validating packages in directory 'packages': error checking manifest
 is not in ".github/CODEOWNERS"
 ```
 
-The fix is an explicit line in `.github/CODEOWNERS` whose team matches
-`owner.github` exactly:
-
-```
-/packages/<package_name> @elastic/<team-name>
-```
-
-CODEOWNERS is repo metadata, not package content — it needs **no version bump
-and no changelog entry** (see `package-spec/SKILL.md`).
+CODEOWNERS is repo metadata, not package content — it needs **no version bump and
+no changelog entry**. For the resolution rules behind this check, see
+`review-integration/references/repo-conventions.md`.
 
 ## Common pitfalls
 
@@ -284,5 +271,5 @@ and no changelog entry** (see `package-spec/SKILL.md`).
 - Manually creating `sample_event.json` or `*-expected.json`
 - Uncommenting `{{ event "stream" }}` before `sample_event.json` exists (causes build failure)
 - Leaving the verbose CEL scaffold unchanged — strip unused vars and replace placeholder CEL program
-- **Missing `.github/CODEOWNERS` entry for a new package** — the repo-wide `/packages/` default resolves to `@elastic/integrations-triaging`, so any other `owner.github` fails `mage check`
+- **Missing `.github/CODEOWNERS` entry for a new package** — any `owner.github` other than the repo-wide default fails `mage check` (see step 11)
 - **Creating `LICENSE.txt` manually** — `elastic-package build` injects it automatically; committing a manually-created one is flagged in PR review
