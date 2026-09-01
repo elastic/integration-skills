@@ -188,19 +188,35 @@ entirely rather than creating an empty one.
 `review-integration/references/conflict-resolutions.md` resolves the
 first-version-leniency conflict: for first-version packages
 (`0.0.1` / `1.0.0` with a single changelog entry), placeholder
-changelog links (`pull/99999` — the sanctioned placeholder;
-`elastic-package lint` rejects `pull/0`) and placeholder logos/icons
-are **informational notes only, not findings**. Do not flag them at
-MEDIUM or HIGH. For subsequent versions, the same placeholders are
-real findings (MEDIUM or HIGH as appropriate).
+changelog links (`pull/99999` is the recommended placeholder, but any
+fake number behaves the same; `elastic-package lint` rejects `pull/0`)
+and placeholder logos/icons are **informational notes only, not
+findings**. Do not flag them at MEDIUM or HIGH. For subsequent
+versions, the same placeholders are real findings (MEDIUM or HIGH as
+appropriate).
 
-**Exception -- the `pull/99999` development placeholder.** Leniency
-does not apply to it, at any package version: flag it at **MEDIUM**.
-Unlike `pull/0`, `pull/99999` passes `elastic-package lint`, so
-nothing else catches it and it silently reaches merge as a dead
-changelog link. The fix is to replace it with the real PR number
-once the PR exists -- see the `package-spec` skill's "Updating the
-changelog link after PR creation".
+**Do not hunt for placeholder numbers.** There is no value to match
+on. `elastic-package lint` only checks that a github.com link ends in
+a positive integer, so `pull/99999`, `pull/12345`, and any other
+invented number pass identically. The property that matters is
+whether the link points at the PR or issue that introduces the
+change, and in `elastic/integrations` that is already a deterministic
+CI check: `check_changelog_entries.sh` compares every link a PR adds
+against the PR's own URL, exempts `/issues/<n>` links, and is
+bypassed only by the `changelog-link-check:skip` label. Do not
+duplicate it. Flag a link only where that check cannot see it -- an
+entry this PR did not touch, or a review with no PR context -- and
+then at **LOW** (the severity rubric's changelog row). CI failing on
+an unreplaced link pre-merge is expected behavior, not a finding to
+report.
+
+**Exception -- the `pull/0` placeholder.** Leniency never applies to
+`pull/0`, at any package version: `elastic-package lint` rejects it
+outright, so the package does not lint until it is fixed. Flag it
+whenever you see it. The fix, here and for any stale placeholder, is
+to replace the link with the real PR number once the PR exists -- see
+the `package-spec` skill's "Updating the changelog link after PR
+creation".
 
 ### CEL-specific operating rules
 

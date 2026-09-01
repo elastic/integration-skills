@@ -1,5 +1,14 @@
 # Severity rubric
 
+This file is the authoritative rubric and is complete on its own -- reading
+it is all a review needs. Do not also load the fragments under `domains/`;
+they are a per-domain split of this same content, for callers that dispatch
+one reviewer per domain.
+
+> **Maintenance:** the fragments under `domains/` mirror this file. A PR
+> that changes a rule here must update the matching fragment in the same
+> PR, and vice versa.
+
 ## Severity definitions
 
 **CRITICAL**: Broken functionality, security vulnerabilities (hardcoded secrets, leaked credentials), missing required files that cause elastic-package build/lint/check failures, infinite loops (pagination without termination, want_more true on error paths).
@@ -38,7 +47,6 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Manifest | format_version too low for features used | HIGH |
 | Manifest | conditions.kibana.version too low for agent features used | HIGH |
 | Manifest | Data stream duplicates root manifest fields | MEDIUM |
-| Changelog | `pull/99999` development placeholder link not replaced with the real PR number | MEDIUM |
 | Tests | No pipeline test fixtures | HIGH |
 | Tests | Missing test-common-config.yml | HIGH |
 | Input | Hardcoded credentials | CRITICAL |
@@ -58,6 +66,7 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Fields | base-fields.yml wrong entry count | HIGH | MEDIUM (verify minimum entries present) |
 | Fields | beats.yml absent | HIGH (file-based inputs) | MEDIUM for file-based; N/A for CEL/HTTPJSON |
 | Tests | source.geo in dynamic_fields | MEDIUM | LOW (acceptable workaround if version bump not in scope) |
+| Changelog | Changelog link does not point at the PR or issue that introduces the change (a placeholder was left in; there is no placeholder value to match on -- see `conflict-resolutions.md`) | Informational note only (first-version leniency) | LOW (`check_changelog_entries.sh` enforces this on every link the PR adds; flag only what that check cannot see -- an entry this PR did not touch, or a review with no PR context) |
 
 ## ECS field declarations
 

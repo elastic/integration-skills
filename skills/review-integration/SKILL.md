@@ -151,6 +151,7 @@ These references live in this skill's `references/` directory and provide review
 | CEL or HTTPJSON with API docs available | `references/api-conformance-methodology.md` -- cross-reference implementation vs vendor docs |
 | entity-analytics input in scope | `references/entity-analytics-provider-matrix.md` + `checklists/entity-analytics-review-checklist.md` -- provider sync/marker/deletion semantics and package checklist |
 | Any input templates in scope | `references/input-review-orchestration.md` -- review depth routing by input type |
+| Assessing the PR title/description (first review) | `references/commit-message-conventions.md` -- squash-merge commit-message conventions the PR title is judged against |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 
@@ -237,7 +238,7 @@ Every issue must include exactly one domain tag:
 | Tag | Covers |
 |-----|--------|
 | `domain:manifest` | Root or data stream manifest fields, format_version, conditions, categories, owner, policy templates |
-| `domain:changelog` | changelog.yml schema, version mismatch, missing entries (missing = user-shipped package content changed without an entry/bump; internal metadata-only changes such as `owner.github` need none), invalid links (`pull/99999` dev placeholder is expected pre-merge — see conflict-resolutions), entry-type miscategorization only when the diff shows an observable compatibility/behavior change (re-bucketing bugfix/enhancement is editorial, not a finding) |
+| `domain:changelog` | changelog.yml schema, version mismatch, missing entries (missing = user-shipped package content changed without an entry/bump; internal metadata-only changes such as `owner.github` need none), invalid links (an unreplaced dev placeholder such as `pull/99999` is expected pre-merge and is CI's check to make, not a finding — see conflict-resolutions), entry-type miscategorization only when the diff shows an observable compatibility/behavior change (re-bucketing bugfix/enhancement is editorial, not a finding) |
 | `domain:build` | `_dev/build/build.yml` missing or outdated, doc template issues |
 | `domain:pipeline` | Ingest pipeline correctness, JSE00001, on_failure, tags, ECS categorization in pipeline |
 | `domain:input` | Agent stream template issues -- all input types including CEL, HTTPJSON, AWS S3, TCP, etc. |
@@ -303,3 +304,22 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 | `entity-mappings/references/entity-field-catalog.md` | Entity data stream in scope (see entity detection rule) | ECS availability matrix, Must Have / Should Have field tables, disambiguation guide, field definition examples, entity field review checklist |
 | `entity-mappings/references/entity-pipeline-patterns.md` | Entity data stream in scope (see entity detection rule) | Categorization processors, `entity.id` mirroring, boolean coercion, relationship object patterns, anti-patterns, entity pipeline review checklist |
 | `checklists/entity-analytics-review-checklist.md` | entity-analytics in scope | Severity-tagged entity-analytics package review checklist |
+
+### Not part of this skill -- `references/domains/`
+
+**Do NOT load anything under `references/domains/` when running this
+skill.** The table above is the complete load graph. This section exists
+only so the directory is not mistaken for a reference you missed.
+
+`references/domains/` holds a per-domain split of `severity-rubric.md` and
+`conflict-resolutions.md`, plus a reviewer guidance variant. It serves one
+caller: an external orchestrator that splits a review into one reviewer
+per domain, where each reviewer sees only its own domain and cannot run
+this skill's whole-review flow. Those files carry no rule this skill does
+not already give you, so loading them adds nothing but duplicated context
+and a second chance to read a rule out of its domain.
+
+If you are running a single-pass review -- which is what this skill
+describes -- read `references/severity-rubric.md` and
+`references/conflict-resolutions.md` instead. They are the authoritative
+copies, and the fragments are kept in sync with them.
