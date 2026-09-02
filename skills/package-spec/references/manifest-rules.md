@@ -290,6 +290,60 @@ The most common occurrence is the `elasticsearch` section in data stream manifes
 
 ---
 
+## Input names are not validated
+
+### The rule
+
+The *name* of an input is a free-form string in the spec. Nothing checks it
+against what the agent can actually run:
+
+| Package type | Field holding the input name |
+|---|---|
+| integration | `policy_templates[].inputs[].type`, and `streams[].input` in the data stream manifest |
+| input | `policy_templates[].input` |
+
+All three are declared `type: string` with no `enum` and no `pattern`
+(`spec/integration/manifest.spec.yml`, `spec/integration/data_stream/manifest.spec.yml`,
+`spec/input/manifest.spec.yml`). A nonexistent name passes `elastic-package
+lint` **and** `elastic-package check` -- the latter still builds the zip.
+
+### Do not confuse it with the enum-backed `type`
+
+One nearby field *is* enum-backed: the data stream's own `type`, and its
+`policy_templates[].type` equivalent in an input package. A bad value there is
+rejected outright:
+
+```
+field type: type must be one of the following: "metrics", "logs", "synthetics", "traces", "profiles"
+```
+
+(`profiles` is marked technical preview in the spec.)
+
+This matters most in an integration package, where the field holding the *input
+name* is also called `type` -- just one level deeper, under `inputs`. It is not
+the enum:
+
+```yaml
+# lints and checks green, builds a zip -- the input does not exist
+policy_templates:
+  - name: nginx
+    inputs:
+      - type: bogus_input_xyz
+```
+
+### How to check
+
+Confirm an input against the agent's own capabilities -- the "Detected available
+inputs and outputs" line in the agent log -- not against a passing build. The
+scaffolder's `--inputs` allowlist is no substitute either; it is narrower than
+what the agent supports (see
+`create-integration/references/scaffold-commands.md`).
+
+*(Verified with elastic-package v0.125.1 on a `format_version: "3.0.2"`
+integration package.)*
+
+---
+
 ## format_version selection
 
 ### The rule
@@ -337,5 +391,6 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] Every `{{var}}` in templates declared in manifest -- **HIGH**
 - [ ] Routing rules have dynamic_dataset + dynamic_namespace -- **HIGH** if routing_rules.yml present but flags missing
 - [ ] YAML uses nested structure, not dotted keys -- **MEDIUM**
+- [ ] Input names verified against agent capabilities, not a green lint -- **MEDIUM**
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**

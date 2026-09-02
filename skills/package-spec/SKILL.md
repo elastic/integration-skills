@@ -102,6 +102,14 @@ See `references/manifest-rules.md` -> **Variable shadowing** for full rules, exa
 
 - **Use proper YAML nesting, not dotted keys** -- `elasticsearch.dynamic_dataset` as a literal key name creates a single flat key, not a nested object. Use nested `elasticsearch:` -> `dynamic_dataset:` structure.
 
+- **A green lint does not prove an input exists** -- the input *name* is an
+  unvalidated string everywhere it appears: `policy_templates[].inputs[].type`
+  and the data stream's `streams[].input` in an integration package,
+  `policy_templates[].input` in an input package. Do not confuse it with the
+  enum-backed data stream `type`, which in an integration package is a
+  different field with the same name. See `references/manifest-rules.md` ->
+  **Input names are not validated**.
+
 See `references/manifest-rules.md` for complete rules, correct/incorrect examples, and the review checklist.
 
 ---
