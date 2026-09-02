@@ -14,6 +14,42 @@ The `preserve_original_event` tag must be conditional so users can opt in or out
 {{/if}}
 ```
 
+### Input packages: the shipped pipeline is not attached automatically
+
+Fleet does not attach an input package's `elasticsearch/ingest_pipeline/` to the
+data stream the way it does for an integration package. The pipeline is
+installed, but nothing points at it on its own — the wiring is the package's own
+`pipeline` variable, written out by the template:
+
+```yaml
+{{#if pipeline}}
+pipeline: {{pipeline}}
+{{/if}}
+```
+
+`packages/unifiedlogs` carries exactly this block, and its `pipeline` default
+does not resolve to the pipeline as installed, so its shipped ingest logic never
+runs. If a package ships a pipeline, check that the variable's default names the
+installed pipeline rather than a guessed `logs-<package>.<dataset>-default`.
+
+For inputs that deliver a raw log line in `message` (`tcp`, `udp`, `unix`),
+`preserve_original_event` only adds the tag — populating `event.original` is the
+template's job:
+
+```yaml
+{{#if preserve_original_event}}
+processors:
+- copy_fields:
+    fields:
+      - from: message
+        to: event.original
+{{/if}}
+```
+
+This is specific to that shape. `winlog` gets the field from `include_xml: true`,
+the object-storage and API inputs carry structured payloads rather than a raw
+line, and an integration package normally sets it in the ingest pipeline.
+
 ### User-defined tags
 
 User-defined tags from the manifest variable are iterated with an `{{#each}}` block:
@@ -91,4 +127,5 @@ Each variable must have a sensible default defined in the manifest `vars` sectio
 | Missing `forwarded` / `publisher_pipeline.disable_host` coupling | **MEDIUM** | If default tags include `forwarded`, the `publisher_pipeline.disable_host` block must be present, and vice versa |
 | Processors passthrough not at top level | **LOW** | The `{{#if processors}}` block must not be nested inside another key |
 | Missing `preserve_original_event` conditional | **MEDIUM** | The tag should be conditional, not hardcoded |
+| `preserve_original_event` without `copy_fields` in a raw-line input package (`tcp`/`udp`/`unix` shape) | **MEDIUM** | Nothing else writes `event.original` for these. Does not apply to `winlog` (`include_xml`), to structured-payload inputs, or to integration packages that set the field in the ingest pipeline |
 | Hardcoded timeouts or intervals | **LOW** | Tuning parameters should be variables with defaults |
