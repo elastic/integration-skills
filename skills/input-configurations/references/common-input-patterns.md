@@ -81,11 +81,17 @@ Applies to:
 
 Each variable must have a sensible default defined in the manifest `vars` section. Sensitive values (credentials, tokens) should use `type: password` and `show_user: true` in the manifest.
 
-## `data_stream.dataset` must be emitted by the template
+## A declared `data_stream.dataset` var must be emitted
 
-Declaring a `data_stream.dataset` variable in the manifest is not enough. Fleet
-stores whatever the user types, but the value only reaches the agent if the
-template writes it out:
+This applies only where the manifest declares a `data_stream.dataset` variable —
+the configurable-dataset shape used by `httpjson`/`generic`, `cef`/`log`,
+`aws_logs`/`generic` and the other catch-all streams. A named data stream with a
+fixed dataset has no such variable, and its template must **not** emit the block;
+Fleet derives the dataset from the data stream itself.
+
+Where the variable does exist, declaring it is not enough. Fleet stores whatever
+the user types, but the value only reaches the agent if the template writes it
+out:
 
 ```yaml
 data_stream:
@@ -104,9 +110,12 @@ variable (`{"value": "tcpmetrics.customds"}`), only the template differing:
 
 Nothing reports this. `elastic-package check` passes either way, the variable
 shows the right value in the Fleet UI, and the agent reports its events as
-acked — they just land in the fallback data stream. `packages/tcp` is the
-reference implementation, where the block sits behind the `use_logs_stream`
-conditional.
+acked — they just land in the fallback data stream.
+
+The two are coupled in practice: across `elastic/integrations`, 13 data streams
+declare the variable and 11 emit it, while **none** emit it without declaring it.
+`packages/tcp` is the reference implementation, where the block sits behind the
+`use_logs_stream` conditional.
 
 ## What to flag during review
 
