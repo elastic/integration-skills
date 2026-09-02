@@ -48,25 +48,31 @@ These features require bumping beyond the current standard. Only use them if the
 
 ## `dynamic_signal_types` is otelcol-only
 
-A policy template with `dynamic_signal_types: true` and no `type:` accepts every
-signal type at once — the mechanism for "one policy template, several signal
-types". It is restricted to `input: otelcol` and no released spec version lifts
-that:
+`dynamic_signal_types: true` lets one policy template accept every signal type at
+once. It is restricted to the `otelcol` input in **every** package type, and no
+released spec version lifts that — the restriction is unchanged through
+`3.7.0-next`. Below `format_version: 3.6.0` the field is not recognised at all
+(`Additional property dynamic_signal_types is not allowed`).
 
-- `dynamic_signal_types: true` on any other input fails with
-  `policy template "<name>": dynamic_signal_types is only allowed when input is
-  'otelcol', got '<input>'`
-- `type:` must **not** be set alongside it — `type field must not be set when
-  dynamic_signal_types is true`
-- below `format_version: 3.6.0` the field is not recognised at all
-  (`Additional property dynamic_signal_types is not allowed`)
+Where it sits differs, and the sibling `type:` means different things:
 
-Bumping the format version does not help: the restriction is unchanged through
-`3.7.0-next`, and the five packages using it in elastic/integrations
-(`otlp_input_otel`, `kafka_input_otel`, `elasticapm_input_otel`,
-`mysql_input_otel`, `sql_server_input_otel`) are all `input: otelcol`. For a
-non-otelcol input needing several signal types, see the shapes in
-`create-integration/references/package-layout.md`.
+| Package type | Field | Sibling `type:` |
+|---|---|---|
+| input | `policy_templates[].dynamic_signal_types` | the signal type — must be **absent** |
+| integration | `policy_templates[].inputs[].dynamic_signal_types` | the input name — must be **`otelcol`** |
+| integration | `streams[].dynamic_signal_types` (data stream manifest) | the input name, via `streams[].input` |
+
+So the input-package rule "`type` must not be set" does not carry over: in an
+integration package the neighbouring `type` is the input name and has to be
+there. The validator words them differently too — `type field must not be set
+when dynamic_signal_types is true` for input packages, `input type "<type>":
+dynamic_signal_types is only allowed when input is 'otelcol'` for integration
+packages.
+
+All five packages using the field today (`otlp_input_otel`, `kafka_input_otel`,
+`elasticapm_input_otel`, `mysql_input_otel`, `sql_server_input_otel`) are input
+packages; no integration package uses it yet. For a non-otelcol input that needs
+several signal types, see `create-integration/references/package-layout.md`.
 
 ## Breaking changes at 3.6.0
 
