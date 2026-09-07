@@ -33,10 +33,16 @@ When classified as entity:
 1. **Definitive:** the pipeline sets `event.kind: asset` anywhere.
 2. **Definitive:** `input: entity-analytics` appears in a data stream or policy-template input in any `manifest.yml`.
 3. **Strong:** any `fields/*.yml` file declares a field matching `*entity.attributes.*`, `*entity.lifecycle.*`, `*entity.relationships.*`, `entity.type`, or `entity.id`.
-4. **Heuristic:** stream name is one of: `users`, `user`, `members`, `membership`, `groups`, `devices`, `hosts`, `assets`, `inventory`, `accounts`, `identities`, `entities`, `apps`, `applications`, `service_accounts`, `roles`, `resources` — **and** the pipeline sets no `event.action` or `event.outcome` — **and** pipeline test fixtures carry no per-record event timestamp distinct from collection time.
+4. **Heuristic:** stream name is one of: `users`, `user`, `members`, `membership`, `groups`, `devices`, `hosts`, `assets`, `inventory`, `accounts`, `identities`, `entities`, `apps`, `applications`, `service_accounts`, `roles`, `resources` — **and** the pipeline sets no `event.action` or `event.outcome` — **and** handwritten pipeline input fixtures show no per-record event timestamp distinct from collection time.
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` **and** the stream sets `result.evaluation` or `vulnerability.*` — this is a CDR *findings* stream, `event.kind: state`. Load the CDR references (`ecs-field-mappings/references/cdr-field-requirements.md` and `ingest-pipelines/references/cdr-pipeline-requirements.md`), **not** entity references.
 
 **Severity rule:** if classification rests on heuristic 4 alone, report entity findings one severity level lower than listed and state the classification basis. This keeps the "cite concrete evidence" discipline honest.
+
+During review, never read generated `*-expected.json` or `sample_event*.json` to
+establish these signals. Use source and handwritten inputs; an already-supplied
+compact test digest is optional for demanding cases only. If the timestamp
+signal remains unclear, leave the heuristic unconfirmed rather than inspect
+generated outputs. This restriction does not change the research-time rule.
 
 ---
 
