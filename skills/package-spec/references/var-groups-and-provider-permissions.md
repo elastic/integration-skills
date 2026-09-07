@@ -37,7 +37,7 @@ var_groups:
         vars: [access_key_id, secret_access_key]
 ```
 
-On `identity_federation`, `iac_template_url` is required for the CloudFormation fallback. Replace `<KIBANA_FLOOR_MINOR>` with the package Kibana floor (currently `9.6.0`). There is no `param_ElasticResourceId=RESOURCE_ID` query parameter any more — the external ID was removed (elastic/integrations#20527, elastic/kibana#284522, elastic/cloudbeat#7637). The GuardDuty-only `cloudformation-cloud-connectors-guardduty-*.yml` URL from #19828 is legacy; every shipped package (`aws`, `aws_logs`, `aws_mq`, `aws_securityhub`, `aws_bedrock`) uses the federated-identity template.
+On `identity_federation`, `iac_template_url` is required for the CloudFormation fallback. Replace `<KIBANA_FLOOR_MINOR>` with the package Kibana floor (currently `9.6.0`). There is no `param_ElasticResourceId=RESOURCE_ID` query parameter any more — the external ID was removed ([elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527), [elastic/kibana#284522](https://github.com/elastic/kibana/pull/284522), [elastic/cloudbeat#7637](https://github.com/elastic/cloudbeat/pull/7637)). The GuardDuty-only `cloudformation-cloud-connectors-guardduty-*.yml` URL from [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828) is legacy; every shipped package (`aws`, `aws_logs`, `aws_mq`, `aws_securityhub`, `aws_bedrock`) uses the federated-identity template.
 
 Validator rules:
 - Every name in `options[].vars` must exist as a var at some level (package, policy template, input, or data stream).
@@ -45,8 +45,8 @@ Validator rules:
 - Use `hide_in_deployment_modes` so agent-only methods stay hidden in agentless mode (and federation stays hidden in default mode when appropriate).
 
 Related input gating (not part of `var_groups` itself):
-- `hide_in_var_group_options` on an input hides that input when a given option is selected. Introduced in elastic/integrations#19828, removed from `aws` in #20527; no shipped package uses it today.
-- Input-level `deployment_modes: ["default"]` pins an input to agent-based mode only — this is how `aws-s3` is handled in `aws_logs` (#20823) and `aws_bedrock_agentcore` (#20821).
+- `hide_in_var_group_options` on an input hides that input when a given option is selected. Introduced in [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828), removed from `aws` in [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527); no shipped package uses it today.
+- Input-level `deployment_modes: ["default"]` pins an input to agent-based mode only — this is how `aws-s3` is handled in `aws_logs` ([elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)) and `aws_bedrock_agentcore` ([elastic/integrations#20821](https://github.com/elastic/integrations/pull/20821)).
 
 ## `provider_permissions`
 
@@ -68,8 +68,8 @@ Do not guess IAM action names — derive them from the collector's real API call
 
 When a package uses Federated Identity / `use_cloud_connectors`:
 - `format_version: "3.6.4"`
-- `conditions.kibana.version: "^9.6.0"` (or higher) — external-ID-free connector flow, elastic/kibana#284522
-- `conditions.agent.version: "^9.4.0"` (or higher) — `auth.aws` + libbeat cloud connectors on the current contract (elastic/beats#47260, #47587, #48956); see elastic/integrations#21007 for why this is 9.4, not 9.6
+- `conditions.kibana.version: "^9.6.0"` (or higher) — external-ID-free connector flow, [elastic/kibana#284522](https://github.com/elastic/kibana/pull/284522)
+- `conditions.agent.version: "^9.4.0"` (or higher) — `auth.aws` + libbeat cloud connectors on the current contract ([elastic/beats#47260](https://github.com/elastic/beats/pull/47260), [elastic/beats#47587](https://github.com/elastic/beats/pull/47587), [elastic/beats#48956](https://github.com/elastic/beats/pull/48956)); see [elastic/integrations#21007](https://github.com/elastic/integrations/pull/21007) for why this is 9.4, not 9.6
 
 If raising the Kibana floor would abandon a still-supported stack line (e.g. dropping 8.x), escalate — do not silent-bump. See **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
