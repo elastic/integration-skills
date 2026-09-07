@@ -4,10 +4,11 @@ Procedure for enabling Federated Identity (Cloud Connectors) on an
 agentless-eligible, **single-provider (AWS-only)** integration. Pattern:
 `aws` package (elastic/integrations#19828, #20527, #20529); end state on
 standalone packages: `aws_logs` (#20823), `aws_mq` (#20817),
-`aws_bedrock` (#20822). Rollout: elastic/ingest-dev#8812.
+`aws_bedrock` (#20822); floors corrected in #21007.
 
 Multi-cloud packages (e.g. `kubernetes`, elastic/integrations#20824) hit
-platform limits tracked in elastic/ingest-dev#9382 — out of scope here.
+platform limits that are still being worked through on that PR — out of
+scope here.
 
 **Do not duplicate other skills.** Load these first and follow them for their
 domains:
@@ -100,8 +101,9 @@ this route (`aws_logs` #20823, `aws_mq` #20817, `aws_bedrock` #20822). Suggest:
 3. EPR routes old stacks to the backport, new stacks to `main`.
 4. Split PRs: spec bump first, federation second.
 
-Requires CODEOWNERS sign-off before any constraint change. See
-elastic/ingest-dev#8788.
+Requires CODEOWNERS sign-off before any constraint change. The branching
+strategy is written up in the `aws_logs` 2.0.0 PR description
+(elastic/integrations#20823).
 
 ---
 
@@ -277,7 +279,7 @@ Changelog: `enhancement`. **Minor** bump when the Kibana/agent floors do not
 change. **Major** bump when the floor jump drops a still-supported stack line
 (shipped: `aws` 6.20.3 → 7.0.0 #19828; `aws_logs` 1.8.3 → 2.0.0 #20823;
 `aws_mq` 1.0.0 → 2.0.0 #20817; `aws_bedrock` #20822), paired with a
-`backport-<package>-<N>.x` branch per elastic/ingest-dev#8788. Follow the
+`backport-<package>-<N>.x` branch (strategy in #20823's description). Follow the
 `package-spec` skill. Call out first-time agentless enablement separately.
 
 ---
@@ -304,6 +306,6 @@ if it must **share** a connector with an existing policy group.
 - [ ] Fleet UI: Identity Federation visible in agentless, hidden in default
 - [ ] Ineligible inputs (e.g. `aws-s3`) pinned with `deployment_modes: ["default"]`, so they never appear in agentless
 - [ ] Changelog bump matches the floor change (minor if floors unchanged; major + `backport-<package>-<N>.x` if a stack line is dropped, see #20823 / #20817); CODEOWNERS confirmed
-- [ ] Integrations PR title `[<package>] Enable Identity Federation for agentless deployments`; link elastic/ingest-dev#8812; note the cloudbeat CFT publish dependency
+- [ ] Integrations PR title `[<package>] Enable Identity Federation for agentless deployments`; link a shipped reference PR (e.g. elastic/integrations#20823); note the cloudbeat CFT publish dependency
 - [ ] IAM actions match real API calls (and the cloudbeat CFT, if that PR exists)
 - [ ] E2E on real AWS (mocks do not verify SigV4); include a regression line for legacy credential paths
