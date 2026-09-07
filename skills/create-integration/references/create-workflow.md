@@ -48,7 +48,7 @@ Before creating any files, verify all required tools are present. Run the Precon
 - `format_version: "3.4.2"`
 - `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
 
-**Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, use `format_version: "3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` (floors per [elastic/integrations#21007](https://github.com/elastic/integrations/pull/21007)). Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
+**Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, use `format_version: "3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`. Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
 
 3. **Start the Elastic stack** (needed for system tests later):
 

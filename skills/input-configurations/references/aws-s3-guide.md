@@ -227,7 +227,7 @@ default_region: {{default_region}}
 
 ## Authentication patterns
 
-> **Federated Identity / Cloud Connectors:** the flat credential fields below are the standard agent-based pattern. `aws-s3` is **not agentless-eligible** and has no Cloud Connectors support — in a package enabling Identity Federation, pin the input with `deployment_modes: ["default"]` in the root manifest (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823), `aws_bedrock_agentcore` [elastic/integrations#20821](https://github.com/elastic/integrations/pull/20821)) and leave this template unchanged. See `references/federated-identity-aws.md`.
+> **Federated Identity / Cloud Connectors:** the flat credential fields below are the standard agent-based pattern. `aws-s3` is **not agentless-eligible** and has no Cloud Connectors support — in a package enabling Identity Federation, pin the input with `deployment_modes: ["default"]` in the root manifest and leave this template unchanged. See `references/federated-identity-aws.md`.
 
 ### Profile-based authentication
 
@@ -436,7 +436,7 @@ bucket_list_prefix: {{bucket_list_prefix}}
 - [ ] Session token supported for temporary credentials -- **MEDIUM**
 - [ ] Role assumption available for cross-account access -- **MEDIUM**
 - [ ] No hardcoded credentials -- **CRITICAL**
-- [ ] If this stream is in a package enabling Federated Identity: keep flat credentials here; the `aws-s3` input is pinned with `deployment_modes: ["default"]` in the root manifest (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)) — do **not** add `auth.aws` / `use_cloud_connectors` to this template -- **HIGH** when in scope
+- [ ] If this stream is in a package enabling Federated Identity: keep flat credentials here; the `aws-s3` input is pinned with `deployment_modes: ["default"]` in the root manifest — do **not** add `auth.aws` / `use_cloud_connectors` to this template -- **HIGH** when in scope
 
 ### SQS settings
 

@@ -1,14 +1,13 @@
 # Federated Identity for AWS integrations
 
 Procedure for enabling Federated Identity (Cloud Connectors) on an
-agentless-eligible, **single-provider (AWS-only)** integration. Pattern:
-`aws` package ([elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828), [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527), [elastic/integrations#20529](https://github.com/elastic/integrations/pull/20529)); end state on
-standalone packages: `aws_logs` ([elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)), `aws_mq` ([elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817)),
-`aws_bedrock` ([elastic/integrations#20822](https://github.com/elastic/integrations/pull/20822)); floors corrected in [elastic/integrations#21007](https://github.com/elastic/integrations/pull/21007).
+agentless-eligible, **single-provider (AWS-only)** integration. The `aws`
+package is where the pattern started, but the end state to copy is a standalone
+2.0 package — `aws_logs` ([elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)),
+`aws_mq`, `aws_bedrock`, `aws_securityhub`.
 
-Multi-cloud packages (e.g. `kubernetes`, [elastic/integrations#20824](https://github.com/elastic/integrations/pull/20824)) hit
-platform limits that are still being worked through on that PR — out of
-scope here.
+Multi-cloud packages (e.g. `kubernetes`) hit platform limits that are still
+being worked through upstream — out of scope here.
 
 **Do not duplicate other skills.** Load these first and follow them for their
 domains:
@@ -28,11 +27,12 @@ Kibana renders the IAM role via IaC Provider from `provider_permissions`. The
 static `federated-identity-aws.yml` CFT in elastic/cloudbeat is the **fallback**
 when IaCP returns 422/502. Both must grant the same actions.
 
-> **Legacy CFT URL.** [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828) shipped `cloudformation-cloud-connectors-guardduty-*.yml`
-> with `&param_ElasticResourceId=RESOURCE_ID`. [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527) replaced it
-> with `cloudformation-federated-identity-aws-<version>.yml` and dropped the parameter
-> (external ID removed; [elastic/cloudbeat#7637](https://github.com/elastic/cloudbeat/pull/7637), [elastic/kibana#284522](https://github.com/elastic/kibana/pull/284522)). Every shipped
-> package now uses the new URL — if you see the GuardDuty URL, replace it.
+> **Legacy CFT URL.** The first `aws` rollout shipped
+> `cloudformation-cloud-connectors-guardduty-*.yml` with
+> `&param_ElasticResourceId=RESOURCE_ID`. Once the external ID left the trust
+> model, that was replaced by
+> `cloudformation-federated-identity-aws-<version>.yml` with no parameter. Every
+> shipped package now uses the new URL — if you see the GuardDuty URL, replace it.
 
 ---
 
@@ -49,7 +49,7 @@ Federation and agentless are different gates. Bucket every input:
 | Bucket | Meaning | Examples | Action |
 |--------|---------|----------|--------|
 | **Federation-eligible** | Agentless **and** Identity Federation (`use_cloud_connectors`) | `cel`, `httpjson`, `aws/metrics` (`*metrics`), `aws-cloudwatch` | Stay visible under Identity Federation |
-| **Not agentless** | Needs a local agent/runtime, or no Cloud Connectors support | `aws-s3`, `awsfargate/metrics` | `deployment_modes: ["default"]` (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823), `aws_bedrock_agentcore` [elastic/integrations#20821](https://github.com/elastic/integrations/pull/20821)) |
+| **Not agentless** | Needs a local agent/runtime, or no Cloud Connectors support | `aws-s3`, `awsfargate/metrics` | `deployment_modes: ["default"]` |
 
 If **no** input is federation-eligible, stop. Name the blocking type and the
 upstream dependency (e.g. `aws-s3` has no `auth.aws` / Cloud Connectors yet).
@@ -69,7 +69,7 @@ Record which, then classify:
 
 | Bucket | Vars | Fate |
 |--------|------|------|
-| **Federation-required** | `role_arn` | Add if missing. Always add `supports_identity_federation`. Do **not** add `external_id` — removed with the external-ID-free trust model ([elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527)). |
+| **Federation-required** | `role_arn` | Add if missing. Always add `supports_identity_federation`. Do **not** add `external_id` — removed with the external-ID-free trust model. |
 | **Agentless-compatible** | `access_key_id`, `secret_access_key` | Keep; `direct_access_key` option |
 | **Agent-only** | `session_token`, `shared_credential_file`, `credential_profile_name` | Keep; `hide_in_deployment_modes: [agentless]` |
 | **Auxiliary** | `assume_role_duration`, `proxy_url`, `ssl`, ... | Leave outside `var_groups` |
@@ -105,13 +105,11 @@ agent floor is lower than the Kibana floor:
 
 Then run `elastic-package lint`.
 A jump to 3.6.x turns on pipeline `tag` / `on_failure` validators; land
-hygiene as a **separate** PR if lint fails on files this change does not own
-(precedent: [elastic/integrations#19824](https://github.com/elastic/integrations/pull/19824)).
+hygiene as a **separate** PR if lint fails on files this change does not own.
 
-**Escalation — do not silent-bump** if the Kibana floor (`^9.6.0`; agent `^9.4.0`,
-[elastic/integrations#21007](https://github.com/elastic/integrations/pull/21007)) would drop a still-supported stack line (e.g.
-`^8.16.5 || ^9.0.0`). That is a product decision — every shipped 2.0 package took
-this route (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823), `aws_mq` [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817), `aws_bedrock` [elastic/integrations#20822](https://github.com/elastic/integrations/pull/20822)). Suggest:
+**Escalation — do not silent-bump** if the Kibana floor (`^9.6.0`; agent
+`^9.4.0`) would drop a still-supported stack line (e.g. `^8.16.5 || ^9.0.0`).
+That is a product decision — every shipped 2.0 package took this route. Suggest:
 
 1. Major-version bump on `main`.
 2. Long-running `backport-<package>-<N>.x` from the last release, old floor kept.
@@ -119,8 +117,7 @@ this route (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/i
 4. Split PRs: spec bump first, federation second.
 
 Requires CODEOWNERS sign-off before any constraint change. The branching
-strategy is written up in the `aws_logs` 2.0.0 PR description
-([elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)).
+strategy is written up in the `aws_logs` 2.0.0 PR description.
 
 ---
 
@@ -147,7 +144,7 @@ Add next to existing auth vars (same level as the audit):
 
 Skip `role_arn` if already declared. Schema for grouping is in
 `var-groups-and-provider-permissions.md`. Emit only options whose vars
-this package declares (shipped set: `aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823), `aws_mq` [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817)):
+this package declares:
 
 | Option | Vars | Visibility |
 |--------|------|------------|
@@ -158,12 +155,12 @@ this package declares (shipped set: `aws_logs` [elastic/integrations#20823](http
 | `shared_credentials` | `shared_credential_file`, `credential_profile_name` | Hide in agentless |
 | `default_credentials` | *(none — SDK default chain)* | Hide in agentless; optional, present on `aws` `main` |
 
-`assume_role_external_id` was removed with the external ID ([elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527)); do not emit it.
+`assume_role_external_id` was removed with the external ID; do not emit it.
 
 On `identity_federation`, set `iac_template_url` (replace
 `<KIBANA_FLOOR_MINOR>` with the package Kibana floor, currently `9.6.0`).
 No `param_ElasticResourceId` — the external ID / `RESOURCE_ID` pre-fill was
-removed in [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527) ([elastic/kibana#284522](https://github.com/elastic/kibana/pull/284522), [elastic/cloudbeat#7637](https://github.com/elastic/cloudbeat/pull/7637)):
+removed with the external-ID-free trust model:
 
 ```text
 https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=https://elastic-cspm-cft.s3.eu-central-1.amazonaws.com/cloudformation-federated-identity-aws-<KIBANA_FLOOR_MINOR>.yml
@@ -191,16 +188,15 @@ sign-off. On each target policy template:
 ```
 
 Pin **Not agentless** inputs (including `aws-s3`) with `deployment_modes: ["default"]`
-— this is what `aws_logs` ([elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)) and `aws_bedrock_agentcore`
-([elastic/integrations#20821](https://github.com/elastic/integrations/pull/20821)) ship.
+— this is what the shipped packages do.
 
 ### Input gating
 
 `hide_in_var_group_options` hides an input when a given `var_groups` option is
-selected. [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828) used it on 13 `aws` inputs; [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527) removed every instance once
-those inputs became federation-eligible. No shipped package uses it today. Reach
-for it only for an input that is agentless-capable but cannot use Cloud
-Connectors — and flag that in the PR, since it is an unproven path:
+selected. The first `aws` rollout used it on 13 inputs, then removed every
+instance once those inputs became federation-eligible. No shipped package uses
+it today. Reach for it only for an input that is agentless-capable but cannot
+use Cloud Connectors — and flag that in the PR, since it is an unproven path:
 
 ```yaml
       - type: <input>
@@ -229,10 +225,10 @@ Prefer the minimal read-only set. Cite the AWS API Reference in the PR.
 Two shapes, decided by input type. Both gate `use_cloud_connectors` on
 `supports_identity_federation`.
 
-**`cel` / `httpjson`** — nested `auth.aws:` block (`aws` `config` CEL and
-`guardduty` / `inspector` / `securityhub_*` HTTPJSON; [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828),
-[elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527), [elastic/integrations#20529](https://github.com/elastic/integrations/pull/20529)). If `auth.aws:` exists, append only the `supports_identity_federation`
-clause; otherwise add the block, dropping `{{#if}}` clauses for undeclared vars:
+**`cel` / `httpjson`** — nested `auth.aws:` block (as in the `aws` `config` CEL
+stream and its `guardduty` / `inspector` / `securityhub_*` HTTPJSON streams).
+If `auth.aws:` exists, append only the `supports_identity_federation` clause;
+otherwise add the block, dropping `{{#if}}` clauses for undeclared vars:
 
 ```handlebars
 auth.aws:
@@ -267,7 +263,7 @@ auth.aws:
 
 **`aws-cloudwatch` / `aws/metrics`** — no `auth.aws:` block. These inputs read
 credentials at the top level (Beats shared `ConfigAWS`); add one clause next to
-the existing `role_arn` (`aws_logs` [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823), `aws_mq` [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817), `aws` [elastic/integrations#20527](https://github.com/elastic/integrations/pull/20527), [elastic/integrations#21058](https://github.com/elastic/integrations/pull/21058)):
+the existing `role_arn`:
 
 ```handlebars
 {{#if role_arn}}
@@ -324,10 +320,8 @@ floor ("Raise the minimum required Kibana and Elastic Agent versions to
 9.6.0 … the 1.x line is reserved for backports serving older stacks") and an
 `enhancement` for the Identity Federation enablement — every 2.0 package uses
 this exact pair. **Minor** bump, `enhancement` only, when the Kibana/agent
-floors do not change. **Major** when the floor jump drops a still-supported stack line
-(shipped: `aws` 6.20.3 → 7.0.0 [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828); `aws_logs` 1.8.3 → 2.0.0 [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823);
-`aws_mq` 1.0.0 → 2.0.0 [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817); `aws_bedrock` [elastic/integrations#20822](https://github.com/elastic/integrations/pull/20822)), paired with a
-`backport-<package>-<N>.x` branch (strategy in [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)'s description). Follow the
+floors do not change. **Major** when the floor jump drops a still-supported
+stack line, paired with a `backport-<package>-<N>.x` branch. Follow the
 `package-spec` skill. Call out first-time agentless enablement separately.
 
 ---
@@ -356,7 +350,7 @@ if it must **share** a connector with an existing policy group.
 - [ ] Every stream template under every agentless policy template renders `use_cloud_connectors` (enumerate, do not sample)
 - [ ] `provider_permissions` declared on every federation-eligible input (or at the narrowest covering level)
 - [ ] One `test-<input>-agentless-cloud-connector.yml` policy fixture per federated stream, `.expected` regenerated
-- [ ] Changelog bump matches the floor change (minor if floors unchanged; major + `backport-<package>-<N>.x` if a stack line is dropped, see [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823) / [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817)); CODEOWNERS confirmed
-- [ ] Integrations PR title `[<package>] Enable Identity Federation for agentless deployments`; link a shipped reference PR (e.g. [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)); note the cloudbeat CFT publish dependency
+- [ ] Changelog bump matches the floor change (minor if floors unchanged; major + `backport-<package>-<N>.x` if a stack line is dropped); CODEOWNERS confirmed
+- [ ] Integrations PR title `[<package>] Enable Identity Federation for agentless deployments`; link a shipped reference PR; note the cloudbeat CFT publish dependency
 - [ ] IAM actions match real API calls (and the cloudbeat CFT, if that PR exists)
 - [ ] E2E on real AWS (mocks do not verify SigV4); include a regression line for legacy credential paths
