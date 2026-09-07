@@ -44,8 +44,8 @@ The domain skills state current standards as absolute rules (e.g., `ecs.version:
 
 | Rule | New package | Existing package |
 |------|-----------|-----------------|
-| `format_version` | Must be `"3.4.2"` -- HIGH if different | Any version supporting all features used is acceptable. Only HIGH if features require a higher version than declared. |
-| `conditions.kibana.version` | Must be `"^8.19.0 \|\| ^9.1.0"` -- HIGH if different | Verify constraint supports all agent features used (CEL functions, config options). Only HIGH if features require a higher version. |
+| `format_version` | Must be `"3.4.2"` -- HIGH if different. **Exception:** `"3.6.4"` when the package declares `provider_permissions` / `var_groups` for Federated Identity (see `package-spec/references/var-groups-and-provider-permissions.md`) | Any version supporting all features used is acceptable. Only HIGH if features require a higher version than declared. |
+| `conditions.kibana.version` | Must be `"^8.19.0 \|\| ^9.1.0"` -- HIGH if different. **Exception:** `"^9.6.0"` plus `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope (elastic/integrations#21007) | Verify constraint supports all agent features used (CEL functions, config options). Only HIGH if features require a higher version. |
 | `ecs.version` in pipeline | Must be `9.3.0` for standard integrations; must be `9.5.0` for packages with entity data streams (`event.kind: asset`) -- HIGH if older than required or mismatched with `build.yml` | Any version is acceptable as long as it matches the `build.yml` ECS pin. Only HIGH if pipeline and build.yml are inconsistent with each other. |
 | `build.yml` ECS pin | Must be `git@v9.3.0` for standard integrations; must be `git@v9.5.0` for packages with entity data streams -- HIGH if different from required | Must match pipeline `ecs.version`. Only HIGH if mismatch between the two, not because the version is older. Entity data streams require `git@v9.5.0` because `entity.attributes.*`, `entity.lifecycle.*`, and `entity.relationships.*` leaf fields do not exist at `v9.3.0`. |
 
@@ -169,8 +169,9 @@ If any stream fires checks 1–4 (and the negative gate does not override), load
 1. Root `manifest.yml` has a `var_groups` option named `identity_federation`.
 2. Any `provider_permissions` entry has `provider: aws`.
 3. Any `agent/stream/*.yml.hbs` contains `use_cloud_connectors` or `supports_identity_federation`.
+4. Root `manifest.yml` `conditions.kibana.version` is `^9.6.0` (or higher) **and** any input is `aws-cloudwatch`, `aws/metrics`, `cel`, or `httpjson` with AWS credential vars — treat as federation-eligible and check the rest of the list.
 
-Then apply the federation items on the manifest checklist, the CEL and HTTPJSON review checklists, and the matching input-configurations guide (CloudWatch Stream template; S3 Input gating). Federation-eligible types with no dedicated guide (e.g. `aws/metrics`) still use `federated-identity-aws.md`. Do **not** treat `auth.aws` alone (flat access keys) as federation.
+Then apply the federation items on the manifest checklist, the CEL and HTTPJSON review checklists, and the matching input-configurations guide (CloudWatch **Stream template** — top-level `use_cloud_connectors`, no `auth.aws:`; S3 — pinned `deployment_modes: ["default"]`). Federation-eligible types with no dedicated guide (e.g. `aws/metrics`) still use `federated-identity-aws.md`. Do **not** treat `auth.aws` alone (flat access keys) as federation, and do **not** flag the absence of `external_id` or `hide_in_var_group_options` — both were removed in elastic/integrations#20527.
 
 ---
 

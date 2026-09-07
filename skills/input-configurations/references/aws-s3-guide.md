@@ -227,7 +227,7 @@ default_region: {{default_region}}
 
 ## Authentication patterns
 
-> **Federated Identity / Cloud Connectors:** the flat credential fields below are the standard agent-based pattern. For agentless Identity Federation (`auth.aws`, `use_cloud_connectors`, `var_groups`, `provider_permissions`), follow `references/federated-identity-aws.md`. `aws-s3` is **not federation-eligible** (no `auth.aws` / Cloud Connectors support yet) but may still run agentless with access keys — in mixed templates hide it under Identity Federation via `hide_in_var_group_options`, do not pin it to `deployment_modes: ["default"]`.
+> **Federated Identity / Cloud Connectors:** the flat credential fields below are the standard agent-based pattern. `aws-s3` is **not agentless-eligible** and has no Cloud Connectors support — in a package enabling Identity Federation, pin the input with `deployment_modes: ["default"]` in the root manifest (`aws_logs` elastic/integrations#20823, `aws_bedrock_agentcore` #20821) and leave this template unchanged. See `references/federated-identity-aws.md`.
 
 ### Profile-based authentication
 
@@ -436,7 +436,7 @@ bucket_list_prefix: {{bucket_list_prefix}}
 - [ ] Session token supported for temporary credentials -- **MEDIUM**
 - [ ] Role assumption available for cross-account access -- **MEDIUM**
 - [ ] No hardcoded credentials -- **CRITICAL**
-- [ ] If this stream is in a package enabling Federated Identity: keep flat credentials here (S3 is not federation-eligible); gate the input with `hide_in_var_group_options` per `references/federated-identity-aws.md` (**Input gating**) — do **not** add `auth.aws` / `use_cloud_connectors` to this template -- **HIGH** when in scope
+- [ ] If this stream is in a package enabling Federated Identity: keep flat credentials here; the `aws-s3` input is pinned with `deployment_modes: ["default"]` in the root manifest (`aws_logs` elastic/integrations#20823) — do **not** add `auth.aws` / `use_cloud_connectors` to this template -- **HIGH** when in scope
 
 ### SQS settings
 
