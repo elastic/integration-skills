@@ -55,6 +55,13 @@ If **no** input is federation-eligible, stop. Name the blocking type and the
 upstream dependency (e.g. `aws-s3` has no `auth.aws` / Cloud Connectors yet).
 Agentless-with-access-keys does not make the package federation-eligible.
 
+> **`aws` is the origin, not the reference.** On `main` it still has `aws-s3`
+> unpinned inside agentless policy templates (`ec2`, `elb`, `s3`, `guardduty`)
+> and declares `provider_permissions` on one input out of ~25 — the rest lean
+> on the static cloudbeat CFT. Copy the standalone 2.0 packages (`aws_logs`,
+> `aws_mq`, `aws_bedrock`, `aws_securityhub`) for structure; use `aws` only for
+> the `cel` / `httpjson` `auth.aws` migrations.
+
 ### Audit credential vars
 
 Auth vars live at package level (`aws`) or input level (`aws_securityhub`).
@@ -86,7 +93,17 @@ Check content, not just key presence.
 
 Bump `format_version` and conditions **before** adding `var_groups` or
 `provider_permissions` — exact values are in
-`var-groups-and-provider-permissions.md`. Then run `elastic-package lint`.
+`var-groups-and-provider-permissions.md`. Every shipped package carries the
+same comment above `conditions.agent.version` — keep it, it explains why the
+agent floor is lower than the Kibana floor:
+
+```yaml
+  # auth.aws + libbeat cloud connectors on the current ExternalID contract ship in Elastic Agent 9.4.0 (elastic/beats#47260, elastic/beats#47587, elastic/beats#48956).
+  agent:
+    version: "^9.4.0"
+```
+
+Then run `elastic-package lint`.
 A jump to 3.6.x turns on pipeline `tag` / `on_failure` validators; land
 hygiene as a **separate** PR if lint fails on files this change does not own
 (precedent: [elastic/integrations#19824](https://github.com/elastic/integrations/pull/19824)).
@@ -271,12 +288,43 @@ expect them at the top level.
 Search `_dev/test/` for credential-gate assertions and rendered `policy/`
 snapshots. Tests that asserted a hand-rolled "access_key required" message
 break when `auth.aws` removes that gate — rewrite to the program's stable
-error wrapper (not environment-dependent AWS exception text). Regenerate
-policy snapshots after hbs changes. Follow `integration-testing` for how to
-author those tests.
+error wrapper (not environment-dependent AWS exception text). Follow
+`integration-testing` for how to author those tests.
 
-Changelog: `enhancement`. **Minor** bump when the Kibana/agent floors do not
-change. **Major** bump when the floor jump drops a still-supported stack line
+**Policy test per federated stream.** Add
+`_dev/test/policy/test-<input>-agentless-cloud-connector.yml` for every
+stream that gained `use_cloud_connectors`, then generate the `.expected`
+snapshot (`aws_logs`, `aws_mq` ship one per stream; the `aws` package has them
+only for `guardduty` / `securityhub_*`):
+
+```yaml
+input: aws-cloudwatch
+vars:
+  role_arn: arn:aws:iam::123456789012:role/ElasticAwsLogsReadOnly
+  supports_identity_federation: true
+  default_region: us-east-1
+data_stream:
+  vars:
+    log_group_name_prefix: /aws/custom/logs
+    region_name: us-east-1
+```
+
+A `test-<input>-legacy-credentials.yml` sibling (access keys, no federation)
+is optional but cheap — `aws` `guardduty` / `securityhub_*` have them.
+Regenerate all existing policy snapshots after hbs changes.
+
+**Completeness check before opening the PR:** list every stream template under
+every agentless-enabled policy template and confirm each renders
+`use_cloud_connectors`. Sampling is how `aws` 7.2.0 missed two `aws/metrics`
+streams and shipped an AccessDenied regression
+([elastic/integrations#21058](https://github.com/elastic/integrations/pull/21058)).
+
+Changelog on a **major** bump is two entries: a `breaking-change` for the
+floor ("Raise the minimum required Kibana and Elastic Agent versions to
+9.6.0 … the 1.x line is reserved for backports serving older stacks") and an
+`enhancement` for the Identity Federation enablement — every 2.0 package uses
+this exact pair. **Minor** bump, `enhancement` only, when the Kibana/agent
+floors do not change. **Major** when the floor jump drops a still-supported stack line
 (shipped: `aws` 6.20.3 → 7.0.0 [elastic/integrations#19828](https://github.com/elastic/integrations/pull/19828); `aws_logs` 1.8.3 → 2.0.0 [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823);
 `aws_mq` 1.0.0 → 2.0.0 [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817); `aws_bedrock` [elastic/integrations#20822](https://github.com/elastic/integrations/pull/20822)), paired with a
 `backport-<package>-<N>.x` branch (strategy in [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)'s description). Follow the
@@ -305,6 +353,9 @@ if it must **share** a connector with an existing policy group.
 - [ ] `elastic-package lint` and `build` clean
 - [ ] Fleet UI: Identity Federation visible in agentless, hidden in default
 - [ ] Ineligible inputs (e.g. `aws-s3`) pinned with `deployment_modes: ["default"]`, so they never appear in agentless
+- [ ] Every stream template under every agentless policy template renders `use_cloud_connectors` (enumerate, do not sample)
+- [ ] `provider_permissions` declared on every federation-eligible input (or at the narrowest covering level)
+- [ ] One `test-<input>-agentless-cloud-connector.yml` policy fixture per federated stream, `.expected` regenerated
 - [ ] Changelog bump matches the floor change (minor if floors unchanged; major + `backport-<package>-<N>.x` if a stack line is dropped, see [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823) / [elastic/integrations#20817](https://github.com/elastic/integrations/pull/20817)); CODEOWNERS confirmed
 - [ ] Integrations PR title `[<package>] Enable Identity Federation for agentless deployments`; link a shipped reference PR (e.g. [elastic/integrations#20823](https://github.com/elastic/integrations/pull/20823)); note the cloudbeat CFT publish dependency
 - [ ] IAM actions match real API calls (and the cloudbeat CFT, if that PR exists)
