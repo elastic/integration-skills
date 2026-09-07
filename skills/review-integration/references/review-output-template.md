@@ -143,7 +143,7 @@ include if cross-domain issues were found.
 
 **Total Actionable Items:** {total}
 
-**Verdict:** {APPROVED / APPROVED_WITH_SUGGESTIONS / NEEDS_CHANGES}
+**Verdict:** {APPROVED / APPROVED_WITH_SUGGESTIONS / NEEDS_CHANGES / NOT_REVIEWED}
 ```
 
 ## Per-issue format
@@ -187,4 +187,5 @@ Every issue must follow this structure:
 
 - Any critical or high finding -> NEEDS_CHANGES
 - Only medium/low findings -> APPROVED_WITH_SUGGESTIONS
-- No findings -> APPROVED
+- No findings after reviewing permitted source -> APPROVED
+- Only excluded generated expected/sample outputs changed -> NOT_REVIEWED. State that the review was skipped; do not render a clean approval or imply CI passed.

@@ -26,9 +26,8 @@ Your responsibility is strictly limited to:
 - Loading the `review-integration` skill and following its phases end to
   end against the package, set of changed files, or scope the
   orchestrator hands you
-- Reading the **full content** of every file in scope (not just diffs or
-  hunks) so you can find issues the orchestrator's incremental view
-  cannot
+- Reading sufficient permitted source and handwritten test context to verify
+  findings, without opening generated expected/sample outputs
 - Producing a severity-ranked, domain-tagged findings report in the
   exact output format defined by
   `review-integration/references/review-output-template.md`
@@ -37,6 +36,11 @@ Your responsibility is strictly limited to:
   reply so the orchestrator sees it directly
 
 **You do NOT**:
+
+- Read raw `*-expected.json` or `sample_event*.json`, including through diffs or
+  APIs. Leave snapshot freshness and output mismatch validation to CI. Check
+  handwritten test scenarios instead. A supplied compact test digest is allowed
+  only for demanding cases; never read snapshots to create or verify it.
 
 - Edit, create, or delete any files in the package under review — this
   workflow is **read-only**. If a fix is obvious, describe it in the
@@ -99,7 +103,8 @@ references to load for the scope you are reviewing.
      `references/package-layout.md`, `anonymize-logs`)
    - Every review-specific reference under
      `review-integration/references/` whose load condition is met
-     (`severity-rubric.md` and `conflict-resolutions.md` always;
+     (`domains/severity-core.md`, `domains/conflicts-core.md`, and
+     `review-calibration.md` always;
      `consistency-rules.md` whenever 2+ domains are touched; CEL
      references when CEL input is in scope; CDR references when
      `cloudsecurity_cdr` appears in root manifest categories; entity references when the
@@ -124,8 +129,7 @@ subagent-specific operating rules layered on top.
 Before inspecting any file, read `changelog.yml` and decide whether
 this is a **new package** (single entry at `0.0.1` / `1.0.0`) or an
 **existing package** (multiple entries). The
-`review-integration` skill's "Reviewing new vs existing integrations"
-table and the `references/severity-rubric.md` "new-vs-existing"
+shared severity core and the relevant domain rubric's new-versus-existing
 adjustments **must** be applied to every version, manifest, and
 pattern-related finding. Calibrating these wrong is the most common
 review error.
@@ -136,17 +140,17 @@ existing-package standards to unchanged files.
 
 ### Trust the orchestrator's validation results, verify only when needed
 
-If the orchestrator told you which `elastic-package format / lint /
-check / test pipeline / test system` runs already passed, do not
-re-run them by default. Re-run only when your manual inspection
-surfaces concrete evidence that a previously-reported result is
-wrong, or when no result was reported at all. When you do run a
-command, record the **full** error message — never paraphrase.
+Use supplied validation results only for the revision and scope they checked.
+Do not re-run checks by default. Targeted source/configuration validation may
+be useful when permitted and supported by a concrete concern. Leave generated
+snapshot comparisons, regeneration, and freshness checks to CI. Missing test
+results are unknown, not a reason to inspect generated outputs or claim CI passed.
 
-### Read full files, not just diffs
+### Read source context, not generated outputs
 
-For every file in scope, read it **end to end** before recording
-findings. Reviews based on diffs alone miss prohibited patterns and
+For permitted source and handwritten test files, read enough surrounding context
+to verify findings and fixes. Generated expected/sample outputs are excluded.
+Reviews based on diffs alone can miss prohibited patterns and
 ECS violations elsewhere in the same file. When the orchestrator
 gives you a diff, also read the unchanged surrounding context — the
 recommendation in each finding has to fit the actual file shape.
@@ -189,19 +193,35 @@ entirely rather than creating an empty one.
 `review-integration/references/conflict-resolutions.md` resolves the
 first-version-leniency conflict: for first-version packages
 (`0.0.1` / `1.0.0` with a single changelog entry), placeholder
-changelog links (`pull/99999` — the sanctioned placeholder;
-`elastic-package lint` rejects `pull/0`) and placeholder logos/icons
-are **informational notes only, not findings**. Do not flag them at
-MEDIUM or HIGH. For subsequent versions, the same placeholders are
-real findings (MEDIUM or HIGH as appropriate).
+changelog links (`pull/99999` is the recommended placeholder, but any
+fake number behaves the same; `elastic-package lint` rejects `pull/0`)
+and placeholder logos/icons are **informational notes only, not
+findings**. Do not flag them at MEDIUM or HIGH. For subsequent
+versions, the same placeholders are real findings (MEDIUM or HIGH as
+appropriate).
 
-**Exception -- the `pull/99999` development placeholder.** Leniency
-does not apply to it, at any package version: flag it at **MEDIUM**.
-Unlike `pull/0`, `pull/99999` passes `elastic-package lint`, so
-nothing else catches it and it silently reaches merge as a dead
-changelog link. The fix is to replace it with the real PR number
-once the PR exists -- see the `package-spec` skill's "Updating the
-changelog link after PR creation".
+**Do not hunt for placeholder numbers.** There is no value to match
+on. `elastic-package lint` only checks that a github.com link ends in
+a positive integer, so `pull/99999`, `pull/12345`, and any other
+invented number pass identically. The property that matters is
+whether the link points at the PR or issue that introduces the
+change, and in `elastic/integrations` that is already a deterministic
+CI check: `check_changelog_entries.sh` compares every link a PR adds
+against the PR's own URL, exempts `/issues/<n>` links, and is
+bypassed only by the `changelog-link-check:skip` label. Do not
+duplicate it. Flag a link only where that check cannot see it -- an
+entry this PR did not touch, or a review with no PR context -- and
+then at **LOW** (the severity rubric's changelog row). CI failing on
+an unreplaced link pre-merge is expected behavior, not a finding to
+report.
+
+**Exception -- the `pull/0` placeholder.** Leniency never applies to
+`pull/0`, at any package version: `elastic-package lint` rejects it
+outright, so the package does not lint until it is fixed. Flag it
+whenever you see it. The fix, here and for any stale placeholder, is
+to replace the link with the real PR number once the PR exists -- see
+the `package-spec` skill's "Updating the changelog link after PR
+creation".
 
 ### CEL-specific operating rules
 
@@ -223,7 +243,8 @@ on the verdict:
 
 - Any **Critical** or **High** finding → `NEEDS_CHANGES`
 - Only **Medium** or **Low** findings → `APPROVED_WITH_SUGGESTIONS`
-- No findings → `APPROVED`
+- No findings after reviewing permitted source → `APPROVED`
+- Only excluded generated outputs changed → `NOT_REVIEWED`
 
 Do not soften the verdict because the package "is close" or "mostly
 works". The orchestrator will accept `APPROVED_WITH_SUGGESTIONS` and
