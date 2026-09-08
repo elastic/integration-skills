@@ -220,6 +220,13 @@ accepts every invented number except `pull/0`, and
 do not escalate and do not treat CI's continued failure on an
 unreplaced link as an additional finding.
 
+The same file may carry an `entity_ecs_pin` observation: the PR adds a
+data stream whose pipeline sets `event.kind: asset` while the package
+pins ECS below `git@v9.5.0` (or the pin is missing or unparseable).
+Confirm the `set` processor and the `build.yml` reference in the
+checkout, then report it at **HIGH** per the fields rubric. Its
+absence is not evidence that the pin is fine.
+
 **Exception -- the `pull/0` placeholder.** Leniency never applies to
 `pull/0`, at any package version: `elastic-package lint` rejects it
 outright, so the package does not lint until it is fixed. Flag it

@@ -32,7 +32,7 @@ Use these new/existing package adjustments for version-related findings.
 | Rule | New package | Existing package |
 |------|-----------|-----------------|
 | `ecs.version` in pipeline | Must be `9.3.0` for standard integrations; must be `9.5.0` for packages with entity data streams (`event.kind: asset`) -- HIGH if older than required or mismatched with `build.yml` | Any version is acceptable as long as it matches the `build.yml` ECS pin. Only HIGH if pipeline and build.yml are inconsistent with each other. |
-| `build.yml` ECS pin | Must be `git@v9.3.0` for standard integrations; must be `git@v9.5.0` for packages with entity data streams -- HIGH if different from required | Must match pipeline `ecs.version`. Only HIGH if mismatch between the two, not because the version is older. Entity data streams require `git@v9.5.0` because `entity.attributes.*`, `entity.lifecycle.*`, and `entity.relationships.*` leaf fields do not exist at `v9.3.0`. |
+| `build.yml` ECS pin | Must be `git@v9.3.0` for standard integrations; must be `git@v9.5.0` for packages with entity data streams -- HIGH if different from required. A host may supply an `entity_ecs_pin` observation in `context/diagnostics.json` when a PR adds an `event.kind: asset` stream on a lower pin; confirm the pipeline and `build.yml` in the checkout before reporting | Must match pipeline `ecs.version`. Only HIGH if mismatch between the two, not because the version is older. Entity data streams require `git@v9.5.0` because `entity.attributes.*`, `entity.lifecycle.*`, and `entity.relationships.*` leaf fields do not exist at `v9.3.0`. |
 
 ## Field-file details
 
