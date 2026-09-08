@@ -25,7 +25,8 @@ A host may supply a change index, interface facts, dashboard digests, or mechani
 diagnostics. These help navigation and verification; they are not review verdicts.
 Use source when enrichment is disabled, missing, capped, partial, or contradictory.
 Do not require a bot context builder for standalone reviews or infer CI success
-from a missing diagnostic. A narrow YAML observation does not verify a whole package.
+from a missing diagnostic. A narrow observation such as a changelog-link check does
+not verify a whole package.
 
 Raw `*-expected.json` and `sample_event*.json` are excluded from review, not source
 fallbacks. Follow the [tests rubric](domains/tests/rubric.md#generated-outputs-are-excluded).

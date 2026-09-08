@@ -20,7 +20,7 @@ This reference covers package structure; it does not introduce a standalone
 
 | Domain | Finding | New package | Existing package |
 |--------|---------|------------|-----------------|
-| Changelog | Changelog link does not point at the PR or issue that introduces the change (a placeholder was left in; there is no placeholder value to match on -- see `../conflicts-core.md`) | Informational note only (first-version leniency) | LOW (`check_changelog_entries.sh` enforces this on every link the PR adds; flag only what that check cannot see -- an entry this PR did not touch, or a review with no PR context) |
+| Changelog | An added changelog `link` is not this PR's pull request URL: a placeholder number (`1`, `9999`, `99999`, `12345`), a URL that is not `/pull/<n>` (an issue link counts), or another PR's number on a PR without the `changelog-link-check:skip` label -- see `../conflicts-core.md` | Placeholder: informational note only (first-version leniency). Non-PR URL or wrong PR: LOW | LOW, reported once (`check_changelog_entries.sh` also fails a wrong PR number pre-merge; do not escalate or repeat per line) |
 
 ## Version-related rules
 

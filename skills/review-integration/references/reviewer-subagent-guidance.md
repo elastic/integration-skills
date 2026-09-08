@@ -200,20 +200,25 @@ findings**. Do not flag them at MEDIUM or HIGH. For subsequent
 versions, the same placeholders are real findings (MEDIUM or HIGH as
 appropriate).
 
-**Do not hunt for placeholder numbers.** There is no value to match
-on. `elastic-package lint` only checks that a github.com link ends in
-a positive integer, so `pull/99999`, `pull/12345`, and any other
-invented number pass identically. The property that matters is
-whether the link points at the PR or issue that introduces the
-change, and in `elastic/integrations` that is already a deterministic
-CI check: `check_changelog_entries.sh` compares every link a PR adds
-against the PR's own URL, exempts `/issues/<n>` links, and is
-bypassed only by the `changelog-link-check:skip` label. Do not
-duplicate it. Flag a link only where that check cannot see it -- an
-entry this PR did not touch, or a review with no PR context -- and
-then at **LOW** (the severity rubric's changelog row). CI failing on
-an unreplaced link pre-merge is expected behavior, not a finding to
-report.
+**Judge every added link against one standard: this PR's pull
+request URL.** `https://github.com/elastic/integrations/pull/<n>`,
+where `<n>` is the PR under review. Three things fail it, in this
+order: a URL that is not `/pull/<n>` at all -- an `/issues/<n>` link
+included, even though the repository's CI tolerates those; a
+placeholder number (one digit repeated up to four times such as `1`,
+`1111`, `9999`; any run of zeros; `99999`, `12345`, `123456`); and any
+other pull number, which is a mismatch unless the PR carries the
+`changelog-link-check:skip` label that the changelog sync workflow
+applies to PRs legitimately linking the backport PR. A host may hand
+you these as `changelog_link_shape`, `changelog_placeholder`, and
+`changelog_link_mismatch` observations in `context/diagnostics.json`;
+treat them as pointers and confirm each against the diff line before
+reporting. Report at **LOW** (the severity rubric's changelog row),
+once per changelog rather than once per line. `elastic-package lint`
+accepts every invented number except `pull/0`, and
+`check_changelog_entries.sh` fails a mismatch pre-merge on its own, so
+do not escalate and do not treat CI's continued failure on an
+unreplaced link as an additional finding.
 
 **Exception -- the `pull/0` placeholder.** Leniency never applies to
 `pull/0`, at any package version: `elastic-package lint` rejects it
