@@ -3,7 +3,7 @@
 ### Build configuration
 
 - [ ] `_dev/build/build.yml` exists when any field files are present -- **HIGH** if missing
-- [ ] ECS reference pinned to `git@v9.3.0` for standard integrations, or `git@v9.5.0` for packages with entity data streams (those using `event.kind: asset`) -- **HIGH** if wrong version; must match `ecs.version` set in the pipeline
+- [ ] ECS reference pinned to `git@v9.3.0` for standard integrations -- **HIGH** if wrong version; must match `ecs.version` set in the pipeline. For packages with entity data streams (`event.kind: asset`), apply the `entity_ecs_pin_minimum` floor from the [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix) -- a pin at or above the floor is not a finding even below the new-package recommendation
 - [ ] ECS pin consistent with `ecs.version` set in pipeline -- **HIGH** if mismatch
 
 ### base-fields.yml

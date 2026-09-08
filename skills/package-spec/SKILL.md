@@ -157,7 +157,7 @@ Edit `changelog.yml` directly, or use `elastic-package changelog add` (see `elas
 ## Common changelog pitfalls
 
 - Adding the entry under the wrong version or not at the top
-- Missing `link` field -- `elastic-package lint` validates that the PR/issue number is a positive integer and **rejects** `pull/0`; use a real PR number or `pull/99999` as a development placeholder and replace before merge. Review tooling and CI will keep flagging any placeholder link until it is replaced -- that is expected pre-merge behavior, not noise
+- Missing or wrong `link` field -- the link must be the pull request URL of the PR that introduces the change (`https://github.com/elastic/integrations/pull/<n>`), not an issue URL. `elastic-package lint` only validates that the number is a positive integer and **rejects** `pull/0`; use a real PR number or `pull/99999` as a development placeholder and replace before merge. Review tooling recognizes placeholder shapes (a repeated digit such as `1` or `9999`, zeros, `99999`, `12345`) and CI fails any number other than the PR's own, so both keep flagging a placeholder until it is replaced -- that is expected pre-merge behavior, not noise
 - Bumping manifest/package version inconsistently with changelog intent
 - **Forgetting to swap the placeholder link back in** -- see below
 

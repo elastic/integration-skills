@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "review_contract": 2,
+  "common": [
+    "review-integration/references/review-calibration.md",
+    "review-integration/references/domains/severity-core.md",
+    "review-integration/references/domains/conflicts-core.md"
+  ],
+  "profiles": {
+    "single": [
+      "review-integration/SKILL.md",
+      "review-integration/references/consistency-rules.md",
+      "review-integration/references/repo-conventions.md",
+      "review-integration/references/commit-message-conventions.md"
+    ],
+    "pipeline": [
+      "ingest-pipelines/SKILL.md",
+      "review-integration/checklists/pipeline-review-checklist.md",
+      "review-integration/references/domains/pipeline/rubric.md",
+      "review-integration/references/domains/pipeline/conflict-resolutions.md",
+      "entity-mappings/references/entity-datastream-classification.md",
+      "entity-mappings/references/entity-pipeline-patterns.md"
+    ],
+    "fields": [
+      "ecs-field-mappings/SKILL.md",
+      "review-integration/checklists/field-review-checklist.md",
+      "review-integration/references/domains/fields/rubric.md",
+      "entity-mappings/references/entity-field-catalog.md"
+    ],
+    "input": [
+      "cel-programs/SKILL.md",
+      "review-integration/checklists/cel-review-checklist.md",
+      "review-integration/checklists/httpjson-review-checklist.md",
+      "review-integration/references/cel-validator-procedure.md",
+      "review-integration/references/input-review-orchestration.md",
+      "review-integration/references/domains/input/rubric.md",
+      "review-integration/references/domains/input/conflict-resolutions.md"
+    ],
+    "tests": [
+      "integration-testing/SKILL.md",
+      "integration-testing/references/pipeline-testing.md",
+      "integration-testing/references/system-testing.md",
+      "review-integration/references/domains/tests/rubric.md"
+    ],
+    "transform": [
+      "review-integration/references/transform-guide.md",
+      "review-integration/references/cdr-transform-requirements.md",
+      "review-integration/references/domains/transform/rubric.md"
+    ],
+    "dashboard": [
+      "dashboard-review/SKILL.md",
+      "dashboard-review/references/review-procedure.md",
+      "dashboard-guidelines/SKILL.md",
+      "dashboard-guidelines/references/kibana-assets-layout.md",
+      "review-integration/references/domains/dashboard/rubric.md"
+    ],
+    "structure": [
+      "package-spec/SKILL.md",
+      "package-spec/references/manifest-rules.md",
+      "package-spec/references/changelog-patterns.md",
+      "package-spec/references/format-version-features.md",
+      "create-integration/references/package-layout.md",
+      "review-integration/references/domains/structure/rubric.md",
+      "review-integration/references/repo-conventions.md"
+    ],
+    "consistency": [
+      "review-integration/references/consistency-rules.md"
+    ]
+  },
+  "folded": {
+    "pipeline": [
+      "review-integration/checklists/pipeline-review-checklist.md",
+      "review-integration/references/domains/pipeline/rubric.md",
+      "review-integration/references/domains/pipeline/conflict-resolutions.md"
+    ],
+    "fields": [
+      "review-integration/checklists/field-review-checklist.md",
+      "review-integration/references/domains/fields/rubric.md"
+    ],
+    "input": [
+      "review-integration/checklists/cel-review-checklist.md",
+      "review-integration/checklists/httpjson-review-checklist.md",
+      "review-integration/references/cel-validator-procedure.md",
+      "review-integration/references/input-review-orchestration.md",
+      "review-integration/references/domains/input/rubric.md",
+      "review-integration/references/domains/input/conflict-resolutions.md"
+    ],
+    "tests": [
+      "review-integration/references/domains/tests/rubric.md"
+    ],
+    "transform": [
+      "review-integration/references/transform-guide.md",
+      "review-integration/references/cdr-transform-requirements.md",
+      "review-integration/references/domains/transform/rubric.md"
+    ],
+    "dashboard": [
+      "review-integration/references/domains/dashboard/rubric.md"
+    ],
+    "structure": [
+      "review-integration/references/domains/structure/rubric.md",
+      "review-integration/references/repo-conventions.md"
+    ]
+  }
+}

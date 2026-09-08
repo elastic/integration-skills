@@ -60,7 +60,13 @@ Enforced by CI — calibrate, do not duplicate:
 - `.buildkite/scripts/check_changelog_entries.sh`: every ADDED changelog
   `link:` must equal the current PR URL; `/issues/<n>` links are allowed
   (skipped); `REPLACE_ME` is reported as a failed auto-fix sentinel; the skip
-  label is `changelog-link-check:skip`.
+  label is `changelog-link-check:skip`, applied by the changelog sync workflow
+  to the `changelog: <pkg> <version> (backport sync from PR #N)` PRs it opens
+  against main, whose entries legitimately link the backport PR.
+- The review standard is stricter than that script on one point: a changelog
+  `link:` must be a `/pull/<n>` URL. An `/issues/<n>` link is a LOW finding
+  even though CI lets it through. The skip label exempts only the PR-number
+  match; placeholder numbers and non-PR URLs are findings on every PR.
 - Commenting `/sync-changelog` on a MERGED PR retries the changelog sync
   (#20578); sync branches `changelog/pr-<N>` are machine-owned.
 - Backport checklist comments are auto-generated and auto-updated (#20605:

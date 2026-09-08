@@ -16,6 +16,17 @@ metadata:
 
 You are a skeptical, thorough quality reviewer for Elastic integrations. Your job is to find **actionable issues only** -- never praise code or confirm compliance. If a domain has no issues, say so in one line and move on.
 
+## Standalone and hosted use
+
+For standalone `/review-integration` reviews, follow the workflow and reference
+guidance below. Do not load or interpret `review-profiles.json`: it is optional
+host-integration metadata, not review instructions. Standalone reviews do not
+require that file, and its presence does not put an agent into hosted mode.
+
+A compatible host, such as `integration-review-bot`, may read the manifest to
+preload guidance. The host chooses profiles and folding and supplies its scope
+and output requirements. Reviewing agents do not need to read the manifest.
+
 ## Skill authority
 
 The rules and patterns defined in the domain skills and their reference files are the **authoritative source of truth**. Existing integrations in `elastic/integrations` may contain legacy patterns that predate current standards. **Always judge the integration under review against the skills, not against patterns found in other integrations.**
@@ -38,38 +49,10 @@ This skill is **read-only**. It produces findings. It does not edit files.
 
 ## Reviewing new vs existing integrations
 
-The domain skills state current standards as absolute rules (e.g., `ecs.version: 9.3.0`, `format_version: "3.4.2"`, `conditions.kibana.version: "^8.19.0 || ^9.1.0"`). These are correct for **building new integrations**. When **reviewing existing integrations**, apply these severity adjustments:
-
-### Version-related rules
-
-| Rule | New package | Existing package |
-|------|-----------|-----------------|
-| `format_version` | Must be `"3.4.2"` -- HIGH if different. **Exception:** `"3.6.4"` when the package declares `provider_permissions` / `var_groups` for Federated Identity (see `package-spec/references/var-groups-and-provider-permissions.md`) | Any version supporting all features used is acceptable. Only HIGH if features require a higher version than declared. |
-| `conditions.kibana.version` | Must be `"^8.19.0 \|\| ^9.1.0"` -- HIGH if different. **Exception:** `"^9.6.0"` plus `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope | Verify constraint supports all agent features used (CEL functions, config options). Only HIGH if features require a higher version. |
-| `ecs.version` in pipeline | Must be `9.3.0` for standard integrations; must be `9.5.0` for packages with entity data streams (`event.kind: asset`) -- HIGH if older than required or mismatched with `build.yml` | Any version is acceptable as long as it matches the `build.yml` ECS pin. Only HIGH if pipeline and build.yml are inconsistent with each other. |
-| `build.yml` ECS pin | Must be `git@v9.3.0` for standard integrations; must be `git@v9.5.0` for packages with entity data streams -- HIGH if different from required | Must match pipeline `ecs.version`. Only HIGH if mismatch between the two, not because the version is older. Entity data streams require `git@v9.5.0` because `entity.attributes.*`, `entity.lifecycle.*`, and `entity.relationships.*` leaf fields do not exist at `v9.3.0`. |
-
-### Pattern-related rules
-
-| Rule | New package | Existing package |
-|------|-----------|-----------------|
-| Processor tags on all processors | MEDIUM if missing | LOW (improvement suggestion). Tags are only enforced by `elastic-package check` at `format_version >= 3.6.0`. |
-| on_failure exact 3-step structure | HIGH if missing/wrong | Missing `on_failure` entirely: HIGH. Wrong structure/order: LOW (improvement). Full structure enforced from `format_version >= 3.6.0`. |
-| CEL-only opening processors (agentless remove + terminate, tagged `remove_agentless_tags`) | MEDIUM if missing on a NEW CEL stream in an agentless-enabled package (`deployment_modes.agentless.enabled: true`) or where sibling pipelines carry the block | LOW at most (modernization suggestion). Agentless-era additions; pre-Agentless CEL integrations don't have them — absence there is not a finding. |
-| JSE00001 exact 2-processor pattern | HIGH if missing | Verify `event.original` is preserved (the concept). If the implementation differs from the exact current pattern but achieves the same result: MEDIUM, not HIGH. |
-| ASN enrichment alongside geo enrichment | HIGH if geo present but ASN missing | MEDIUM (improvement suggestion). Geo+ASN pairing is a newer standard. |
-| `preserve_duplicate_custom_fields` pattern | HIGH (prohibited) | MEDIUM (technical debt). This was an officially recommended pattern before deprecation. Flag as HIGH only if the pipeline is being refactored in this change. |
-| `base-fields.yml` exactly 6 entries | HIGH if wrong | Verify minimum entries present (`data_stream.type`, `data_stream.dataset`, `data_stream.namespace`, `@timestamp`). Missing `event.module` or `event.dataset`: MEDIUM. |
-| `beats.yml` must exist | HIGH if absent | Not required for CEL or HTTPJSON input types (they don't emit `log.offset`). For file-based inputs: MEDIUM if absent. |
-| `source.geo.*` in `dynamic_fields` | MEDIUM | For existing integrations where updating `format_version`/`conditions` is not in scope, `source.geo` in `dynamic_fields` may be an acceptable workaround. Note as technical debt. |
-
-### How to determine new vs existing
-
-Read the package's `changelog.yml`:
-- **One entry** (version `0.0.1` or `1.0.0`): this is a new package. Apply new-package standards.
-- **Multiple entries**: this is an existing package. Apply existing-package adjustments above.
-
-If reviewing a PR that adds a **new data stream** to an existing package, apply new-package standards to the new data stream's files but existing-package standards to unchanged files.
+Before judging version or pattern choices, read the
+[shared package calibration](references/domains/severity-core.md#new-versus-existing-packages).
+Apply the detailed new/existing adjustments in the domain references selected
+below. The rules live there once rather than in a duplicate entrypoint table.
 
 ---
 
@@ -102,28 +85,32 @@ For every file in scope, classify into a domain:
 | `kibana/**/*.json` | dashboard |
 | `_dev/build/docs/README.md` | docs |
 | `elasticsearch/transform/**` | transform |
-| `*-expected.json`, `sample_event.json` | generated (skip review) |
+| `*-expected.json`, `sample_event*.json` | generated (excluded from review; CI-owned) |
 
 Print which domains are present and how many files each has.
+
+Never read raw generated expected/sample outputs, even for cross-references or
+through another tool. If every changed file is excluded, report `NOT_REVIEWED`
+and stop rather than inspecting generated outputs or issuing an approval.
 
 ## Step 3: Load domain skills and review checklists
 
 Only load what the detected domains require. Do not load all skills for every review.
 
-| Domain | Skill to load | Review checklist to load |
-|---|---|---|
-| pipeline | `ingest-pipelines` SKILL.md | `checklists/pipeline-review-checklist.md` |
-| fields | `ecs-field-mappings` SKILL.md | `checklists/field-review-checklist.md` |
-| input (CEL) | `cel-programs` SKILL.md | `checklists/cel-review-checklist.md` |
-| input (HTTPJSON) | `input-configurations` SKILL.md -> `references/httpjson-guide.md` | `checklists/httpjson-review-checklist.md` |
-| input (entity-analytics) | this skill's `references/entity-analytics-provider-matrix.md` | `checklists/entity-analytics-review-checklist.md` |
-| input (other types) | `input-configurations` SKILL.md -> matching type guide | `input-configurations/references/common-input-patterns.md` |
-| manifest + changelog | `package-spec` SKILL.md | `package-spec/references/manifest-rules.md` |
-| tests | `integration-testing` SKILL.md -> relevant testing reference | -- |
-| dashboard | `dashboard-review` SKILL.md + `dashboard-guidelines` SKILL.md | `dashboard-review/references/review-procedure.md` |
-| build | `ecs-field-mappings` SKILL.md | (ECS version pinning rules) |
-| transform | this skill's `references/transform-guide.md` | (includes review checklist) |
-| docs | (inline checklist below) | -- |
+| Domain | Skill to load | Review checklist to load | Review calibration |
+|---|---|---|---|
+| pipeline | `ingest-pipelines` SKILL.md | `checklists/pipeline-review-checklist.md` | `references/domains/pipeline/rubric.md` + `references/domains/pipeline/conflict-resolutions.md` |
+| fields | `ecs-field-mappings` SKILL.md | `checklists/field-review-checklist.md` | `references/domains/fields/rubric.md` |
+| input (CEL) | `cel-programs` SKILL.md | `checklists/cel-review-checklist.md` | `references/domains/input/rubric.md` + `references/domains/input/conflict-resolutions.md` |
+| input (HTTPJSON) | `input-configurations` SKILL.md -> `references/httpjson-guide.md` | `checklists/httpjson-review-checklist.md` | `references/domains/input/rubric.md` (CEL-only rows do not apply) |
+| input (entity-analytics) | this skill's `references/entity-analytics-provider-matrix.md` | `checklists/entity-analytics-review-checklist.md` | `references/domains/input/rubric.md` (CEL-only rows do not apply) |
+| input (other types) | `input-configurations` SKILL.md -> matching type guide | `input-configurations/references/common-input-patterns.md` | `references/domains/input/rubric.md` (CEL-only rows do not apply) |
+| manifest + changelog | `package-spec` SKILL.md | `package-spec/references/manifest-rules.md` | `references/domains/structure/rubric.md` |
+| tests | `integration-testing` SKILL.md -> relevant testing reference | -- | `references/domains/tests/rubric.md` |
+| dashboard | `dashboard-review` SKILL.md + `dashboard-guidelines` SKILL.md | `dashboard-review/references/review-procedure.md` | `references/domains/dashboard/rubric.md` |
+| build | `ecs-field-mappings` SKILL.md | (ECS version pinning rules) | `references/domains/fields/rubric.md` + `references/domains/structure/rubric.md` |
+| transform | this skill's `references/transform-guide.md` | (includes review checklist) | `references/domains/transform/rubric.md` |
+| docs | (inline checklist below) | -- | `references/domains/structure/rubric.md` |
 
 ## Step 3b: Always-load skills
 
@@ -141,8 +128,9 @@ These references live in this skill's `references/` directory and provide review
 
 | Condition | Reference to load |
 |---|---|
-| Always | `references/severity-rubric.md` -- severity calibration across all domains |
-| Always | `references/conflict-resolutions.md` -- known rule conflicts and resolution decisions |
+| Always | `references/domains/severity-core.md` -- shared severity and new/existing package calibration |
+| Always | `references/domains/conflicts-core.md` -- shared review exceptions |
+| Always | `references/review-calibration.md` -- source evidence, optional digests, and reporting limits |
 | Always | `references/review-output-template.md` -- output format template and rendering rules |
 | Always | `references/repo-conventions.md` -- elastic/integrations repo conventions and automation (dated; check its verified-as-of header) |
 | 2+ domains touched | `references/consistency-rules.md` -- cross-domain consistency (pipeline-fields-manifest-tests alignment) |
@@ -152,6 +140,7 @@ These references live in this skill's `references/` directory and provide review
 | entity-analytics input in scope | `references/entity-analytics-provider-matrix.md` + `checklists/entity-analytics-review-checklist.md` -- provider sync/marker/deletion semantics and package checklist |
 | Any input templates in scope | `references/input-review-orchestration.md` -- review depth routing by input type |
 | Federated Identity / Cloud Connectors in scope | `input-configurations/references/federated-identity-aws.md` -- input classification, `iac_template_url`, `auth.aws` / `use_cloud_connectors`, input gating |
+| Assessing the PR title/description (first review) | `references/commit-message-conventions.md` -- squash-merge commit-message conventions the PR title is judged against |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 
@@ -161,7 +150,7 @@ These references live in this skill's `references/` directory and provide review
 1. **Definitive:** any pipeline sets `event.kind: asset`.
 2. **Definitive:** `input: entity-analytics` appears in a data stream or policy-template input in any `manifest.yml`.
 3. **Strong:** any `fields/*.yml` declares a field matching `*entity.attributes.*`, `*entity.lifecycle.*`, `*entity.relationships.*`, `entity.type`, or `entity.id`.
-4. **Heuristic:** stream name is one of the entity-vocabulary names (users, members, devices, hosts, assets, accounts, identities, apps, groups, service_accounts, roles, resources) AND no `event.action` or `event.outcome` is set AND pipeline test fixtures carry no per-record event timestamp distinct from collection time.
+4. **Heuristic:** stream name is one of the entity-vocabulary names (users, members, devices, hosts, assets, accounts, identities, apps, groups, service_accounts, roles, resources) AND no `event.action` or `event.outcome` is set AND handwritten input fixtures show no per-record event timestamp distinct from collection time. If this is unclear from permitted source or a supplied digest, leave this heuristic unconfirmed; do not inspect generated outputs to resolve it.
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` AND the stream sets `result.evaluation` or `vulnerability.*` — this is CDR state, not entity asset. Load CDR references only.
 If any stream fires checks 1–4 (and the negative gate does not override), load both entity references for that stream.
 
@@ -187,20 +176,18 @@ elastic-package lint
 elastic-package check
 ```
 
-If pipeline or system tests are appropriate and a stack is available:
-
-```bash
-elastic-package test pipeline
-elastic-package test system
-```
-
-Record every failure with its full error message.
+Leave generated-output validation and snapshot freshness to `elastic-package`
+in CI. Do not regenerate outputs or run snapshot comparisons as review work.
+Review handwritten test scenarios and producing source instead. Available CI
+results are context, not proof of complete scenario coverage or instructions to
+inspect generated outputs. Report relevant source/configuration failures, not
+expected/sample-output mismatches or stale snapshots.
 
 ## Step 6: Inspect and produce findings
 
-For each file in scope (excluding generated files):
+For ordinary source and test files in scope:
 
-1. Read the **full file** for complete context
+1. Read sufficient surrounding source to verify the issue and fix; read the full file when needed
 2. If reviewing a diff, read the **diff hunks** to understand what changed
 3. Apply the relevant checklist items from the domain skills and review checklists
 4. For every issue found, record:
@@ -212,16 +199,20 @@ For each file in scope (excluding generated files):
    - **description**: what is wrong and why it matters
    - **recommendation**: how to fix -- include a code block showing the corrected YAML/CEL/JSON
 
+Follow the generated-output exclusion in the tests rubric. A compact test digest
+may be read only when a demanding scenario needs it and one is already supplied.
+Do not read raw generated outputs to build or verify a digest. Missing summaries
+do not prove that validation passed or justify reopening excluded artifacts.
+
 ### Cross-file checks
 
 After individual file inspection, check cross-domain consistency (load `references/consistency-rules.md` if not already loaded):
 
 - Fields set in pipeline processors must be declared in `fields/ecs.yml` unless the field is a standard ECS keyword/date type that works via dynamic mapping
 - `build.yml` ECS version must match `ecs.version` set in pipeline
-- Manifest variables must be referenced in stream templates
+- Manifest variables must be referenced in stream templates; a template variable counts as declared if it appears in the data stream manifest `streams[].vars`, the root manifest `policy_templates[].vars`, or the root manifest `policy_templates[].inputs[].vars` for that input type (Handlebars block parameters such as `{{#each tags as |tag|}}` are not variables)
 - Data stream manifest must not duplicate root manifest fields (`format_version`, `conditions`)
-- Pipeline test fixtures must cover every branch
-- `sample_event.json` must be system-test-generated or absent with `{{ event }}` commented out
+- Handwritten test configurations and input fixtures should exercise relevant pipeline branches and failure scenarios. Do not use generated expected/sample outputs to establish coverage or freshness.
 
 Read unchanged files from the workspace if needed for cross-referencing.
 
@@ -237,7 +228,8 @@ Read `references/review-output-template.md` for the exact output format and rend
 
 - Any critical or high finding -> `NEEDS_CHANGES`
 - Only medium/low findings -> `APPROVED_WITH_SUGGESTIONS`
-- No findings -> `APPROVED`
+- No findings after reviewing permitted source -> `APPROVED`
+- Only excluded generated outputs changed -> `NOT_REVIEWED`
 
 ### Domain tags
 
@@ -246,12 +238,12 @@ Every issue must include exactly one domain tag:
 | Tag | Covers |
 |-----|--------|
 | `domain:manifest` | Root or data stream manifest fields, format_version, conditions, categories, owner, policy templates |
-| `domain:changelog` | changelog.yml schema, version mismatch, missing entries (missing = user-shipped package content changed without an entry/bump; internal metadata-only changes such as `owner.github` need none), invalid links (`pull/99999` dev placeholder is expected pre-merge — see conflict-resolutions), entry-type miscategorization only when the diff shows an observable compatibility/behavior change (re-bucketing bugfix/enhancement is editorial, not a finding) |
+| `domain:changelog` | Changelog schema, entries, version requirements, links, and observable compatibility/behavior changes; apply the structure rubric and shared conflict resolutions |
 | `domain:build` | `_dev/build/build.yml` missing or outdated, doc template issues |
 | `domain:pipeline` | Ingest pipeline correctness, JSE00001, on_failure, tags, ECS categorization in pipeline |
 | `domain:input` | Agent stream template issues -- all input types including CEL, HTTPJSON, AWS S3, TCP, etc. |
 | `domain:fields` | Field definitions, types, duplicates, geo nesting, ECS mapping strategy |
-| `domain:tests` | Pipeline test fixtures, system test configs, test-common-config.yml, sample_event.json |
+| `domain:tests` | Handwritten pipeline input fixtures, system test configs, test-common-config.yml, and scenario coverage; excludes generated expected/sample outputs |
 | `domain:dashboard` | Kibana dashboard JSON at package root (kibana/), TSVB, dataset filters, by-reference panels |
 | `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR |
 | `domain:docs` | README content, placeholder text, title/description quality |
@@ -260,12 +252,9 @@ Every issue must include exactly one domain tag:
 
 ### Severity levels
 
-- **CRITICAL**: broken functionality, security vulnerabilities, missing required files, build/lint failures, infinite loops
-- **HIGH**: quality standard violations -- must fix before merge
-- **MEDIUM**: suboptimal patterns, missing edge cases, documentation gaps -- fix when possible
-- **LOW**: style issues, minor improvements -- nice to have
-
-Load `references/severity-rubric.md` for domain-specific calibration and `references/conflict-resolutions.md` for known inter-rule conflicts.
+Use the [shared severity definitions](references/domains/severity-core.md#severity-definitions)
+and the relevant domain calibration/conflict references from Step 3. Do not
+load the compatibility indexes in addition to those same references.
 
 ### Important rules
 
@@ -291,8 +280,9 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 |------|---------------|---------|
 | `references/reviewer-subagent-guidance.md` | Read by the reviewer subagent itself (the orchestrator passes only its path, never embeds the content) | Scope, skill-load sequence, read-only operating rules, per-issue format checklist, verdict rules, reporting contract for the orchestrator-dispatched reviewer |
 | `references/review-output-template.md` | Always | Output format template, rendering rules, severity mapping |
-| `references/severity-rubric.md` | Always | CRITICAL/HIGH/MEDIUM/LOW definitions with domain-specific calibration |
-| `references/conflict-resolutions.md` | Always | Known rule conflicts and resolution decisions |
+| `references/domains/severity-core.md` | Always | Shared severity and package-age calibration |
+| `references/domains/conflicts-core.md` | Always | Shared review exceptions |
+| `references/review-calibration.md` | Always | Source evidence, optional context, and reporting limits |
 | `references/consistency-rules.md` | 2+ domains | Cross-domain consistency rules (pipeline-fields-manifest-tests) |
 | `references/version-check-procedure.md` | CEL in scope | 5-step systematic version verification procedure |
 | `references/beats-mito-version-matrix.md` | CEL in scope | Full beats-to-mito version mapping (160+ entries) |
@@ -313,3 +303,14 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 | `entity-mappings/references/entity-field-catalog.md` | Entity data stream in scope (see entity detection rule) | ECS availability matrix, Must Have / Should Have field tables, disambiguation guide, field definition examples, entity field review checklist |
 | `entity-mappings/references/entity-pipeline-patterns.md` | Entity data stream in scope (see entity detection rule) | Categorization processors, `entity.id` mirroring, boolean coercion, relationship object patterns, anti-patterns, entity pipeline review checklist |
 | `checklists/entity-analytics-review-checklist.md` | entity-analytics in scope | Severity-tagged entity-analytics package review checklist |
+
+### Shared domain references
+
+The Step 3 table is the domain routing map for this skill. Its domain rubrics
+and conflict references are canonical and shared with hosted reviewers. Load
+only the references relevant to the review and any supporting cross-domain
+checks. `references/severity-rubric.md` and `references/conflict-resolutions.md`
+remain compatibility indexes, not second copies of the rules.
+
+`review-profiles.json` remains optional host metadata. Standalone reviewers
+follow this Markdown workflow, not the host's profile or folding configuration.
