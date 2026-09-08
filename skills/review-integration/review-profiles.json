@@ -64,9 +64,7 @@
       "review-integration/references/repo-conventions.md"
     ],
     "consistency": [
-      "review-integration/references/consistency-rules.md",
-      "review-integration/references/severity-rubric.md",
-      "review-integration/references/conflict-resolutions.md"
+      "review-integration/references/consistency-rules.md"
     ]
   },
   "folded": {
