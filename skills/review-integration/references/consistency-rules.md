@@ -22,8 +22,8 @@ Rules that span multiple skills. Each rule specifies which files to compare.
 ## Root manifest to data stream manifest
 
 - Data stream `manifest.yml` must NOT set its own `format_version` or `conditions` -- these belong only in the root manifest.
-- Root manifest `format_version` should be `"3.4.2"` for new packages. For existing packages, the minimum version that supports all features used is acceptable. Flag as HIGH if the version is too low for features used or if a new package uses anything other than the current standard.
-- Root manifest `conditions.kibana.version` -- for new packages should be `"^8.19.0 || ^9.1.0"`. For existing packages, verify the constraint supports all agent features the package uses (CEL functions, config options, input types). Only flag HIGH if features require a higher version than declared, not merely because the constraint is older than the current standard.
+- Root manifest `format_version` should be `"3.4.2"` for new packages, or `"3.6.4"` when the package declares `provider_permissions` / `var_groups` (Federated Identity). For existing packages, the minimum version that supports all features used is acceptable. Flag as HIGH if the version is too low for features used or if a new package uses anything other than the applicable standard.
+- Root manifest `conditions.kibana.version` -- for new packages should be `"^8.19.0 || ^9.1.0"`, or `"^9.6.0"` with `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope. For existing packages, verify the constraint supports all agent features the package uses (CEL functions, config options, input types). Only flag HIGH if features require a higher version than declared, not merely because the constraint is older than the current standard.
 
 ## Test coverage
 

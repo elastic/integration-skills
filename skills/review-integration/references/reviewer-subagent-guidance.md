@@ -103,7 +103,8 @@ references to load for the scope you are reviewing.
      `consistency-rules.md` whenever 2+ domains are touched; CEL
      references when CEL input is in scope; CDR references when
      `cloudsecurity_cdr` appears in root manifest categories; entity references when the
-     Step 4 entity-data-stream detection fires; etc.)
+     Step 4 entity-data-stream detection fires; Federated Identity procedure when
+     Step 4 Federated Identity detection fires; etc.)
 
 Do not assume the skills will load automatically. Read each file you
 identify before you begin inspection — the SKILL.md summaries alone

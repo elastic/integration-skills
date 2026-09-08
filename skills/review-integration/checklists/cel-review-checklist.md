@@ -38,6 +38,7 @@ Severity-tagged checklist for reviewing CEL input programs. Use for self-review 
 - [ ] Config-level auth (`auth.oauth2`, `auth.digest`, `auth.aws`, `auth.file`, `auth.custom`) applies to direct HTTP calls (`get()`, `post()`) AND `do_request()` calls
 - [ ] If using `do_request()` with `auth.basic` or `auth.token` config: these are NOT applied to `do_request()` calls (only to direct calls). Must set auth headers manually in the request map for `do_request()` -- **HIGH** if relying on config auth that is not applied
 - [ ] For new integrations targeting v8.19.0+: prefer `auth.custom` for static Bearer/Token auth over manual header construction -- **LOW** informational
+- [ ] If Federated Identity is in scope: `cel.yml.hbs` has `use_cloud_connectors` gated on `supports_identity_federation` per `input-configurations/references/federated-identity-aws.md` (**Stream template**). Do not leave a hand-rolled credential gate that `auth.aws` replaces -- **HIGH** when in scope
 
 ## Type safety
 

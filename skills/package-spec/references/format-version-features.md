@@ -43,6 +43,7 @@ These features require bumping beyond the current standard. Only use them if the
 | `show_divider` on inputs | 3.6.1 | [#1133](https://github.com/elastic/package-spec/pull/1133) |
 | Transform `num_failure_retries` | 3.6.1 | [#1124](https://github.com/elastic/package-spec/issues/1124) |
 | ML modules in content packages | 3.6.2 | [#1149](https://github.com/elastic/package-spec/pull/1149) |
+| `provider_permissions` declarations (IAM role generation for Federated Identity) | 3.6.4 | [#1180](https://github.com/elastic/package-spec/pull/1180) |
 | `semantic_text` field type | 3.7.0 (unreleased) | [#807](https://github.com/elastic/package-spec/pull/807) |
 
 ## Breaking changes at 3.6.0
@@ -52,7 +53,9 @@ Spec version 3.6.0 introduced **stricter validations** that are breaking changes
 1. **Pipeline tag validations**: every processor in an ingest pipeline must have a `tag` field. Packages at 3.6.0+ that lack tags will fail `elastic-package check`.
 2. **Pipeline on_failure validations**: the pipeline-level `on_failure` block must follow the expected structure. Missing or malformed `on_failure` blocks fail validation.
 
-Packages at the current standard `3.4.2` are NOT subject to these stricter validations. Bumping to 3.6.0+ adds these requirements. Only bump if the package needs a 3.6.0+ feature AND the pipeline already complies with tag and on_failure rules (which they should, per the `ingest-pipelines` skill).
+Packages at the current default `3.4.2` are NOT subject to these stricter validations. Bumping to 3.6.0+ adds these requirements. Only bump if the package needs a 3.6.0+ feature AND the pipeline already complies with tag and on_failure rules (which they should, per the `ingest-pipelines` skill).
+
+**Federated Identity note:** enabling Cloud Connectors requires `provider_permissions` and therefore `format_version >= 3.6.4`, so the 3.6.0 validators apply. Expect a possible hygiene PR before the federation change — see **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
 ## Upstream source
 

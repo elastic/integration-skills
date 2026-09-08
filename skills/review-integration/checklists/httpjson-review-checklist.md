@@ -48,6 +48,7 @@ Severity-tagged checklist for reviewing `httpjson.yml.hbs` templates. Items are 
 - [ ] Mutual exclusion correct when multiple auth methods are supported -- **MEDIUM**
 - [ ] OAuth2 scopes and endpoint params match API requirements -- **MEDIUM**
 - [ ] Credential variables use `type: password` in manifest -- **HIGH**
+- [ ] If Federated Identity is in scope: `httpjson.yml.hbs` uses `auth.aws` with `use_cloud_connectors` gated on `supports_identity_federation` per `input-configurations/references/federated-identity-aws.md` (**Stream template**); HTTPJSON is federation-eligible -- **HIGH** when in scope
 
 ## Common patterns
 

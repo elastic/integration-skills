@@ -460,6 +460,8 @@ cursor:
 
 ## Authentication patterns
 
+> **Federated Identity / Cloud Connectors:** the patterns below are the standard agent-based methods. For agentless Identity Federation (`auth.aws`, `use_cloud_connectors`, `var_groups`, `provider_permissions`), follow `references/federated-identity-aws.md`. `httpjson` is federation-eligible when used in an agentless AWS package.
+
 ### Basic authentication
 
 ```yaml

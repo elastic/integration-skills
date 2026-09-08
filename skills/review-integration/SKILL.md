@@ -44,8 +44,8 @@ The domain skills state current standards as absolute rules (e.g., `ecs.version:
 
 | Rule | New package | Existing package |
 |------|-----------|-----------------|
-| `format_version` | Must be `"3.4.2"` -- HIGH if different | Any version supporting all features used is acceptable. Only HIGH if features require a higher version than declared. |
-| `conditions.kibana.version` | Must be `"^8.19.0 \|\| ^9.1.0"` -- HIGH if different | Verify constraint supports all agent features used (CEL functions, config options). Only HIGH if features require a higher version. |
+| `format_version` | Must be `"3.4.2"` -- HIGH if different. **Exception:** `"3.6.4"` when the package declares `provider_permissions` / `var_groups` for Federated Identity (see `package-spec/references/var-groups-and-provider-permissions.md`) | Any version supporting all features used is acceptable. Only HIGH if features require a higher version than declared. |
+| `conditions.kibana.version` | Must be `"^8.19.0 \|\| ^9.1.0"` -- HIGH if different. **Exception:** `"^9.6.0"` plus `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope | Verify constraint supports all agent features used (CEL functions, config options). Only HIGH if features require a higher version. |
 | `ecs.version` in pipeline | Must be `9.3.0` for standard integrations; must be `9.5.0` for packages with entity data streams (`event.kind: asset`) -- HIGH if older than required or mismatched with `build.yml` | Any version is acceptable as long as it matches the `build.yml` ECS pin. Only HIGH if pipeline and build.yml are inconsistent with each other. |
 | `build.yml` ECS pin | Must be `git@v9.3.0` for standard integrations; must be `git@v9.5.0` for packages with entity data streams -- HIGH if different from required | Must match pipeline `ecs.version`. Only HIGH if mismatch between the two, not because the version is older. Entity data streams require `git@v9.5.0` because `entity.attributes.*`, `entity.lifecycle.*`, and `entity.relationships.*` leaf fields do not exist at `v9.3.0`. |
 
@@ -151,6 +151,7 @@ These references live in this skill's `references/` directory and provide review
 | CEL or HTTPJSON with API docs available | `references/api-conformance-methodology.md` -- cross-reference implementation vs vendor docs |
 | entity-analytics input in scope | `references/entity-analytics-provider-matrix.md` + `checklists/entity-analytics-review-checklist.md` -- provider sync/marker/deletion semantics and package checklist |
 | Any input templates in scope | `references/input-review-orchestration.md` -- review depth routing by input type |
+| Federated Identity / Cloud Connectors in scope | `input-configurations/references/federated-identity-aws.md` -- input classification, `iac_template_url`, `auth.aws` / `use_cloud_connectors`, input gating |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 
@@ -163,6 +164,14 @@ These references live in this skill's `references/` directory and provide review
 4. **Heuristic:** stream name is one of the entity-vocabulary names (users, members, devices, hosts, assets, accounts, identities, apps, groups, service_accounts, roles, resources) AND no `event.action` or `event.outcome` is set AND pipeline test fixtures carry no per-record event timestamp distinct from collection time.
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` AND the stream sets `result.evaluation` or `vulnerability.*` — this is CDR state, not entity asset. Load CDR references only.
 If any stream fires checks 1–4 (and the negative gate does not override), load both entity references for that stream.
+
+**Federated Identity detection:** Load `input-configurations/references/federated-identity-aws.md` when any of:
+1. Root `manifest.yml` has a `var_groups` option named `identity_federation`.
+2. Any `provider_permissions` entry has `provider: aws`.
+3. Any `agent/stream/*.yml.hbs` contains `use_cloud_connectors` or `supports_identity_federation`.
+4. Root `manifest.yml` `conditions.kibana.version` is `^9.6.0` (or higher) **and** any input is `aws-cloudwatch`, `aws/metrics`, `cel`, or `httpjson` with AWS credential vars — treat as federation-eligible and check the rest of the list.
+
+Then apply the federation items on the manifest checklist, the CEL and HTTPJSON review checklists, and the matching input-configurations guide (CloudWatch **Stream template** — top-level `use_cloud_connectors`, no `auth.aws:`; S3 — pinned `deployment_modes: ["default"]`). Federation-eligible types with no dedicated guide (e.g. `aws/metrics`) still use `federated-identity-aws.md`. Do **not** treat `auth.aws` alone (flat access keys) as federation, and do **not** flag the absence of `external_id` or `hide_in_var_group_options` — both were removed from the shipped packages.
 
 ---
 
@@ -292,6 +301,7 @@ Load `references/severity-rubric.md` for domain-specific calibration and `refere
 | `references/cel-validator-procedure.md` | CEL in scope | celfmt authority, type conversion audit, error shape validation |
 | `references/api-conformance-methodology.md` | CEL/HTTPJSON + API docs | Cross-referencing implementation vs vendor API documentation |
 | `references/input-review-orchestration.md` | Any input templates | Review depth routing by input type |
+| `input-configurations/references/federated-identity-aws.md` | Federated Identity detection (see Step 4) | AWS Cloud Connectors procedure: `iac_template_url`, `use_cloud_connectors`, input gating |
 | `references/transform-guide.md` | Transform in scope | Transform types, config, fields, sync, review checklist |
 | `references/cdr-transform-requirements.md` | CDR transforms | CDR latest transform requirements, destination naming, keys, retention |
 | `references/repo-conventions.md` | Always | elastic/integrations repo conventions: `group` field, Elastic Managed rename + agentless `release`, owner.type, changelog/backport automation, version-constraint hygiene (dated reference) |
