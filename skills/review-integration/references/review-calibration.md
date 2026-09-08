@@ -42,11 +42,13 @@ option requires a higher version:
 - `conditions.kibana.version` — any constraint is acceptable if it covers all agent features used
 - `ecs.version` — any version is acceptable as long as it matches `build.yml` ECS pin
 - `build.yml` ECS pin — only flag if it mismatches the pipeline `ecs.version`.
-  **Exception:** a package with a NEW entity data stream must pin `git@v9.5.0`
-  or higher (with a matching `ecs.version`); a matched pair below `git@v9.5.0`
-  IS a finding — `entity.attributes.*`, `entity.lifecycle.*`, and
-  `entity.relationships.*` are undefined below v9.5.0 and cause
-  `field is undefined` build failures. A pin higher than 9.5.0 is fine.
+  **Exception:** entity data streams have a minimum ECS pin. Apply the
+  `entity_ecs_pin_minimum` rule in
+  [consistency-rules.md](consistency-rules.md#build-config-to-pipeline-consistency)
+  and the pin rule in the
+  [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix)
+  rather than a version restated here. A matched pin at or above that floor is
+  not a finding, even when it sits below the new-package recommendation.
 
 'Could be newer' or 'below current standard' is NOT a finding. Only flag when
 the current value causes a concrete problem (missing feature, lint failure,

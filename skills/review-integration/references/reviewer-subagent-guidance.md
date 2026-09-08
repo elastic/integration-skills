@@ -222,10 +222,13 @@ unreplaced link as an additional finding.
 
 The same file may carry an `entity_ecs_pin` observation: the PR adds a
 data stream whose pipeline sets `event.kind: asset` while the package
-pins ECS below `git@v9.5.0` (or the pin is missing or unparseable).
-Confirm the `set` processor and the `build.yml` reference in the
-checkout, then report it at **HIGH** per the fields rubric. Its
-absence is not evidence that the pin is fine.
+pins ECS below the `entity_ecs_pin_minimum` floor (the entity field
+catalog's ECS-availability matrix), or the pin is missing or
+unparseable. Confirm the `set` processor and the `build.yml` reference
+in the checkout, then apply the fields rubric -- a pin at or above the
+floor is not a finding on the pin alone, even below the new-package
+recommendation. The observation's absence is not evidence that the pin
+is fine.
 
 **Exception -- the `pull/0` placeholder.** Leniency never applies to
 `pull/0`, at any package version: `elastic-package lint` rejects it
