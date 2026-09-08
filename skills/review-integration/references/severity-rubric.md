@@ -37,6 +37,7 @@ These severities apply to **new packages**. For existing packages, see the "Revi
 | Fields | build.yml ECS pin mismatches pipeline ecs.version | HIGH |
 | Manifest | format_version too low for features used | HIGH |
 | Manifest | conditions.kibana.version too low for agent features used | HIGH |
+| Manifest | `format_version: "3.6.4"` / Kibana `^9.6.0` / agent `^9.4.0` on a package that declares `provider_permissions` (Federated Identity) | Not a finding -- required floors, not an unjustified bump |
 | Manifest | Data stream duplicates root manifest fields | MEDIUM |
 | Changelog | `pull/99999` development placeholder link not replaced with the real PR number | MEDIUM |
 | Tests | No pipeline test fixtures | HIGH |

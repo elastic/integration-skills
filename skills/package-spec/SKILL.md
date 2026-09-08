@@ -84,7 +84,7 @@ The current **default** constraint is `"^8.19.0 || ^9.1.0"`. This is set in the 
 
 When an integration uses features that require a newer agent (e.g., CEL functions introduced in v9.3.0), the constraint must be adjusted accordingly. For systematic version verification of CEL features, see the `review-integration` skill's version check references.
 
-**Justified exception — Federated Identity / `auth.aws`:** set both `conditions.kibana.version` and `conditions.agent.version` to `"^9.4.0"` (or higher). If the current Kibana constraint still covers an 8.x line that `^9.4.0` would drop, do **not** bump silently — escalate per **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
+**Justified exception — Federated Identity / `use_cloud_connectors`:** set `conditions.kibana.version` to `"^9.6.0"` and `conditions.agent.version` to `"^9.4.0"` (or higher). If the current Kibana constraint still covers a line that `^9.6.0` would drop, do **not** bump silently — escalate per **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 
 ---
 

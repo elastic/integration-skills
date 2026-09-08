@@ -85,7 +85,7 @@ Notes:
 - Keep `name` stable; package identity and folder name alignment matter.
 - Integration templates generally define `inputs:` as a list.
 - Each input entry maps to one or more stream templates under data streams.
-- `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"` are the **defaults**. If the package needs a higher floor (e.g. Federated Identity / `provider_permissions` → `format_version: "3.6.4"` with both `conditions.kibana.version: "^9.4.0"` and `conditions.agent.version: "^9.4.0"`), follow `package-spec` and `input-configurations` -> `references/federated-identity-aws.md` instead of forcing these defaults.
+- `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"` are the **defaults**. If the package needs a higher floor (e.g. Federated Identity / `provider_permissions` → `format_version: "3.6.4"` with `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`), follow `package-spec` and `input-configurations` -> `references/federated-identity-aws.md` instead of forcing these defaults.
 
 ### Data stream `manifest.yml` pattern
 
