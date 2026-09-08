@@ -310,19 +310,24 @@ is optional but cheap — `aws` `guardduty` / `securityhub_*` have them.
 Regenerate all existing policy snapshots after hbs changes.
 
 **Completeness check before opening the PR:** list every stream template under
-every agentless-enabled policy template and confirm each renders
-`use_cloud_connectors`. Sampling is how `aws` 7.2.0 missed two `aws/metrics`
-streams and shipped an AccessDenied regression
+every agentless-enabled policy template. Each **federation-eligible** one
+(`cel`, `httpjson`, `aws-cloudwatch`, `aws/metrics`) must render
+`use_cloud_connectors`; pinned inputs such as `aws-s3` must not. Sampling is
+how `aws` 7.2.0 missed two `aws/metrics` streams and shipped an AccessDenied
+regression
 ([elastic/integrations#21058](https://github.com/elastic/integrations/pull/21058)).
 
 Changelog on a **major** bump is two entries: a `breaking-change` for the
-floor ("Raise the minimum required Kibana and Elastic Agent versions to
-9.6.0 … the 1.x line is reserved for backports serving older stacks") and an
-`enhancement` for the Identity Federation enablement — every 2.0 package uses
-this exact pair. **Minor** bump, `enhancement` only, when the Kibana/agent
-floors do not change. **Major** when the floor jump drops a still-supported
-stack line, paired with a `backport-<package>-<N>.x` branch. Follow the
-`package-spec` skill. Call out first-time agentless enablement separately.
+floors ("Raise the minimum required Kibana version to 9.6.0 and Elastic Agent
+version to 9.4.0 … the 1.x line is reserved for backports serving older
+stacks") and an `enhancement` for the Identity Federation enablement — every
+2.0 package uses this pair. State both floors with their own values: the 2.0.0
+packages wrote "Kibana and Elastic Agent versions to 9.6.0" and then needed a
+2.0.1 `bugfix` entry when the agent floor was lowered to 9.4.0. **Minor** bump,
+`enhancement` only, when the Kibana/agent floors do not change. **Major** when
+the floor jump drops a still-supported stack line, paired with a
+`backport-<package>-<N>.x` branch. Follow the `package-spec` skill. Call out
+first-time agentless enablement separately.
 
 ---
 
@@ -347,7 +352,7 @@ if it must **share** a connector with an existing policy group.
 - [ ] `elastic-package lint` and `build` clean
 - [ ] Fleet UI: Identity Federation visible in agentless, hidden in default
 - [ ] Ineligible inputs (e.g. `aws-s3`) pinned with `deployment_modes: ["default"]`, so they never appear in agentless
-- [ ] Every stream template under every agentless policy template renders `use_cloud_connectors` (enumerate, do not sample)
+- [ ] Every federation-eligible stream template (`cel`, `httpjson`, `aws-cloudwatch`, `aws/metrics`) under every agentless policy template renders `use_cloud_connectors`; pinned inputs (`aws-s3`) do not (enumerate, do not sample)
 - [ ] `provider_permissions` declared on every federation-eligible input (or at the narrowest covering level)
 - [ ] One `test-<input>-agentless-cloud-connector.yml` policy fixture per federated stream, `.expected` regenerated
 - [ ] Changelog bump matches the floor change (minor if floors unchanged; major + `backport-<package>-<N>.x` if a stack line is dropped); CODEOWNERS confirmed
