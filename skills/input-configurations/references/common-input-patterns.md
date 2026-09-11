@@ -27,17 +27,32 @@ pipeline: {{pipeline}}
 {{/if}}
 ```
 
-`packages/unifiedlogs` carries exactly this block, and its `pipeline` default
-does not resolve to the pipeline as installed, so its shipped ingest logic never
-runs. If a package ships a pipeline, check that the variable's default names the
-installed pipeline rather than a guessed `logs-<package>.<dataset>-default`.
+Fleet installs a shipped pipeline under a name derived from the package
+**version** — `<version>-default`, with no package or dataset part — and points
+nothing at it. The pipeline attached to the data stream carries only the
+`@custom` hook stages. `packages/unifiedlogs` carries exactly the block above,
+but its `pipeline` default is `logs-unifiedlogs.log-default`, which does not
+exist, so its shipped ingest logic never runs.
+
+So the default must name the pipeline as Fleet installs it, not a guessed
+`logs-<package>.<dataset>-default` — and because the name carries the version, it
+has to be updated on every version bump.
 
 For inputs that deliver a raw log line in `message` (`tcp`, `udp`, `unix`),
 `preserve_original_event` only adds the tag — populating `event.original` is the
 template's job:
 
 ```yaml
+{{#if processors}}
+processors:
 {{#if preserve_original_event}}
+- copy_fields:
+    fields:
+      - from: message
+        to: event.original
+{{/if}}
+{{processors}}
+{{else if preserve_original_event}}
 processors:
 - copy_fields:
     fields:
@@ -46,9 +61,17 @@ processors:
 {{/if}}
 ```
 
-This is specific to that shape. `winlog` gets the field from `include_xml: true`,
-the object-storage and API inputs carry structured payloads rather than a raw
-line, and an integration package normally sets it in the ingest pipeline.
+Note the shape: `copy_fields` is the first entry of the one `processors:` list the
+template emits, and the user's `{{processors}}` passthrough comes last. This
+supersedes the plain block under **Custom processors passthrough** rather than
+sitting next to it — emitting `processors:` twice in one template is a silent
+conflict. `packages/tcp`, `packages/udp` and `packages/unix` all use this chain,
+with an extra `{{else if syslog}}` branch.
+
+The `copy_fields` rule is specific to that shape. `winlog` gets the field from
+`include_xml: true`, the object-storage and API inputs carry structured payloads
+rather than a raw line, and an integration package normally sets it in the
+ingest pipeline.
 
 ### User-defined tags
 
