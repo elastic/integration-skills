@@ -10,6 +10,31 @@ Use this reference for understanding package topology, required files, and manif
 | `input` | Reusable input configuration package | `agent/input/*.yml.hbs` and root `fields/` |
 | `content` | Kibana assets only | `kibana/` (no ingest/data streams) |
 
+### Choosing between `input` and `integration` for multiple signal types
+
+Index write permissions for an input package are derived from
+`policy_templates[].type`: a template declaring `logs` yields an agent API key
+scoped to `logs-*-*` and nothing else. There is no `dynamic_type` counterpart to
+`dynamic_dataset`/`dynamic_namespace`, so a `data_stream.type` **variable cannot
+widen the grant** — routing follows the variable, the writes are denied, and the
+only trace is a `security_exception` in the agent event log:
+
+    action [indices:admin/auto_create] is unauthorized for API key ... on
+    indices [metrics-<pkg>.<dataset>-<n>]
+
+The scope is per policy template, not per package. An input package with several
+templates gets the union of their grants (verified: a package with a `logs` and a
+`metrics` template receives both `logs-*-*` and `metrics-*-*`, and passes
+`elastic-package check`). So multiple signal types leave two workable shapes:
+
+| Shape | Fleet UI | Use when |
+| --- | --- | --- |
+| Input package, one policy template **per signal type** | one tile per template | types are configured independently; precedent: `aws_cloudwatch_input_otel` (9 templates, all `metrics`) |
+| Integration package, one policy template + typed data streams | a single tile with toggleable data streams | the signals belong to one logical source and should be enabled together |
+
+What does **not** work is one policy template serving more than one type. Give each
+signal type its own template, or move to an integration package.
+
 ---
 
 ## Integration package
