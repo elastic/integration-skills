@@ -96,6 +96,10 @@ Choose `--inputs` based on how the product sends data:
 
 Allowed input values: `aws-cloudwatch`, `aws-s3`, `azure-blob-storage`, `azure-eventhub`, `cel`, `entity-analytics`, `etw`, `filestream`, `gcp-pubsub`, `gcs`, `http_endpoint`, `journald`, `netflow`, `redis`, `tcp`, `udp`, `winlog`
 
+This list is the scaffolder's, not the spec's, and it is narrower than what the agent supports — `mqtt`, for one, is rejected here but advertised by a 9.4.3 agent. For an input outside the list, scaffold with an allowed one and rewrite afterwards. Rewriting `input:` in the data stream manifest is **not enough**: the generated template is named after the input (`agent/stream/<input>.yml.hbs`) and its contents are input-specific, so rename the file and replace its body.
+
+Nothing catches a half-done rewrite. package-spec does not validate input names, so a manifest naming one input while the only template is still the other passes `elastic-package lint` *and* `check`, and `check` goes on to build the zip.
+
 ### What `create data-stream` generates
 
 - `data_stream/<name>/manifest.yml` — data stream config with input streams and vars
