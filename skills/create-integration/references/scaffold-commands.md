@@ -251,6 +251,11 @@ error validating packages in directory 'packages': error checking manifest
 is not in ".github/CODEOWNERS"
 ```
 
+Insert the line in alphabetical order among the existing `/packages/` entries —
+the file asks for it (`# Please keep the list sorted.`). `elastic-package check`
+(step 9) does not catch a missing or mismatched line; only repo-root `mage check`
+does.
+
 CODEOWNERS is repo metadata, not package content — it needs **no version bump and
 no changelog entry**. For the resolution rules behind this check, see
 `review-integration/references/repo-conventions.md`.

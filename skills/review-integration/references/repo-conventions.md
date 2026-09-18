@@ -53,7 +53,7 @@ with a **minor** bump ("owner type is part of published package metadata").
 - DO NOT FLAG: a pure `owner.github` change with no bump — internal metadata
   needs none.
 
-## CODEOWNERS coverage for new packages
+## CODEOWNERS coverage
 
 *(Verified 2026-08-27 against elastic/integrations@b416b9f6be, later than the
 file header's date above.)*
@@ -67,9 +67,12 @@ Resolution walks up parent directories, and `.github/CODEOWNERS` carries
 line still resolves — but to the triaging team, which means the check passes
 only if its `owner.github` is `elastic/integrations-triaging`.
 
-- FLAG: a NEW package whose `owner.github` names a team with no matching
-  CODEOWNERS line for its path — this fails CI with `owner "..." defined in
-  "packages/<name>/manifest.yml" is not in ".github/CODEOWNERS"`.
+- FLAG: `owner.github` names a team that is not on the resolved CODEOWNERS line
+  for the package path — this fails CI with `owner "..." defined in
+  "packages/<name>/manifest.yml" is not in ".github/CODEOWNERS"`. `checkManifest`
+  runs on every package on every PR, so this is the same failure for a new
+  package with no explicit line and for an existing-package `owner.github`
+  reassignment that does not update CODEOWNERS.
 - FLAG: a package where *some* but not all data streams have explicit
   `/packages/<name>/data_stream/<ds>` entries — `checkDataStreams` rejects
   partial per-data-stream ownership ("shares ownership across data streams but
