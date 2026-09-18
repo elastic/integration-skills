@@ -70,9 +70,10 @@ only if its `owner.github` is `elastic/integrations-triaging`.
 - FLAG: `owner.github` names a team that is not on the resolved CODEOWNERS line
   for the package path — this fails CI with `owner "..." defined in
   "packages/<name>/manifest.yml" is not in ".github/CODEOWNERS"`. `checkManifest`
-  runs on every package on every PR, so this is the same failure for a new
-  package with no explicit line and for an existing-package `owner.github`
-  reassignment that does not update CODEOWNERS.
+  runs on every package on every PR, so this covers a new package with no
+  explicit line (it resolves to the triaging default, so any other `owner.github`
+  fails) and an existing-package `owner.github` reassignment that does not update
+  CODEOWNERS.
 - FLAG: a package where *some* but not all data streams have explicit
   `/packages/<name>/data_stream/<ds>` entries — `checkDataStreams` rejects
   partial per-data-stream ownership ("shares ownership across data streams but
