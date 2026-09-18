@@ -86,6 +86,11 @@ only if its `owner.github` is `elastic/integrations-triaging`.
   such lines at the verified commit, none of them for data streams).
   `checkManifest` matches `owner.github` against *any* owner on the resolved
   line, so it only has to appear among them.
+- DO NOT FLAG as a CI failure: a new package with no explicit CODEOWNERS line
+  whose `owner.github` is `elastic/integrations-triaging` — it resolves to the
+  `/packages/` default and passes `mage check`. It is only right when the owner
+  was explicitly left unsettled, so ask in the review whether an owning team is
+  known.
 - DO NOT FLAG: a missing version bump or changelog entry for a CODEOWNERS change
   (repo metadata — see `package-spec/SKILL.md`); the choice of owning team
   itself, which is the triaging team's call.

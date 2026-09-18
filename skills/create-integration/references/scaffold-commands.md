@@ -236,14 +236,16 @@ The scaffold may generate `default.yml` with an older `ecs.version` (e.g., `8.17
 
 ### 11. Add a CODEOWNERS entry (new packages only)
 
-A new package needs an explicit line in `.github/CODEOWNERS` naming the same team
-as the root manifest's `owner.github`:
+`mage check` requires the team that `.github/CODEOWNERS` resolves for the package
+path to match the root manifest's `owner.github`. The normal way to satisfy it is
+an explicit line naming the owning team:
 
 ```
 /packages/<package_name> @elastic/<team-name>
 ```
 
-Without it, `mage check` (run by Buildkite on every PR) fails with:
+If the resolved team does not match, `mage check` (run by Buildkite on every PR)
+fails with:
 
 ```
 error validating packages in directory 'packages': error checking manifest
@@ -255,6 +257,24 @@ Insert the line in alphabetical order among the existing `/packages/` entries �
 the file asks for it (`# Please keep the list sorted.`). `elastic-package check`
 (step 9) does not catch a missing or mismatched line; only repo-root `mage check`
 does.
+
+#### Which team to name
+
+Name a real team, in both `owner.github` and the CODEOWNERS line. This is what
+`docs/extend/_publish_an_integration.md` tells authors to do, and what recently
+added packages do (`temporal`, `vercel` and `supabase` name
+`obs-infraobs-integrations`; `gdacs` names `security-service-integrations`).
+
+If the task does not say which team owns the package, **ask** — do not infer a
+team, and do not fall back to the triaging default on your own.
+
+Only when the user or the triaging team explicitly says the owner is not settled
+yet: add no CODEOWNERS line and set `owner.github: elastic/integrations-triaging`.
+The package then resolves to the repo-wide `/packages/ @elastic/integrations-triaging`
+default, the two match, and `mage check` passes. Treat this as an exception, not
+a fallback: the default exists to route reviews of new packages
+(elastic/integrations#13545), and none of the 488 packages on `main` use it as
+their owner (September 2026).
 
 CODEOWNERS is repo metadata, not package content — it needs **no version bump and
 no changelog entry**. For the resolution rules behind this check, see
