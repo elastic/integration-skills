@@ -21,7 +21,7 @@ Read the package's `changelog.yml`:
 - **One entry** (version `0.0.1` or `1.0.0`): this is a new package. Apply new-package standards.
 - **Multiple entries**: this is an existing package. Apply the existing-package adjustments in the relevant domain rubric.
 
-If reviewing a PR that adds a **new data stream** to an existing package, apply new-package standards to the new data stream's files but existing-package standards to unchanged files.
+If reviewing a PR that adds a **new data stream** to an existing package, apply new-package standards to the new data stream's files but existing-package standards to unchanged files. A data stream is new when its `data_stream/<name>/` directory does not exist on the base branch (every file under it is added in the diff). Decide this per data stream from the diff, not from `changelog.yml` -- the changelog only tells you about the package. Prohibited patterns copied into a new data stream from older streams in the same package (for example `preserve_duplicate_custom_fields`) are HIGH regardless of the package's age.
 
 Use the new/existing adjustments in the relevant domain rubric. Version-related
 standards live with the fields and package-structure rubrics, not in a second

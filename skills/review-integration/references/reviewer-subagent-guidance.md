@@ -136,7 +136,12 @@ review error.
 
 For a PR that adds a **new data stream** to an existing package,
 apply new-package standards to the new stream's files and
-existing-package standards to unchanged files.
+existing-package standards to unchanged files. Identify new streams
+from the diff (the `data_stream/<name>/` directory is added), not from
+the changelog. Patterns copied from sibling streams do not inherit the
+existing-package leniency -- `preserve_duplicate_custom_fields` in a new
+stream's manifest is HIGH even when every other stream in the package has
+it.
 
 ### Trust the orchestrator's validation results, verify only when needed
 

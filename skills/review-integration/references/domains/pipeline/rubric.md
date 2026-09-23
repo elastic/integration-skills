@@ -19,7 +19,7 @@ Also read the [relevant conflict resolutions](conflict-resolutions.md).
 | Domain | Finding | New package | Existing package |
 |--------|---------|------------|-----------------|
 | Pipeline | Missing pipeline-level on_failure | HIGH | Missing entirely: HIGH. Wrong structure/order: LOW |
-| Pipeline | preserve_duplicate_custom_fields tag | HIGH | MEDIUM (technical debt; was officially recommended before deprecation) |
+| Pipeline | `preserve_duplicate_custom_fields` (manifest var, template tag, pipeline conditional, or test-config tag) | HIGH -- applies to new packages AND to a new data stream added to an existing package | Not a finding when the use pre-exists in an unchanged data stream (was officially recommended before deprecation). MEDIUM when the PR touches the processors that implement the pattern; HIGH when the PR refactors that pipeline |
 | Pipeline | Missing processor tag | MEDIUM | LOW (only enforced from format_version 3.6.0) |
 | Pipeline | CEL-only opening processors (`remove_agentless_tags` + terminate) missing on a NEW CEL stream in an agentless-enabled package (`deployment_modes.agentless.enabled: true`), or where sibling pipelines already carry the block | MEDIUM | LOW at most (Agentless-era additions; pre-Agentless integrations don't have them — absence there is not a finding) |
 | Pipeline | JSE00001 pattern differs from current standard | HIGH | MEDIUM (if event.original is preserved by alternate means) |
@@ -36,8 +36,17 @@ section in `../fields/rubric.md`.
   package, missing or wrong structure is HIGH. For existing packages, missing
   handling is HIGH and wrong structure/order is LOW. Full structure enforcement
   starts at `format_version >= 3.6.0`.
-- Existing `preserve_duplicate_custom_fields` is technical debt. Raise it to
-  HIGH only when this change refactors the pipeline.
+- `preserve_duplicate_custom_fields` is a deprecated pattern that keeps
+  spreading by copy-paste from older packages. Decide by the age of the **data
+  stream**, not the package: a data stream whose directory is added in the diff
+  is new even when `changelog.yml` has many entries, and gets HIGH. Look for the
+  manifest `vars` entry and the `tags` entry in the stream template first -- a
+  new stream can declare the variable without its own pipeline containing the
+  `remove ... if !ctx.tags.contains(...)` conditional, and the manifest entry
+  alone is the finding. Pre-existing use in an unchanged stream is technical
+  debt, not a finding; it becomes MEDIUM when the PR edits the processors that
+  implement the pattern and HIGH when the PR refactors that pipeline. See
+  `conflict-resolutions.md` for the reroute exception.
 - For JSE00001, verify that `event.original` is preserved. An existing alternate
   implementation that achieves this is MEDIUM, not HIGH.
 
