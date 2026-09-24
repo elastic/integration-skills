@@ -25,15 +25,22 @@ Classify each file as **added**, **removed**, or **modified** using
 
 ## 2. Extract before/after descriptions
 
-For each **modified** dashboard file:
+For each **modified** dashboard file, extract the base version with
+`git show` and describe the current state using the package directory.
+Running kbdash on the package directory (rather than an individual
+file) resolves saved searches and Kibana asset tags from the package's
+`kibana/search/` and `kibana/tag/` files.
 
 ```bash
 git show <base>:<path> > /tmp/kbdash-before.json
 kbdash /tmp/kbdash-before.json > /tmp/kbdash-before.txt
-kbdash <path> > /tmp/kbdash-after.txt
+kbdash <package-dir> > /tmp/kbdash-after.txt
 ```
 
-For **added** files, only run `kbdash` on the new version.
+The "after" output covers all dashboards in the package; read the
+section whose `File:` line matches the changed file.
+
+For **added** files, only run `kbdash <package-dir>` on the new state.
 For **removed** files, only extract the base version.
 
 When reviewing a PR by URL and you don't have the repo checked out,
@@ -74,10 +81,14 @@ shifting 2 grid units to the right is not.
 
 ## 4. Verify suspected issues against raw JSON
 
-`kbdash` extracts a subset of the dashboard structure. Before
-reporting that something is missing (no filters, no fields, empty
-configuration), check the raw dashboard JSON for the panel in
-question to confirm the issue is real.
+Trust kbdash output for facts it directly reports — panel count,
+tags, panel types, filter lists, column names, and warnings. Do not
+re-check these in the raw JSON; that is redundant and wastes time.
+
+Raw JSON verification is for suspected issues that kbdash may have
+missed or only partially extracted: before reporting that something
+is missing (no filters, no fields, empty configuration), check the
+raw JSON to confirm the issue is real.
 
 For each suspected problem:
 

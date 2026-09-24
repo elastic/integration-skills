@@ -69,20 +69,21 @@ change summary for each dashboard.
   panels that query broad index patterns (`metrics-*`, `logs-*`)
   without scoping.
 - **By-reference visualizations:** Visualization and lens panels
-  should be embedded by value. In the raw JSON, `references` entries
-  with a `panelRefName` indicate by-reference panels. Flag these
-  only when the reference type is `visualization`, `lens`, or `map`.
-  Saved searches (`search` type) are inherently referenced and
-  should not be flagged.
+  should be embedded by value. kbdash flags by-reference `lens`,
+  `visualization`, and `map` panels with `[!] <type> ref: …
+  (definition not inlined)`. Flag these. Saved searches are
+  inherently referenced and carry a separate `[!] saved search ref`
+  warning — do not flag those.
 - **Deprecated input controls:** The `input-control-vis` type is
   deprecated. Dashboard-native controls should be used instead.
 - **Package-name title prefix:** Panel titles matching
   `[<Package Name> ...]` create unnecessary repetition. Flag these.
 - **Broad wildcard filters:** Filters using unscoped `-*` patterns
   without further qualification are a performance concern.
-- **High panel count:** If a dashboard has more than roughly 20
-  panels, note it. The guidelines recommend splitting across
-  dashboards and linking with drilldowns.
+- **High panel count:** kbdash includes the count in the panels
+  section header — `Panels (N total, …)`. If N exceeds roughly 20,
+  note it. The guidelines recommend splitting across dashboards and
+  linking with drilldowns.
 - **Queries on `event.dataset` instead of `data_stream.dataset`:**
   Saved-object queries (dashboards, saved searches, packaged ML job
   datafeeds) must filter on `data_stream.dataset`. Some inputs
@@ -98,8 +99,15 @@ change summary for each dashboard.
   `state.adHocDataViews`, `state.internalReferences`, and per-layer
   `index` keys (the ES|QL/Discover fix on Kibana 9.3+). Diffs beyond
   those keys in a "regenerate" PR deserve inspection.
-- **Missing Kibana asset tags:** New content-pack dashboards are
-  expected to carry Kibana asset tags — note their absence (LOW).
+- **Missing Kibana asset tags:** kbdash shows a `Tags:` section for
+  each dashboard (resolved from `kibana/tag/` when run on a package
+  directory). New content-pack dashboards are expected to carry
+  Kibana asset tags — note their absence (LOW).
+- **Navigation link completeness:** If a dashboard has a links panel,
+  verify that every dashboard in the package has a corresponding
+  entry. Run `kbdash <package-dir>` to see all dashboard titles
+  (the `=== … ===` headers) alongside each links panel's `Link:`
+  lines. Note any dashboard whose title has no matching link.
 
 Only report issues that actually exist — skip passing checks. For
 pre-existing violations in unchanged panels, mention them once
