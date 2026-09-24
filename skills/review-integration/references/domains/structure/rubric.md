@@ -15,6 +15,7 @@ This reference covers package structure; it does not introduce a standalone
 | Manifest | conditions.kibana.version too low for agent features used | HIGH |
 | Manifest | `format_version: "3.6.4"` / Kibana `^9.6.0` / agent `^9.4.0` on a package that declares `provider_permissions` (Federated Identity) | Not a finding -- required floors, not an unjustified bump |
 | Manifest | Data stream duplicates root manifest fields | MEDIUM |
+| Manifest | Stream marked deprecated (title/description or `deprecated:` field) but left enabled by default — missing `enabled: false` (see `../../repo-conventions.md`, "Deprecating data streams and inputs") | MEDIUM |
 
 ## Rules with new-vs-existing severity adjustment
 
