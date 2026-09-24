@@ -5,7 +5,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 ### Prohibited patterns (quick reject)
 
 - [ ] Pipeline does NOT set `event.ingested` -- managed by Elasticsearch -- **HIGH**
-- [ ] Pipeline does NOT use `preserve_duplicate_custom_fields` tag pattern -- **HIGH**
+- [ ] No NEW use of `preserve_duplicate_custom_fields` anywhere in the data stream: manifest `vars` entry, `tags` entry in the stream template (`*.yml.hbs`), pipeline `if: ... ctx.tags.contains('preserve_duplicate_custom_fields')` conditional, or `_dev/test/pipeline/test-common-config.yml` tag. Check the manifest and template, not just the pipeline -- the variable is usually copied in before the pipeline conditional is. **HIGH** on a new package or a new data stream (directory added in the diff). Pre-existing use in an unchanged data stream is not a finding; see `references/domains/pipeline/rubric.md` and `conflict-resolutions.md` for the reroute exception
 - [ ] Pipeline does NOT have a trailing `remove` processor deleting `event.original` based on absence of `preserve_original_event` tag -- deprecated pattern -- **HIGH**
 
 ### JSE00001 (event.original preservation)
