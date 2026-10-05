@@ -2,6 +2,78 @@
 
 Full working patterns for common API collection styles. Use the matching pattern for your API; see the main `cel-programs` skill for state rules and error handling.
 
+## Cursor placement: what survives a restart
+
+The CEL input writes `state.cursor` to the registry after each evaluation that publishes events. Nothing else on `state` is written. Any key that encodes *where the program is in a walk* must therefore live under `cursor`:
+
+| Belongs under `cursor` | Can stay on `state` |
+|---|---|
+| next-page token, offset, page number, next URL | auth tokens and their expiry |
+| worklist of IDs still to visit | derived config (`batch_size`, URLs) |
+| "fetch more after this page" flags | `rate_limit` output |
+| high-water timestamp | |
+
+```cel
+// WRONG — page token and worklist are on state; a restart drops them and the walk restarts
+{
+  "worklist": body,
+  "next_page": {"token": body.?pagination.nextCursor},
+  "want_more": body.?pagination.nextCursor.orValue(null) != null,
+}
+
+// CORRECT — mid-walk position is under cursor
+{
+  "cursor": {
+    "worklist": body,
+    "next_page": {"token": body.?pagination.nextCursor},
+    "fetch_more": body.?pagination.nextCursor.orValue(null) != null,
+  },
+  "want_more": body.?pagination.nextCursor.orValue(null) != null,
+}
+```
+
+Read positions back with optional access (`state.?cursor.next_page.token`) so a fresh install works. When a walk completes, clear the transient sub-object (`"cursor": {"last_timestamp": ...}` with no `next_page`) rather than leaving stale tokens; `with()` is a shallow merge, so omitting the sub-object removes it.
+
+### Expiring tokens
+
+Many continuation tokens are only valid for minutes to hours (Graph `@odata.nextLink`/`$skiptoken`, Okta `after`, Google `nextPageToken`, scroll IDs, SentinelOne `cursor`). Persisting one under `cursor` is still right: most restarts (agent upgrade, policy change, reboot) take seconds, and resuming beats re-walking. But a token restored after a long outage will be rejected, so the token must not be the only thing the program can resume from.
+
+1. **Keep a non-expiring anchor beside the token.** The high-water timestamp, the last ID seen, or the worklist of IDs still to visit. The token is a shortcut into the walk; the anchor is where the walk restarts if the shortcut is gone.
+2. **Treat an invalid-token response as a signal, not an error.** Branch on the status or body the API uses for it (`400`/`410`, `InvalidPageToken`, `Scroll context missing`, ...), clear the token, and re-list from the anchor. Returning the single-object error shape here is wrong: it drops the whole cursor, anchor included, and the next run starts from the initial interval.
+3. **Expect some overlap.** Re-listing from the anchor re-fetches anything between the anchor and where the token pointed. `fingerprint → _id` in the pipeline absorbs it.
+
+```cel
+// Invalid-token branch: drop the token, keep the anchor, let the next evaluation re-list.
+resp.StatusCode == 400 && string(resp.Body).contains("invalid cursor") ?
+  {
+    "events": [{"message": "retry"}],   // placeholder so the cursor change is persisted
+    "cursor": {"last_timestamp": state.cursor.last_timestamp},
+    "want_more": true,
+  }
+:
+  ...
+```
+
+Worklists are not opaque, so they do not expire, but entries can go stale (the item was deleted). The usual 404-on-item handling covers that; drop the item and continue.
+
+On agentless deployments the input state is kept in an Elasticsearch-backed store shared per component, so a token one instance stored may be replayed by another after a longer gap than a local restart would produce. The anchor-plus-clear pattern is what keeps that safe.
+
+Reference fix: elastic/integrations#20022 (sentinel_one `threat_event` and `application_risk`).
+
+## Full re-list streams (no server-side "updated since")
+
+Some APIs expose no incremental filter: every call returns the whole collection. Inventories, posture assessments, and many threat intelligence feeds work this way. Each interval then appends a full copy of the collection.
+
+Rules for these streams:
+
+1. **Bound growth in the pipeline.** Add a `fingerprint` processor over the record's own identifier plus a change marker (`id` + `updatedAt`, or `id` + `status`), `target_field: _id`. Repeated copies of an unchanged record are rejected within a backing index instead of accumulating.
+2. **Bound growth in storage, on both deployment types.** Ship an ILM policy (`elasticsearch/ilm/default_policy.json`, attached with `ilm_policy:` in the data stream manifest) for stateful stacks **and** a `lifecycle.yml` for Serverless. Fleet applies `lifecycle.yml` only where ILM is unavailable, so one without the other leaves a deployment type unbounded. Repo conventions: 30d for inventories, 5d for feeds; make the ILM delete age and `data_retention` agree. Fingerprinting only dedups within one backing index; rollover starts a new one.
+3. **Document it.** The README must state the retention, the reason, which mechanism applies on stateful versus Serverless, and how to override each.
+4. **Still use `cursor` for position.** A full re-list that pages through 50k records is still a walk; its page token belongs under `cursor` so a restart resumes instead of starting over.
+5. **Add a watermark if the API has one.** If the API accepts a sort and a lower bound on a change timestamp, store the high-water mark in `cursor.last_timestamp`, seed it from an `initial_interval` variable on first run, and drop the polling interval. A long interval is not a substitute: with no watermark, a 24h interval still re-ingests everything daily.
+
+Reference fix: elastic/integrations#20211 (sentinel_one `threat_event` 2.11.1: `updatedAt__gte` watermark, interval 24h → 5m, fingerprint dedup).
+
 ## Simple single request
 
 No pagination. Fetch all data in one request.

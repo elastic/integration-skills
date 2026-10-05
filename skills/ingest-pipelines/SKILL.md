@@ -348,6 +348,27 @@ Why: Mustache double braces `{{...}}` HTML-encode the value (e.g., `&` becomes `
 
 **Exception:** `{{ IngestPipeline "..." }}` in `pipeline.name` is a Go template directive processed at build time, not a Mustache template — it correctly uses double braces.
 
+## Deduplication for re-collected data (`fingerprint` → `_id`)
+
+When the input re-collects the same records on every interval (inventories, posture, feeds, or any CEL program with no time watermark), set `_id` from the record itself so repeated copies are rejected within a backing index instead of accumulating:
+
+```yaml
+- fingerprint:
+    tag: fingerprint_threat_event_dedup
+    fields:
+      - json.id
+      - json.updatedAt
+    target_field: _id
+    ignore_missing: true
+```
+
+Rules:
+- Place it immediately after `event.original` is decoded into `json`, before any rename.
+- Fingerprint the *record version*: the record's own id plus a change marker (`updatedAt`, `status`, `version`). Never include `@timestamp`, `event.ingested`, or anything the collector sets per run.
+- Dedup is per backing index. Rollover starts a new index, so pair this with retention on the data stream (an ILM policy via `ilm_policy` for stateful stacks and a `lifecycle.yml` for Serverless) and document it in the README.
+
+Reference: elastic/integrations#20211 (sentinel_one `threat_event`, `application_risk`).
+
 ## Error handling essentials
 
 Use pipeline-level `on_failure` as the main error reporting mechanism.
