@@ -82,6 +82,8 @@ These are the most common mistakes that cause compilation failures. See `referen
 - **Time-window** — advance a timestamp cursor based on response data.
 - **Worklist** — fetch a list of IDs, then iterate over each.
 
+**Position goes under `cursor`** — page tokens, offsets, next URLs, and worklists belong in `state.cursor.*`; only `cursor` survives a restart. Keep a non-expiring anchor beside any opaque token and drop the token on an invalid-token response. See `cel-pagination-patterns.md`, "Cursor placement".
+
 **Cursor timestamp tracking** — use the last record's timestamp when results are known to be sorted by the API (first record if reverse-sorted). Use `max()` with a regression guard when sort order is not guaranteed.
 
 ## Event output
