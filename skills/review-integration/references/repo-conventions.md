@@ -53,6 +53,43 @@ with a **minor** bump ("owner type is part of published package metadata").
 - DO NOT FLAG: a pure `owner.github` change with no bump — internal metadata
   needs none.
 
+## CODEOWNERS coverage
+
+*(Verified 2026-08-27 against elastic/integrations@b416b9f6be, later than the
+file header's date above.)*
+
+`dev/codeowners` (run by `mage check`, which Buildkite runs on every PR via the
+`check` step) requires, for every package, a resolvable `.github/CODEOWNERS`
+entry **and** that it name the same team as the manifest's `owner.github`.
+Resolution walks up parent directories, and `.github/CODEOWNERS` carries
+`/packages/ @elastic/integrations-triaging` as a repo-wide default
+(elastic/integrations#13545, merged 2025-04-15), so a package with no explicit
+line still resolves — but to the triaging team, which means the check passes
+only if its `owner.github` is `elastic/integrations-triaging`.
+
+- FLAG: `owner.github` names a team that is not on the resolved CODEOWNERS line
+  for the package path — this fails CI with `owner "..." defined in
+  "packages/<name>/manifest.yml" is not in ".github/CODEOWNERS"`. `checkManifest`
+  runs on every package on every PR, so this covers a new package with no
+  explicit line (it resolves to the triaging default, so any other `owner.github`
+  fails) and an existing-package `owner.github` reassignment that does not update
+  CODEOWNERS.
+- FLAG: a package where *some* but not all data streams have explicit
+  `/packages/<name>/data_stream/<ds>` entries — `checkDataStreams` rejects
+  partial per-data-stream ownership ("shares ownership across data streams but
+  these ones lack owners"). All or none.
+- FLAG (independently of the above): an explicit **data stream** entry listing
+  more than one owner — `checkDataStreams` rejects it whether ownership is split
+  or complete. This restriction is scoped to `data_stream` lines only.
+- DO NOT FLAG: a **package-level** line naming several teams
+  (`/packages/<name> @elastic/team-a @elastic/team-b`) — valid and common (207
+  such lines at the verified commit, none of them for data streams).
+  `checkManifest` matches `owner.github` against *any* owner on the resolved
+  line, so it only has to appear among them.
+- DO NOT FLAG: a missing version bump or changelog entry for a CODEOWNERS change
+  (repo metadata — see `package-spec/SKILL.md`); the choice of owning team
+  itself, which is the triaging team's call.
+
 ## Changelog-link CI + backport automation
 
 Enforced by CI — calibrate, do not duplicate:
