@@ -142,9 +142,12 @@ These references live in this skill's `references/` directory and provide review
 | Federated Identity / Cloud Connectors in scope | `input-configurations/references/federated-identity-aws.md` -- input classification, `iac_template_url`, `auth.aws` / `use_cloud_connectors`, input gating |
 | Assessing the PR title/description (first review) | `references/commit-message-conventions.md` -- squash-merge commit-message conventions the PR title is judged against |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
+| Threat intelligence (`ti_*`) package with indicator data streams or transforms in scope | `references/ti-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 
 **CDR detection:** Check the root `manifest.yml` categories. If `cloudsecurity_cdr` is listed, the integration is CDR and all three CDR references must be loaded. Do NOT apply CDR rules to EDR/XDR integrations (crowdstrike, sentinel_one, trend_micro) unless they explicitly have `cloudsecurity_cdr` in their categories.
+
+**TI transform detection:** Load `references/ti-transform-requirements.md` when the package name starts with `ti_` and the review touches `elasticsearch/transform/` or any data stream whose pipeline sets `event.kind: enrichment`. This includes new `ti_*` packages and new indicator data streams that ship without a transform: the missing transform is itself a finding. The reference's "When these requirements apply" section decides which data streams and transforms it covers; do not apply it to alert-copying transforms or to non-`ti_*` packages.
 
 **Entity data stream detection:** Apply the review-time rule from `entity-mappings/references/entity-datastream-classification.md` (first hit wins) to each data stream in scope:
 1. **Definitive:** any pipeline sets `event.kind: asset`.
@@ -245,7 +248,7 @@ Every issue must include exactly one domain tag:
 | `domain:fields` | Field definitions, types, duplicates, geo nesting, ECS mapping strategy |
 | `domain:tests` | Handwritten pipeline input fixtures, system test configs, test-common-config.yml, and scenario coverage; excludes generated expected/sample outputs |
 | `domain:dashboard` | Kibana dashboard JSON at package root (kibana/), TSVB, dataset filters, by-reference panels |
-| `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR |
+| `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR, TI |
 | `domain:docs` | README content, placeholder text, title/description quality |
 | `domain:anonymization` | Real data in committed files, non-synthetic IPs/hostnames/credentials |
 | `domain:consistency` | Cross-domain issues: pipeline-fields mismatch, build.yml-pipeline ECS mismatch, unused manifest vars |
@@ -294,6 +297,7 @@ load the compatibility indexes in addition to those same references.
 | `input-configurations/references/federated-identity-aws.md` | Federated Identity detection (see Step 4) | AWS Cloud Connectors procedure: `iac_template_url`, `use_cloud_connectors`, input gating |
 | `references/transform-guide.md` | Transform in scope | Transform types, config, fields, sync, review checklist |
 | `references/cdr-transform-requirements.md` | CDR transforms | CDR latest transform requirements, destination naming, keys, retention |
+| `references/ti-transform-requirements.md` | TI packages (see TI transform detection) | Latest transform required for every indicator data stream, source retention (ILM + `lifecycle.yml`), `labels.is_ioc_transform_source` for built-in indicator match rules, unique key, destination fields, IOC expiration, review checklist |
 | `references/repo-conventions.md` | Always | elastic/integrations repo conventions: `group` field, Elastic Managed rename + agentless `release`, owner.type, changelog/backport automation, version-constraint hygiene (dated reference) |
 | `references/entity-analytics-provider-matrix.md` | entity-analytics in scope | Provider capability matrix (azure-ad, okta, activedirectory, jamf), legacy vs minimal-state sync/marker/deletion semantics |
 | `checklists/pipeline-review-checklist.md` | Pipeline in scope | Severity-tagged pipeline review checklist |

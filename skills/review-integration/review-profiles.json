@@ -19,7 +19,8 @@
       "review-integration/references/domains/pipeline/rubric.md",
       "review-integration/references/domains/pipeline/conflict-resolutions.md",
       "entity-mappings/references/entity-datastream-classification.md",
-      "entity-mappings/references/entity-pipeline-patterns.md"
+      "entity-mappings/references/entity-pipeline-patterns.md",
+      "review-integration/references/ti-transform-requirements.md"
     ],
     "fields": [
       "ecs-field-mappings/SKILL.md",
@@ -45,6 +46,7 @@
     "transform": [
       "review-integration/references/transform-guide.md",
       "review-integration/references/cdr-transform-requirements.md",
+      "review-integration/references/ti-transform-requirements.md",
       "review-integration/references/domains/transform/rubric.md"
     ],
     "dashboard": [
@@ -91,6 +93,7 @@
     "transform": [
       "review-integration/references/transform-guide.md",
       "review-integration/references/cdr-transform-requirements.md",
+      "review-integration/references/ti-transform-requirements.md",
       "review-integration/references/domains/transform/rubric.md"
     ],
     "dashboard": [
