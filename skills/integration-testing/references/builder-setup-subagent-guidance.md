@@ -244,8 +244,8 @@ Audit both `data_stream/<stream>/manifest.yml` and the package root
 **Root `manifest.yml` version enforcement** (do this even if the scaffold
 generated other values):
 
-- `format_version: "3.4.2"`
-- `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
+- `format_version: "3.6.5"`
+- `conditions.kibana.version: "^9.4.0"`
 
 These belong only in the root manifest — never duplicate them at the data
 stream level.

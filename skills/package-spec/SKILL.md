@@ -51,14 +51,16 @@ For package directory layout and required files, see `create-integration` -> `re
 
 ## format_version
 
-The `format_version` field in `manifest.yml` declares which [elastic/package-spec](https://github.com/elastic/package-spec) version the package conforms to. The current **default** for new packages is `"3.4.2"`.
+The `format_version` field in `manifest.yml` declares which [elastic/package-spec](https://github.com/elastic/package-spec) version the package conforms to.
 
-**Use the minimum version that supports the features the package actually uses**, not the latest available spec version. Bumping without needing new features:
+**New packages:** use `"3.6.5"`. It is supported by the new-package Kibana floor (`^9.4.0`, see below): Kibana 9.4 serverless Fleet accepts specs up to `3.6`. Do not go above the spec range the Kibana floor supports, and never use a `-next` (unreleased) version. 3.6.0+ enforces processor `tag` and global `on_failure` validation on ingest pipelines; pipelines built per the `ingest-pipelines` skill already comply.
+
+**Existing packages:** use the minimum version that supports the features the package actually uses, not the latest available spec version. Bumping without needing new features:
 - forces users to run a newer Kibana than necessary
 - breaks backward compatibility for no reason
 - makes it harder to determine which features the package depends on
 
-Only bump when the package uses a feature introduced in a newer spec version:
+Only bump an existing package when it uses a feature introduced in a newer spec version:
 
 | Feature | Minimum format_version |
 |---------|----------------------|
@@ -72,7 +74,7 @@ Only bump when the package uses a feature introduced in a newer spec version:
 | `var_groups` | 3.6.1 |
 | `provider_permissions` (Federated Identity IAM declarations) | 3.6.4 |
 
-**Justified exception — Federated Identity:** packages that declare `provider_permissions` (and typically `var_groups`) must use `format_version: "3.6.4"`. That bump activates 3.6.0+ pipeline validators; land pipeline hygiene first if lint surfaces pre-existing violations. See `references/var-groups-and-provider-permissions.md` and `input-configurations` -> `references/federated-identity-aws.md`.
+**Federated Identity:** packages that declare `provider_permissions` (and typically `var_groups`) need `format_version` >= `"3.6.4"`. New packages already meet this with `3.6.5`. For an existing package, the bump activates 3.6.0+ pipeline validators; land pipeline hygiene first if lint surfaces pre-existing violations. See `references/var-groups-and-provider-permissions.md` and `input-configurations` -> `references/federated-identity-aws.md`.
 
 See `references/format-version-features.md` for the full feature-to-version table including recent spec additions (3.6.0+), and `references/manifest-rules.md` for the review procedure.
 
@@ -80,7 +82,11 @@ See `references/format-version-features.md` for the full feature-to-version tabl
 
 ## conditions.kibana.version
 
-The current **default** constraint is `"^8.19.0 || ^9.1.0"`. This is set in the **root** `manifest.yml` only -- data stream manifests must NOT set their own `conditions`.
+**New packages:** use `"^9.4.0"`. Newly added integrations must require Kibana 9.4 or later. Reviewers flag a new package whose constraint admits anything below 9.4.
+
+**Existing packages:** keep the current constraint. Only raise it when the package uses a feature that needs a newer stack. Do not bump an existing package to `^9.4.0` just to match the new-package floor.
+
+This is set in the **root** `manifest.yml` only -- data stream manifests must NOT set their own `conditions`.
 
 When an integration uses features that require a newer agent (e.g., CEL functions introduced in v9.3.0), the constraint must be adjusted accordingly. For systematic version verification of CEL features, see the `review-integration` skill's version check references.
 

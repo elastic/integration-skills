@@ -57,7 +57,7 @@ Use this reference for understanding package topology, required files, and manif
 ### Root `manifest.yml` pattern
 
 ```yaml
-format_version: "3.4.2"
+format_version: "3.6.5"
 name: <package_name>
 title: <Package Title>
 version: "0.1.0"
@@ -67,7 +67,7 @@ categories:
   - <category>
 conditions:
   kibana:
-    version: "^8.19.0 || ^9.1.0"
+    version: "^9.4.0"
 policy_templates:
   - name: <package_name>
     title: <Template Title>
@@ -85,7 +85,7 @@ Notes:
 - Keep `name` stable; package identity and folder name alignment matter.
 - Integration templates generally define `inputs:` as a list.
 - Each input entry maps to one or more stream templates under data streams.
-- `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"` are the **defaults**. If the package needs a higher floor (e.g. Federated Identity / `provider_permissions` → `format_version: "3.6.4"` with `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`), follow `package-spec` and `input-configurations` -> `references/federated-identity-aws.md` instead of forcing these defaults.
+- `format_version: "3.6.5"` and `conditions.kibana.version: "^9.4.0"` are the **defaults** for new packages (see `package-spec`). If the package needs a higher floor (e.g. Federated Identity / `provider_permissions` → `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`), follow `package-spec` and `input-configurations` -> `references/federated-identity-aws.md` instead of forcing these defaults.
 
 ### Data stream `manifest.yml` pattern
 
@@ -212,7 +212,7 @@ For complex integrations with routing:
 ### Root `manifest.yml` shape for input packages
 
 ```yaml
-format_version: "3.4.2"
+format_version: "3.6.5"
 name: <package_name>
 title: <title>
 description: <summary>
@@ -220,7 +220,7 @@ type: input
 version: "x.y.z"
 conditions:
   kibana:
-    version: "^8.19.0 || ^9.1.0"
+    version: "^9.4.0"
 policy_templates:
   - name: <template_name>
     type: logs
@@ -233,7 +233,7 @@ policy_templates:
         type: <var_type>
 ```
 
-Same default `format_version` / Kibana floor as integration packages (`3.4.2` and `^8.19.0 || ^9.1.0`). Raise only when a feature the **input package** actually uses requires it (see `package-spec`). Federated Identity / Cloud Connectors is an integration-package procedure (`input-configurations` -> `references/federated-identity-aws.md`), not an input-package pattern.
+Same default `format_version` / Kibana floor as integration packages (`3.6.5` and `^9.4.0`). Raise only when a feature the **input package** actually uses requires it (see `package-spec`). Federated Identity / Cloud Connectors is an integration-package procedure (`input-configurations` -> `references/federated-identity-aws.md`), not an input-package pattern.
 
 ### `agent/input/*.yml.hbs`
 
