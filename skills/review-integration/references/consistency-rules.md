@@ -99,8 +99,29 @@ Rule key: `kibana_reference_resolution` -- reviewed against source by the review
 
 - ILM policies and lifecycle settings must be consistent across the package's data streams. Compare `data_stream/*/lifecycle.yml` and any `elasticsearch.ilm_policy` set in the data stream manifests: streams carrying the same kind of data should not have divergent retention without a reason visible in the change.
 - A lifecycle policy on some streams and not others is a finding only when the streams are comparable; a metrics stream and a logs stream legitimately differ.
+- A data stream whose input re-collects the whole collection every interval (see `cel_cursor_and_relist_bound` below) and has neither an attached ILM policy nor a `lifecycle.yml` is a finding regardless of what sibling streams do.
 
 Rule key: `ilm_lifecycle_consistency` -- owned by the structure reviewer.
+
+## Retention assets and README
+
+Fleet applies retention differently per deployment type. On stateful stacks (self-managed, Elastic Cloud Hosted) the data stream manifest's `ilm_policy` names a policy shipped at `elasticsearch/ilm/<name>.json`; `lifecycle.yml` is ignored there. On Serverless, ILM does not exist and Fleet applies `lifecycle.yml` (`data_retention`) instead. A package that bounds growth must therefore ship **both**, and they must agree.
+
+- A data stream with `elasticsearch/ilm/*.json` but no `ilm_policy:` in its `manifest.yml` is a finding: the policy is installed but never attached, so stateful backing indices fall back to the default `logs` policy, which never deletes (elastic/integrations#21661 fixed this in ti_misp).
+- A data stream with `ilm_policy` but no `lifecycle.yml` (or package-level `lifecycle.yml`) is a finding: Serverless deployments have no retention at all.
+- A data stream with `lifecycle.yml` but no ILM policy is a finding unless the package is Serverless-only: stateful deployments get the default `logs` policy.
+- The ILM delete age and the lifecycle `data_retention` should express the same intent. ILM `delete.min_age` counts from rollover, so the effective stateful retention is between `min_age` and `rollover.max_age + min_age`; a 2d/3d ILM policy next to a 30d lifecycle (or the reverse) is a finding.
+- Every data stream that ships retention must be covered in `_dev/build/docs/README.md`: the period, the reason (usually repeated collection per interval), which mechanism applies on stateful versus Serverless, and how to override each (edit the ILM policy; `PUT _data_stream/<name>/_lifecycle` on Serverless). Compare `data_stream/*/lifecycle.yml`, `data_stream/*/manifest.yml` `ilm_policy`, and `elasticsearch/ilm/` against the README.
+- README text that describes only ILM, or only a lifecycle, or states "deleted after N days" without saying which deployment type that applies to, is incomplete.
+
+Rule key: `retention_assets_and_readme` -- owned by the structure reviewer.
+
+## CEL cursor placement and re-list bound
+
+- In every CEL stream template, pagination position (page token, offset, next URL, worklist, "more pending" flag) must be read from and written to `state.cursor.*`. Top-level `state.<position>` is lost on restart and the walk restarts from the beginning. Compare the keys the program reads before its request against the keys it writes under `cursor`.
+- A CEL stream that sends no change-timestamp lower bound to the API (fetches the full collection every interval) must have a `fingerprint → _id` processor in `elasticsearch/ingest_pipeline/default.yml` and bounded retention on both deployment types: `ilm_policy` + `elasticsearch/ilm/*.json` for stateful and `lifecycle.yml` for Serverless (see `retention_assets_and_readme`). Compare the stream template, the pipeline, and the data stream directory.
+
+Rule key: `cel_cursor_and_relist_bound` -- owned by the input reviewer.
 
 ## README to package reality
 
