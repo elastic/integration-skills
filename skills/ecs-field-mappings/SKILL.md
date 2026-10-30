@@ -151,7 +151,7 @@ Groups do not need to be declared as `type: object` — defining a `group` with 
 
 `labels` is a core ECS object (`type: object`, `object_type: keyword`) designed for ad-hoc key-value metadata. Subkeys under `labels.*` do **not** require vendor namespacing — this is the one exception to the vendor-prefix rule.
 
-Use `labels.*` for simple keyword flags or integration-internal markers (e.g., `labels.is_ioc_transform_source`). Use the vendor namespace for structured or nested data from an upstream source.
+Use `labels.*` for simple keyword flags or integration-internal markers (e.g., `labels.is_ioc_transform_source`, which `ti_*` IOC transforms must set; see `review-integration/references/ti-transform-requirements.md`). Use the vendor namespace for structured or nested data from an upstream source.
 
 #### Flags vs structured data
 
