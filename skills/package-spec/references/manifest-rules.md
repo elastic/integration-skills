@@ -400,5 +400,6 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] Input names verified against agent capabilities, not a green lint -- **MEDIUM**
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**
+- [ ] Deprecated streams/inputs set `enabled: false` so the replacement is the default collection path (precedent: `o365` `audit`, `island_browser` `admin_actions`; formal `deprecated:` field available from format_version 3.6.0) -- **MEDIUM**
 - [ ] If `var_groups` includes `identity_federation`: `vars` is `[role_arn, supports_identity_federation]` (no `external_id`) and `iac_template_url` points at `cloudformation-federated-identity-aws-<Kibana-floor>.yml` with no `param_ElasticResourceId` — not the GuardDuty-only CFT -- **HIGH** when in scope (see `input-configurations` -> `references/federated-identity-aws.md`)
 - [ ] If `provider_permissions` is declared: `format_version >= 3.6.4` and IAM action names match the collector's real API calls -- **HIGH** when in scope
