@@ -350,7 +350,7 @@ integration package.)*
 
 The `format_version` field in `manifest.yml` declares which package spec version the package conforms to. Always use the **minimum version that supports the features the package actually uses**, not the latest available spec version.
 
-The current **default** is `"3.4.2"`. Higher versions are correct when the package uses features that require them.
+New packages use `"3.6.5"` (see `../SKILL.md`). For existing packages, higher versions are correct when the package uses features that require them.
 
 ### Why minimum matters
 
