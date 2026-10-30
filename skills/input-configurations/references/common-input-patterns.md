@@ -81,6 +81,42 @@ Applies to:
 
 Each variable must have a sensible default defined in the manifest `vars` section. Sensitive values (credentials, tokens) should use `type: password` and `show_user: true` in the manifest.
 
+## A declared `data_stream.dataset` var must be emitted
+
+This applies only where the manifest declares a `data_stream.dataset` variable —
+the configurable-dataset shape used by `httpjson`/`generic`, `cef`/`log`,
+`aws_logs`/`generic` and the other catch-all streams. A named data stream with a
+fixed dataset has no such variable, and its template must **not** emit the block;
+Fleet derives the dataset from the data stream itself.
+
+Where the variable does exist, declaring it is not enough. Fleet stores whatever
+the user types, but the value only reaches the agent if the template writes it
+out:
+
+```yaml
+data_stream:
+  dataset: {{data_stream.dataset}}
+```
+
+Without that block the compiled agent configuration silently falls back to
+`<package>.<policy_template>`, and the user's "Dataset name" setting has no
+effect at all. Verified on a 9.4.3 stack — same package policy, same stored
+variable (`{"value": "tcpmetrics.customds"}`), only the template differing:
+
+| template | compiled `data_stream.dataset` |
+| --- | --- |
+| emits the block | `tcpmetrics.customds` |
+| omits the block | `tcpmetrics.tcp` |
+
+Nothing reports this. `elastic-package check` passes either way, the variable
+shows the right value in the Fleet UI, and the agent reports its events as
+acked — they just land in the fallback data stream.
+
+The two are coupled in practice: across `elastic/integrations`, 13 data streams
+declare the variable and 11 emit it, while **none** emit it without declaring it.
+`packages/tcp` is the reference implementation, where the block sits behind the
+`use_logs_stream` conditional.
+
 ## What to flag during review
 
 | Issue | Severity | Description |
@@ -90,5 +126,6 @@ Each variable must have a sensible default defined in the manifest `vars` sectio
 | Hardcoded bucket/queue/topic IDs | **MEDIUM** | Cloud resource identifiers must be user-configurable |
 | Missing `forwarded` / `publisher_pipeline.disable_host` coupling | **MEDIUM** | If default tags include `forwarded`, the `publisher_pipeline.disable_host` block must be present, and vice versa |
 | Processors passthrough not at top level | **LOW** | The `{{#if processors}}` block must not be nested inside another key |
+| `data_stream.dataset` var declared but not emitted | **HIGH** | The template must write `data_stream.dataset`, otherwise the user's setting is silently ignored and data lands in `<package>.<policy_template>` |
 | Missing `preserve_original_event` conditional | **MEDIUM** | The tag should be conditional, not hardcoded |
 | Hardcoded timeouts or intervals | **LOW** | Tuning parameters should be variables with defaults |
