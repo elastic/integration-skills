@@ -209,6 +209,7 @@ In addition to the top-level skills, you can invoke any domain skill directly wh
 | `/ingest-pipelines` | Ingest pipeline processors, grok patterns, Painless scripts, error handling |
 | `/ecs-field-mappings` | ECS field mapping strategy, event categorization, custom fields |
 | `/entity-mappings` | ECS `entity.*` fields for entity/inventory data streams, entity-vs-event classification, entity-coverage gap analysis on existing packages |
+| `/genai-mappings` | ECS `gen_ai.*` fields for LLM, AI gateway, agent and AI assistant data streams: source research, OTel message normalization, GenAI-coverage gap analysis on existing packages |
 | `/input-configurations` | Input templates for all non-CEL input types: HTTPJSON, TCP/UDP, filestream/logfile, AWS S3, CloudWatch, Azure Blob/Event Hub, GCS, GCP Pub/Sub, HTTP Endpoint, journald, winlog, WebSocket (CEL routes to `/cel-programs`), plus Federated Identity (Cloud Connectors) for agentless AWS integrations |
 | `/package-spec` | Manifest rules, changelog schema, format version features, `var_groups` / `provider_permissions` |
 | `/integration-testing` | Pipeline testing, system testing, test fixture authoring |

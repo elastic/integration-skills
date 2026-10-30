@@ -19,13 +19,16 @@
       "review-integration/references/domains/pipeline/rubric.md",
       "review-integration/references/domains/pipeline/conflict-resolutions.md",
       "entity-mappings/references/entity-datastream-classification.md",
-      "entity-mappings/references/entity-pipeline-patterns.md"
+      "entity-mappings/references/entity-pipeline-patterns.md",
+      "genai-mappings/references/genai-datastream-classification.md",
+      "genai-mappings/references/genai-pipeline-patterns.md"
     ],
     "fields": [
       "ecs-field-mappings/SKILL.md",
       "review-integration/checklists/field-review-checklist.md",
       "review-integration/references/domains/fields/rubric.md",
-      "entity-mappings/references/entity-field-catalog.md"
+      "entity-mappings/references/entity-field-catalog.md",
+      "genai-mappings/references/genai-field-catalog.md"
     ],
     "input": [
       "cel-programs/SKILL.md",

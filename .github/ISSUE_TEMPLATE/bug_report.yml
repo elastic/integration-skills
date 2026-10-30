@@ -22,6 +22,7 @@ body:
         - /ingest-pipelines
         - /ecs-field-mappings
         - /entity-mappings
+        - /genai-mappings
         - /input-configurations
         - /package-spec
         - /integration-testing

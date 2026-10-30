@@ -143,6 +143,7 @@ These references live in this skill's `references/` directory and provide review
 | Assessing the PR title/description (first review) | `references/commit-message-conventions.md` -- squash-merge commit-message conventions the PR title is judged against |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
+| GenAI data stream (`gen_ai.*` fields, LLM / agent / AI assistant telemetry) | `genai-mappings/references/genai-field-catalog.md` + `genai-mappings/references/genai-pipeline-patterns.md` |
 
 **CDR detection:** Check the root `manifest.yml` categories. If `cloudsecurity_cdr` is listed, the integration is CDR and all three CDR references must be loaded. Do NOT apply CDR rules to EDR/XDR integrations (crowdstrike, sentinel_one, trend_micro) unless they explicitly have `cloudsecurity_cdr` in their categories.
 
@@ -153,6 +154,12 @@ These references live in this skill's `references/` directory and provide review
 4. **Heuristic:** stream name is one of the entity-vocabulary names (users, members, devices, hosts, assets, accounts, identities, apps, groups, service_accounts, roles, resources) AND no `event.action` or `event.outcome` is set AND handwritten input fixtures show no per-record event timestamp distinct from collection time. If this is unclear from permitted source or a supplied digest, leave this heuristic unconfirmed; do not inspect generated outputs to resolve it.
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` AND the stream sets `result.evaluation` or `vulnerability.*` — this is CDR state, not entity asset. Load CDR references only.
 If any stream fires checks 1–4 (and the negative gate does not override), load both entity references for that stream.
+
+**GenAI data stream detection:** Apply the review-time rule from `genai-mappings/references/genai-datastream-classification.md` (first hit wins) to each data stream in scope:
+1. **Definitive:** any pipeline or `fields/*.yml` sets or declares a `gen_ai.*` field.
+2. **Definitive:** handwritten input fixtures (pipeline test inputs, mock API responses, `_dev/deploy/` samples) carry a model identifier, token counts, a `messages` or `contents` array, a model request/response body, a tool/function call, or an agent/session id.
+3. **Strong:** the package is about an LLM provider, AI gateway, agent platform or AI assistant, and the stream is not an admin audit or billing stream without a model dimension.
+If any stream fires checks 1–3, load both GenAI references for that stream and run the catalog's review checklist. Do not flag missing `gen_ai.*` fields on streams the classification marks out of scope.
 
 **Federated Identity detection:** Load `input-configurations/references/federated-identity-aws.md` when any of:
 1. Root `manifest.yml` has a `var_groups` option named `identity_federation`.
@@ -302,6 +309,8 @@ load the compatibility indexes in addition to those same references.
 | `checklists/httpjson-review-checklist.md` | HTTPJSON in scope | Severity-tagged HTTPJSON review checklist |
 | `entity-mappings/references/entity-field-catalog.md` | Entity data stream in scope (see entity detection rule) | ECS availability matrix, Must Have / Should Have field tables, disambiguation guide, field definition examples, entity field review checklist |
 | `entity-mappings/references/entity-pipeline-patterns.md` | Entity data stream in scope (see entity detection rule) | Categorization processors, `entity.id` mirroring, boolean coercion, relationship object patterns, anti-patterns, entity pipeline review checklist |
+| `genai-mappings/references/genai-field-catalog.md` | GenAI data stream in scope (see GenAI detection rule) | ECS availability matrix, every `gen_ai.*` field with type and restrictions, OTel well-known values, message shapes, field definition rules (`nested` and `flattened` traps), anti-patterns, GenAI review checklist |
+| `genai-mappings/references/genai-pipeline-patterns.md` | GenAI data stream in scope (see GenAI detection rule) | Provider and operation lookups, token totals, body decoding, message normalization, tool calls, fixture checklist |
 | `checklists/entity-analytics-review-checklist.md` | entity-analytics in scope | Severity-tagged entity-analytics package review checklist |
 
 ### Shared domain references

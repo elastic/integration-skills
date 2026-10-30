@@ -45,7 +45,7 @@ Keep `default.yml` readable and focused. Move large format-specific logic into s
 
 ## ECS version
 
-Set the pipeline ECS reference version explicitly at the top of `processors` (after any introductory processors you already use). **Use `9.3.0`** — do not pin an older ECS version. **Exception:** when the orchestrator specifies this is an entity data stream (`event.kind: asset`), use `9.5.0` instead — entity leaf fields (`entity.attributes.*`, `entity.lifecycle.*`, `entity.relationships.*`) do not exist at `9.3.0` and cause `field is undefined` build failures at that pin.
+Set the pipeline ECS reference version explicitly at the top of `processors` (after any introductory processors you already use). **Use `9.3.0`** — do not pin an older ECS version. **Exception:** when the orchestrator specifies this is an entity data stream (`event.kind: asset`), use `9.5.0` instead — entity leaf fields (`entity.attributes.*`, `entity.lifecycle.*`, `entity.relationships.*`) do not exist at `9.3.0` and cause `field is undefined` build failures at that pin. The same exception applies when the orchestrator specifies a GenAI data stream (`gen_ai.*` fields): the current `gen_ai` field set (`gen_ai.provider.name`, the `flattened` message fields) exists only from ECS `9.5.0`.
 
 ```yaml
   - set:
@@ -610,4 +610,5 @@ As documented in the JSE00001 section above: do not add a `remove` processor for
 - `references/builder-subagent-guidance.md` — subagent operating manual: scope boundaries, skill-load sequence, input data paths (CEL-first vs Direct), 9-step pipeline build workflow, "review generated output, never hand-edit expected JSON", reporting contract. The orchestrator dispatches subagents by passing this file's **path** in the task prompt; the subagent reads it itself in its own fresh context. Do NOT embed/paste its contents into the task prompt.
 - `references/cdr-pipeline-requirements.md` — cloud security / CDR integrations only (`cloudsecurity_cdr` category): event categorization, Must Have / Should Have fields, processor patterns, review checklist
 - `entity-mappings/references/entity-pipeline-patterns.md` — entity/inventory data streams only (`event.kind: asset`): categorization processors, `entity.id` mirroring, boolean coercion, relationship objects, anti-patterns, pipeline review checklist
+- `genai-mappings/references/genai-pipeline-patterns.md` — GenAI data streams only (`gen_ai.*` fields): provider and operation lookups, token totals, decoding request/response bodies, normalizing messages, tool calls and reasoning into the OTel message shape, fixture checklist. Field definitions are in `genai-mappings/references/genai-field-catalog.md`
 
