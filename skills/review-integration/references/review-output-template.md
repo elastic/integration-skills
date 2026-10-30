@@ -130,6 +130,13 @@ include if cross-domain issues were found.
 
 [Same per-issue format.]
 
+### Pre-existing
+
+Cross-domain issues the change did not introduce but the per-stream checks
+surfaced (for example a manifest variable the template has never read). Same
+per-issue format and severity. Listed so the package gets fixed, but excluded
+from the Summary counts and the verdict. Omit if empty.
+
 ---
 
 ## Summary

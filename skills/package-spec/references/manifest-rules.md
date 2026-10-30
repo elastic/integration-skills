@@ -94,9 +94,16 @@ Variables can be declared at any manifest scope:
 
 ### How to check
 
-1. Scan the `.yml.hbs` file for all `{{variable_name}}` references (excluding Handlebars helpers and built-in variables).
-2. For each variable, verify it exists in one of the manifest scopes above.
-3. Flag any variable that is not declared anywhere.
+Work per stream, in both directions. A manual scan that only looks for `{{variable_name}}` misses the references that cause real bugs, so collect every form:
+
+1. List every variable the `.yml.hbs` file references. Include all of these forms, not only the plain mustache:
+   - plain expressions: `{{x}}`, `{{ x }}` (spaces are common), `{{{x}}}`
+   - block helper arguments: `{{#if x}}`, `{{#unless x}}`, `{{else if x}}`, `{{#each x}}`, `{{#contains "value" x}}`
+   - helper arguments inside expressions: `{{escape_string x}}`, `{{url_encode x}}`
+   Exclude helper names, block parameters declared with `as |p|` and paths starting from them, string literals, comments, and the built-in variables listed below.
+2. List every variable the stream's manifest declares, at all four scopes above. For scopes in the root manifest, use the `policy_templates[].inputs[].vars` block whose `type` matches the stream's `input`.
+3. Compare both ways. A template variable missing from every scope is undeclared. A stream-level manifest variable that no template references is unused.
+4. Pair the results. An unused manifest variable next to an undeclared template variable with a similar name in the same stream is almost always a rename or typo, and the user-facing setting does nothing. Report that pairing as HIGH. A single-direction result on its own is often harmless (a `{{#if x}}` guard in a template shared by streams that declare `x` elsewhere, or a leftover branch for a removed setting) and needs judgment.
 
 ### Correct vs incorrect
 
@@ -139,6 +146,25 @@ resource.url: {{url}}/api/{{api_version}}/events
 #                         ^^^^^^^^^^^^^^^^ NOT in any manifest!
 ```
 
+```yaml
+# WRONG -- manifest declares "interval", template reads "bucket_list_interval"
+# data_stream/audit/manifest.yml
+streams:
+  - input: aws-s3
+    vars:
+      - name: interval
+        type: text
+        title: Bucket List Interval
+        default: 2m
+
+# data_stream/audit/agent/stream/aws-s3.yml.hbs
+{{#if bucket_list_interval }}
+bucket_list_interval: {{ bucket_list_interval }}
+{{/if}}
+```
+
+The template never reads `interval`, and `bucket_list_interval` is declared nowhere, so the `{{#if}}` is always false and the user's setting is ignored with no error. The reference sits inside a block helper argument with spaces around the name, which a scan for `{{variable_name}}` does not find. Policy tests do not catch it either: `elastic-package test policy --generate` records the broken rendering as the expected output. The fix is to make the names agree, usually by renaming the manifest variable to what the template reads.
+
 ### Built-in variables
 
 Some variables are provided by Fleet automatically and do NOT need declaration in manifests:
@@ -150,18 +176,19 @@ Some variables are provided by Fleet automatically and do NOT need declaration i
 
 ### Handlebars helpers (not variables)
 
-These are control-flow helpers, not variable references. Do not flag them:
+These are control-flow helpers, not variable references. Do not flag the helper names themselves, but do check their arguments: `var`, `items`, and `array` below are variable references and must be declared.
 
 - `{{#if var}}...{{/if}}`
 - `{{#unless var}}...{{/unless}}`
-- `{{#each items as |item|}}...{{/each}}`
+- `{{#each items as |item|}}...{{/each}}` (`item` is a block parameter and needs no declaration)
 - `{{#contains "value" array}}...{{/contains}}`
 
 ### Common mistakes
 
 1. **Copy-paste from another integration** -- template references a variable from the source integration that was never added to this package's manifest.
-2. **Renamed variable** -- manifest variable was renamed but the template still uses the old name.
-3. **Wrong scope** -- variable declared at package level but template expects it at data stream level. This works at runtime, but may confuse users when reviewing the code.
+2. **Renamed variable** -- manifest variable was renamed but the template still uses the old name. Shows up as an unused manifest variable paired with an undeclared template variable in the same stream.
+3. **Template copied from a sibling stream** -- the new stream's manifest was written by hand while the template was copied, so the two disagree on a name. Diff the new template against the one it was copied from and check any variable name that differs.
+4. **Wrong scope** -- variable declared at package level but template expects it at data stream level. This works at runtime, but may confuse users when reviewing the code.
 
 ---
 
