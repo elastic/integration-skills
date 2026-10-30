@@ -210,7 +210,7 @@ After individual file inspection, check cross-domain consistency (load `referenc
 
 - Fields set in pipeline processors must be declared in `fields/ecs.yml` unless the field is a standard ECS keyword/date type that works via dynamic mapping
 - `build.yml` ECS version must match `ecs.version` set in pipeline
-- Manifest variables must be referenced in stream templates; a template variable counts as declared if it appears in the data stream manifest `streams[].vars`, the root manifest `policy_templates[].vars`, or the root manifest `policy_templates[].inputs[].vars` for that input type (Handlebars block parameters such as `{{#each tags as |tag|}}` are not variables)
+- Manifest variables must be referenced in stream templates; a template variable counts as declared if it appears in the data stream manifest `streams[].vars`, the root manifest `policy_templates[].vars`, or the root manifest `policy_templates[].inputs[].vars` for that input type (Handlebars block parameters such as `{{#each tags as |tag|}}` are not variables). Reconcile per touched stream in both directions, counting block helper arguments (`{{#if x}}`) and spaced forms (`{{ x }}`) as references. An unused manifest variable paired with a similarly named undeclared template variable in the same stream is HIGH. For a new stream whose template was copied from a sibling, diff the two templates and check every variable name that differs.
 - Data stream manifest must not duplicate root manifest fields (`format_version`, `conditions`)
 - Handwritten test configurations and input fixtures should exercise relevant pipeline branches and failure scenarios. Do not use generated expected/sample outputs to establish coverage or freshness.
 
@@ -227,6 +227,7 @@ Read `references/review-output-template.md` for the exact output format and rend
 ### Verdict rules
 
 - Any critical or high finding -> `NEEDS_CHANGES`
+- Findings listed under "Pre-existing" keep their severity but do not count toward the verdict
 - Only medium/low findings -> `APPROVED_WITH_SUGGESTIONS`
 - No findings after reviewing permitted source -> `APPROVED`
 - Only excluded generated outputs changed -> `NOT_REVIEWED`

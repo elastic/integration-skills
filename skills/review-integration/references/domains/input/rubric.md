@@ -21,6 +21,8 @@ CEL-specific rows apply only when a CEL input is in scope.
 | Input | Hardcoded credentials | CRITICAL |
 | Input | Hardcoded URL | MEDIUM |
 | Input | Missing forwarded/disable_host coupling | MEDIUM |
+| Input | Unused manifest var paired with similarly named undeclared template var in the same stream | HIGH |
+| Input | Template var undeclared at every scope, no paired manifest var | MEDIUM (judgment: shared-template guards may be intended) |
 
 ## Additional review exceptions
 

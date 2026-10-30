@@ -25,6 +25,13 @@ or audit these snapshots for stale values, mismatches, formatting, or provenance
 Leave their validation to `elastic-package` in CI. Their paths/counts may appear
 in the change index solely to explain the exclusion.
 
+One narrow exception: a policy test `.expected` file under `_dev/test/policy/`
+may be read for key presence only, to confirm that every variable the fixture's
+`vars:` sets has a visible effect in the rendered output. A value that is set in
+the fixture and absent from the `.expected` means the template does not read
+that variable name (see `template_vars_judgment_residue` in
+`consistency-rules.md`). Do not read the `.expected` for anything else.
+
 Review handwritten test configurations, input fixtures, and producing source.
 Check which normal, boundary, and failure scenarios they exercise, including
 relevant routing branches, missing/optional fields, and recovery behavior. Report
