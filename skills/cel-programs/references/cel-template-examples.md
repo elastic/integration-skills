@@ -95,32 +95,38 @@ streams:
       - name: url
         type: text
         title: URL
+        description: Base URL of the API endpoint to collect from.
         required: true
         show_user: false
         default: https://api.example.com/v1/items
       - name: interval
         type: text
         title: Interval
+        description: Duration between requests to the API. Supported units for this parameter are h/m/s.
         required: true
         default: 5m
       - name: http_client_timeout
         type: text
         title: HTTP Client Timeout
+        description: Duration before declaring that the HTTP client connection has timed out. Supported time units are ns, us, ms, s, m, h.
         required: false
         show_user: false
       - name: proxy_url
         type: text
         title: Proxy URL
+        description: URL to proxy connections in the form of http[s]://<user>:<password>@<server name/ip>:<port>. Please ensure your username and password are in URL encoded format.
         required: false
         show_user: false
       - name: ssl
         type: yaml
         title: SSL Configuration
+        description: SSL configuration options. See [documentation](https://www.elastic.co/docs/reference/beats/filebeat/configuration-ssl#ssl-common-config) for details.
         required: false
         show_user: false
       - name: tags
         type: text
         title: Tags
+        description: Tags to include in the published event.
         multi: true
         required: true
         show_user: false
@@ -129,12 +135,14 @@ streams:
       - name: preserve_original_event
         type: bool
         title: Preserve Original Event
+        description: Preserves a raw copy of the original event, added to the field `event.original`.
         required: true
         show_user: true
         default: false
       - name: enable_request_tracer
         type: bool
         title: Enable Request Tracer
+        description: The request tracer logs requests and responses to the agent's local file-system for debugging configurations. Enabling this request tracing compromises security and should only be used for debugging. See [documentation](https://www.elastic.co/docs/reference/beats/filebeat/filebeat-input-cel#_resource_tracer_filename) for details.
         required: false
         show_user: false
       - name: processors
@@ -242,11 +250,14 @@ vars:
   - name: api_key
     type: password
     title: API Key
+    description: API key used to authenticate requests.
     required: true
     show_user: true
+    secret: true
   - name: batch_size
     type: integer
     title: Batch Size
+    description: Maximum number of records to request per page.
     required: true
     default: 100
     show_user: false
@@ -357,28 +368,34 @@ vars:
   - name: url
     type: text
     title: API URL
+    description: Base URL of the API.
     required: true
     show_user: true
     default: https://api.example.com
   - name: client_id
     type: text
     title: Client ID
+    description: OAuth2 client ID used to request access tokens.
     required: true
     show_user: true
   - name: client_secret
     type: password
     title: Client Secret
+    description: OAuth2 client secret used to request access tokens.
     required: true
     show_user: true
+    secret: true
   - name: token_url
     type: text
     title: Token URL
+    description: OAuth2 token endpoint used to obtain access tokens.
     required: true
     show_user: true
     default: https://api.example.com/oauth/token
   - name: scope
     type: text
     title: OAuth Scope
+    description: Space-separated OAuth2 scopes to request with the access token.
     required: false
     show_user: false
 ```
