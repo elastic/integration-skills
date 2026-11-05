@@ -131,12 +131,14 @@ Add next to existing auth vars (same level as the audit):
   - name: supports_identity_federation
     type: bool
     title: Supports Identity Federation
+    description: Set to true when the integration authenticates to AWS through Elastic Cloud Connectors (identity federation) instead of static credentials.
     multi: false
     required: false
     show_user: false
   - name: role_arn
     type: text
     title: Role ARN
+    description: ARN of the AWS IAM role to assume. With identity federation, this is the role created by the CloudFormation template.
     multi: false
     required: false
     show_user: false
