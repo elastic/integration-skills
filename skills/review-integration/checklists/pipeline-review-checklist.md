@@ -52,6 +52,11 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 - [ ] CEL-opening Agentless block (`remove` processor for agentless metadata `organization`/`division`/`team` when all are strings, tagged `remove_agentless_tags`, followed by `terminate` processor on the collector-error placeholder shape): required only on NEW CEL data streams in packages whose manifest enables agentless deployment (`deployment_modes.agentless.enabled: true`), or where sibling pipelines in the same package already carry the block (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
 - [ ] These processors must NOT be present for non-CEL streams -- **MEDIUM** if present for wrong input type
 
+### Deduplication for re-collected data
+
+- [ ] If the data stream's input re-collects the same records on every interval (inventory, posture, feed, or any CEL program with no time watermark), the pipeline sets `_id` with a `fingerprint` processor over the record identifier plus a change marker (for example `json.id` + `json.updatedAt`), `ignore_missing: true`, placed right after `event.original` is decoded -- **HIGH** if absent on such a stream
+- [ ] The fingerprint fields identify the *record version*, not the collection run: do not include `@timestamp`, `event.ingested`, or anything the collector sets per run, or every copy gets a fresh `_id` -- **HIGH** if a per-run field is in the fingerprint
+
 ### Performance
 
 - [ ] Cheap checks (conditionals, renames) before expensive operations (grok, geoip, user_agent) -- **LOW**
