@@ -288,6 +288,8 @@ See the `ingest-pipelines` skill → `references/processor-cookbook.md` for the 
 
 **`entity`** (beta; leaf fields require ECS `v9.4.0+`) — nested under: `user.entity`, `host.entity`, `service.entity`, `cloud.entity`, `orchestrator.entity`, root `entity`, `entity.target`. Never invent `device.entity.*` — not a valid parent. For entity data streams (i.e. those with `event.kind: asset`), see the `entity-mappings` skill for the full field catalog, pipeline patterns, and ECS availability matrix.
 
+**`gen_ai`** (beta; current field set requires ECS `v9.5.0+`) — root field set for GenAI operations: model calls, agent and tool executions, token usage. Only fields defined in the pinned ECS release; never OpenTelemetry attributes that ECS has not adopted. For GenAI data streams, see the `genai-mappings` skill for the field catalog, values, message shapes and pipeline patterns.
+
 ### Nested (array-of-objects) ECS fields
 
 Some ECS fields use `type: nested`, meaning they hold an **array of objects** where each object groups related sub-fields together. The pipeline must produce this structure — do **not** flatten these into parallel scalar arrays.
@@ -302,6 +304,8 @@ Some ECS fields use `type: nested`, meaning they hold an **array of objects** wh
 | `threat.indicator.file.pe.sections` | `name`, `physical_size`, `virtual_size`, etc. |
 | `process.elf.sections` | `name`, `physical_size`, `virtual_size`, etc. |
 | `process.pe.sections` | `name`, `physical_size`, `virtual_size`, etc. |
+
+**Exception — `gen_ai` string arrays typed `nested`:** ECS types `gen_ai.response.finish_reasons`, `gen_ai.request.stop_sequences` and `gen_ai.request.encoding_formats` as `nested` with no sub-fields ([elastic/ecs#2560](https://github.com/elastic/ecs/issues/2560)). They hold arrays of strings, not objects, so this section does not apply: with `external: ecs` a string array rejects the whole document. Define them locally as `type: keyword` (see `genai-mappings/references/genai-field-catalog.md`).
 
 **Anti-pattern — parallel arrays (WRONG):**
 
@@ -503,6 +507,8 @@ Fix the root cause. Do not work around it by:
 - **`event.category` or `event.type` set as scalar** — must use `append` processor, not `set`
 - **`nested` ECS field mapped as parallel arrays** — `email.attachments`, `threat.enrichments`, and similar `nested` fields must be arrays of objects, not objects with parallel scalar arrays; see the *Nested (array-of-objects) ECS fields* section above
 - **`entity.attributes.*` / `entity.relationships.*` with `external: ecs` at `git@v9.3.0`** — these leaf fields do not exist at ECS v9.3.0 (`attributes` is a bare `object`; `entity_reference` fieldset is absent). They first appear at v9.4.0. Using `external: ecs` on them at `git@v9.3.0` causes `field is undefined` errors. Packages with entity data streams must pin `git@v9.5.0` in `_dev/build/build.yml` and match `ecs.version: 9.5.0` in the pipeline. See the `entity-mappings` skill.
+- **`gen_ai.provider.name`, `gen_ai.input.messages` and the other v9.5.0 `gen_ai` fields with `external: ecs` below `git@v9.5.0`** — they fail with `field definition not found in schema`; older pins only have `gen_ai.system` (removed in v9.5.0). Packages with GenAI data streams must pin `git@v9.5.0` and match `ecs.version: 9.5.0`. See the `genai-mappings` skill.
+- **`flattened` `gen_ai.*` fields without `ignore_above`** — a leaf longer than 32766 bytes (a long prompt or response) rejects the whole document, and Fleet adds no default. Add `ignore_above: 8191` to `gen_ai.input.messages`, `output.messages`, `system_instructions`, `tool.definitions`, `tool.call.arguments` and `tool.call.result`.
 
 ## Validation loop
 
@@ -520,4 +526,5 @@ elastic-package test pipeline --data-streams <stream>
 - `references/fieldset-links.md`
 - `references/cdr-field-requirements.md` — cloud security / CDR integrations only (`cloudsecurity_cdr` category)
 - `entity-mappings/references/entity-field-catalog.md` — ECS `entity.*` fields; entity/inventory data streams only
+- `genai-mappings/references/genai-field-catalog.md` — ECS `gen_ai.*` fields; GenAI data streams only
 - [ECS field reference](https://www.elastic.co/docs/reference/ecs/ecs-field-reference)

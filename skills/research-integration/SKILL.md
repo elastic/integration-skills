@@ -80,10 +80,11 @@ Also load:
 
 5. `ecs-field-mappings` skill -- for ECS field mapping guidance during the analysis phase
 6. `entity-mappings/references/entity-datastream-classification.md` -- read this yourself so you can classify each proposed data stream as event vs entity (apply the research-time rule in that file). **Do NOT load the rest of the `entity-mappings` skill** — the field catalog and pipeline patterns are implementation material and must not be loaded during research.
-7. `references/market-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
-8. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
+7. `genai-mappings/references/genai-datastream-classification.md` -- read this yourself when the product is an LLM provider, AI gateway, agent runtime or AI assistant, so you can classify each proposed data stream (and each record type in mixed streams) by GenAI kind or as out of scope (apply the research-time rule in that file). **Do NOT load the rest of the `genai-mappings` skill** — the Track G subagent reads `genai-source-discovery.md` itself, and the field catalog and pipeline patterns are implementation material that must not be loaded during research.
+8. `references/market-coverage-checklist.md` -- read this yourself so you know what to pass through; when dispatching the Track E subagent, point it at this file **by path** (do NOT paste its contents into the task prompt). The Track E subagent will read it in its own fresh context.
+9. `references/research-subagent-guidance.md` -- the operating manual every research subagent needs. **Do NOT read this file yourself** unless you specifically need to debug a subagent's behaviour. Instead, point every research subagent at this file **by path** in its task prompt and instruct it to read the file end-to-end before doing any other work. Embedding the file verbatim doubles its context cost.
 
-Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, entity-mappings field catalog, etc.). Those are for implementation, not research.
+Do **not** load other integration-building skills (CEL, pipelines, ecs-field-mappings implementation details, entity-mappings field catalog, genai-mappings field catalog and pipeline patterns, etc.). Those are for implementation, not research.
 
 **Downstream tooling note:** The research workflow itself has no CEL tooling requirements. However, if the recommended collection method turns out to be API-based (CEL input), the downstream `/create-integration` run will need `mito`, `celfmt`, `ceplx`, and `stream` installed. Surface this in the Phase 8 summary so the user can verify their toolchain before switching to build mode.
 
@@ -109,6 +110,7 @@ research_results/<product_slug>/
     field-schema-analysis.md  # detailed field inventories written by subagents
     market-coverage.md  # detailed market coverage analysis (always created)
     entity-coverage.md        # entity inventory endpoint details, scopes, key fields (entity streams only)
+    genai-coverage.md         # GenAI record types, payloads, content opt-ins, per-field availability (GenAI streams only)
     sample-events/            # representative sample data files
       <event_type>.json       # one file per event type or data format variant
       <event_type>.log
@@ -116,6 +118,7 @@ research_results/<product_slug>/
     <descriptive-subfolder>/  # e.g., vendor-sdk/, schema-files/, openapi-spec/
   ecs-mapping-analysis.md     # initial ECS field mapping analysis
   entity-mapping-analysis.md  # entity.* field status per entity-classified stream (entity streams only)
+  genai-mapping-analysis.md   # gen_ai.* field status per GenAI-classified stream (GenAI streams only)
   configuration-plan.md       # planned integration configuration variables
 ```
 
@@ -135,7 +138,7 @@ Not all files are required -- create only what applies to the product's collecti
 
 ### Phase 2: Parallel research
 
-Launch multiple research subagents in parallel using the platform's generic / general-purpose subagent (see the dispatch description at the top of this skill). Each subagent focuses on a specific research track. **You should launch as many parallel subagents as makes sense for the product -- typically 2-4 subagents, plus the always-on Track E, and Track F when any data stream was classified as entity in Before you start.**
+Launch multiple research subagents in parallel using the platform's generic / general-purpose subagent (see the dispatch description at the top of this skill). Each subagent focuses on a specific research track. **You should launch as many parallel subagents as makes sense for the product -- typically 2-4 subagents, plus the always-on Track E, Track F when any data stream was classified as entity in Before you start, and Track G when any data stream was classified as GenAI.**
 
 **IMPORTANT -- subagent context and capabilities:**
 
@@ -281,6 +284,36 @@ Instruct the subagent to investigate each entity-classified stream:
 3. The **path** to `entity-mappings/references/entity-datastream-classification.md` so the subagent can apply the research-time classification signals when assessing each endpoint. Pass the path only; do not embed the file contents.
 4. Working directory.
 
+#### Research Track G: GenAI field coverage (conditional — launch only for GenAI-classified streams)
+
+**Launch this track only when you classified at least one proposed data stream as a GenAI stream during `## Before you start`.** Run it in parallel with the other tracks.
+
+The goal is that no source field that could feed a `gen_ai.*` field is missed. Instruct the subagent to investigate each GenAI-classified stream:
+
+- **Record types** — every event, log or record type the source emits for the stream (for example request, response, tool result, usage summary), with its full schema from the vendor docs, not only from sample data.
+- **Serialized bodies** — request and response bodies, tool inputs and outputs, and other JSON-in-string fields. List their keys: model, request parameters, messages, system prompt, tool definitions, tool calls, finish reasons, token usage.
+- **Content capture settings** — which vendor-side settings, environment variables, logging levels or retention options enable prompts, responses, reasoning content and tool details; who controls them; their size limits and truncation behaviour.
+- **Other transports and endpoints** — other ways to get the same data (another API, export, log destination, OTel signal) that carry more fields.
+- **Accepted request parameters** — every parameter the API accepts, and in which API versions. Any accepted parameter can appear in a logged request.
+- **Provider and operation** — which API or platform served each record (including products that can route to several backends), and which source field names the operation.
+- **Token usage** — how input and output counts are reported, and whether cached and reasoning tokens are included in the totals or reported separately.
+- **Identifiers** — completion or message ids, request ids, and real session, thread or conversation ids.
+
+**Output rules for the Track G subagent:**
+
+- Describe the data; do not design the pipeline or field definitions.
+- **Implementation complexity is not a reason to exclude a GenAI field from scope.** If collecting a field requires a vendor-side opt-in, another endpoint or transport, or a new data stream, document what is needed and who controls it. Only report a field as unavailable when the source provably cannot provide it.
+- **Do not invent `gen_ai.*` field names.** Only fields in a released ECS version are valid (the current set is ECS v9.5.0). OpenTelemetry GenAI attributes that ECS has not adopted (cache and reasoning token counts, agent version, …) and `gen_ai.conversation.id` (only on ECS `main`) are **not** valid: flag those source values as custom field candidates under `<integration_name>.<datastream_name>.<field_name>`, using the source's own field name.
+- Write findings to `references/genai-coverage.md` with one section per GenAI-classified stream, including a content-capture settings table.
+- Return a concise inline summary listing each stream's kind, record types, content-capture settings, and the most important fields that need an opt-in or another endpoint.
+
+**Task prompt must include** (in addition to the `research-subagent-guidance.md` read-by-path directive):
+
+1. Product name, the GenAI-classified streams you identified, and the kind of each (and of each record type in mixed streams).
+2. API and logging documentation URLs (from Track A/B findings, or user-provided).
+3. The **paths** to `genai-mappings/references/genai-datastream-classification.md` and `genai-mappings/references/genai-source-discovery.md`. The subagent reads both itself; it uses the source discovery file's three layers, opt-in table, per-API maps and field-by-field questions. Pass the paths only; do not embed the file contents.
+4. Working directory.
+
 ### Phase 3: Synthesize and supplement
 
 After all subagents return:
@@ -320,6 +353,24 @@ Using the ECS reference skill loaded earlier, perform an initial field mapping a
      Status key: ✅ direct mapping · 🔄 derived/transformed · 🔍 needs investigation · ⛔ not available.
 
    Write this to `entity-mapping-analysis.md` alongside `ecs-mapping-analysis.md`. **Findings only — no processors, no field YAML, no `external: ecs` declarations.** Those belong in the build phase.
+6. **For each GenAI-classified stream** (identified in `## Before you start`): using the findings from Track G, produce:
+   - The stream kind, and the kind of each record type in mixed streams.
+   - The `gen_ai.provider.name` and `gen_ai.operation.name` candidates (OpenTelemetry well-known values such as `aws.bedrock`, `azure.ai.openai`, `gcp.vertex_ai`, `openai`, `anthropic`; `chat`, `embeddings`, `execute_tool`, `invoke_agent`), and any source value with no well-known match.
+   - A per-field status table covering at least: identity (`provider.name`, `operation.name`, `request.model`, `response.model`, `response.id`, `output.type`), request parameters (`max_tokens`, `temperature`, `top_p`, `top_k`, `frequency_penalty`, `presence_penalty`, `seed`, `choice.count`, `stop_sequences`, `encoding_formats`), response and usage (`response.finish_reasons`, `usage.input_tokens`, `usage.output_tokens`, `token.type`), content (`input.messages`, `output.messages` including reasoning, `system_instructions`, `tool.definitions`), and agent and tool (`agent.id`, `agent.name`, `agent.description`, `tool.name`, `tool.type`, `tool.call.id`, `tool.call.arguments`, `tool.call.result`):
+
+     | ECS field | Status | Source field | Notes |
+     |---|---|---|---|
+     | `gen_ai.request.model` | ✅ default | `modelId` | |
+     | `gen_ai.input.messages` | 🔍 | `input.inputBodyJson.messages` | source-side setting: only when model invocation logging includes text |
+     | `gen_ai.usage.input_tokens` | 🔄 derived | `input_tokens` + cache counts | provider total excludes cached tokens |
+     | `gen_ai.request.seed` | ⛔ | — | not available: API has no seed parameter |
+
+     Status key: ✅ sent by default · 🔄 derived/transformed · 🔍 obtainable but needs extra work (a source-side setting, request parameter, endpoint, transport or new data stream; say which, and who controls it) or still needs investigation · ⛔ not available or not applicable (say which).
+
+   - A separate list of source values that have no ECS field (cache and reasoning token counts, session or conversation ids, …), each with its custom field candidate.
+   - The content-capture settings the integration's README must document.
+
+   Write this to `genai-mapping-analysis.md` alongside `ecs-mapping-analysis.md`. **Findings only — no processors, no field YAML, no `external: ecs` declarations.** Those belong in the build phase.
 
 ### Phase 5: Configuration planning
 
@@ -422,6 +473,13 @@ After the research brief and all companion artifacts are written, generate a sta
   - **Bad:** "Add a `convert` processor with `type: boolean` targeting `user.entity.attributes.mfa_enabled`."
   - **Good:** "The API returns `role` as a string — a candidate for `user.roles` (an array of user role objects, may need splitting)."
   - **Bad:** "Use a `foreach` processor over `role.split(',')` to populate `user.roles`."
+- **Do not invent `gen_ai.*` field names.** In the GenAI field coverage (Track G and Phase 4 step 6), only propose `gen_ai.*` fields defined in a released ECS version. The OpenTelemetry GenAI conventions define more attributes than ECS; they are not ECS fields, and ECS may adopt them later under another name or type.
+  - **Good:** "`usage.cache_read_input_tokens` has no ECS field → `anthropic.messages.cache_read_input_tokens` (custom field)."
+  - **Bad:** "`usage.cache_read_input_tokens` → `gen_ai.usage.cache_read.input_tokens` (OpenTelemetry attribute)."
+  - **Good:** "`session.id` identifies the conversation; ECS has `gen_ai.conversation.id` only on `main`, so → `claude_code.events.session_id` (custom field) until it is released."
+- **Do not prescribe GenAI field mapping or pipeline implementation details in Track G or Phase 4 step 6.** Describe where each value is and in what form (string, object, array, JSON in a string); the `genai-mappings` and `ingest-pipelines` skills decide how to map it.
+  - **Good:** "For Claude models, the response body is an object in `output.outputBodyJson`; its `content[]` holds `text`, `thinking` and `tool_use` blocks."
+  - **Bad:** "Add a Painless script that builds `gen_ai.output.messages` from `output.outputBodyJson.content`."
 - **Never recommend `httpjson` as an input type.** The `httpjson` input is deprecated in favour of CEL. For any REST/HTTP API, recommend `cel` regardless of how simple the API is or what input type existing streams in the same package use. An existing `httpjson` stream in the same package is a legacy pattern, not a template. Do not reference it as justification for using `httpjson` in new streams.
 - If a product has multiple viable collection methods, document all of them with a recommendation and rationale, but produce detailed deep-dive material for the recommended method.
 - If research reveals the product does not expose data in a way that Elastic can ingest, say so clearly in the brief.

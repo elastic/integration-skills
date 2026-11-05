@@ -24,7 +24,7 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### ECS version
 
-- [ ] Pipeline sets `ecs.version: 9.3.0` for standard streams -- **HIGH** if wrong version; must match the `build.yml` ECS pin. For entity data streams (`event.kind: asset`), apply the `entity_ecs_pin_minimum` floor from the [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix) -- a pin at or above the floor is not a finding even below the new-package recommendation
+- [ ] Pipeline sets `ecs.version: 9.3.0` for standard streams -- **HIGH** if wrong version; must match the `build.yml` ECS pin. For entity data streams (`event.kind: asset`), apply the `entity_ecs_pin_minimum` floor from the [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix) -- a pin at or above the floor is not a finding even below the new-package recommendation. For GenAI data streams (`gen_ai.*` fields), apply the `genai_ecs_pin_minimum` floor (`9.5.0`) from the [GenAI field catalog](../../genai-mappings/references/genai-field-catalog.md#ecs-availability-matrix)
 
 ### Processor-level checks
 

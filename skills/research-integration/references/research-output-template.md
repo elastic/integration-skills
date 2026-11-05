@@ -229,7 +229,7 @@ See `temp/<subfolder>/` for the raw source artifacts (cloned repos, downloaded s
 
 ### 5.2 Field mappings
 
-> **Custom field namespace rule:** only propose mappings to ECS fields that actually exist. For source fields with no ECS equivalent, use `<integration_name>.<datastream_name>.<field_name>` — never invent an ECS path (e.g. never write `entity.attributes.is_employee` if that field is not in ECS; write `github.members.is_employee` instead). This applies equally to all ECS prefixes: `entity.attributes.*`, `user.*`, `host.*`, etc.
+> **Custom field namespace rule:** only propose mappings to ECS fields that actually exist. For source fields with no ECS equivalent, use `<integration_name>.<datastream_name>.<field_name>` — never invent an ECS path (e.g. never write `entity.attributes.is_employee` if that field is not in ECS; write `github.members.is_employee` instead). This applies equally to all ECS prefixes: `entity.attributes.*`, `gen_ai.*`, `user.*`, `host.*`, etc. For `gen_ai.*`, OpenTelemetry GenAI attributes that ECS has not adopted are not ECS fields.
 
 | Source field | ECS field | Notes |
 |-------------|-----------|-------|
@@ -277,6 +277,43 @@ Status key: ✅ direct mapping · 🔄 derived/transformed · 🔍 needs investi
 
 See `entity-mapping-analysis.md` for the full per-field analysis and `references/entity-coverage.md` for the raw entity endpoint findings.
 
+### 5.6 GenAI field coverage
+
+> N/A — no GenAI data streams identified. (Remove this line and populate the tables below when one or more data streams are classified as GenAI streams.)
+
+For each GenAI-classified data stream:
+
+**Stream kind and identity:**
+
+| Data stream | Record type | Kind | `provider.name` candidate | `operation.name` candidates |
+|-------------|-------------|------|---------------------------|-----------------------------|
+| <stream_name> | <type or "all"> | <inference / agent / tool execution / message / usage metrics / product telemetry> | <OTel well-known value, or source field for multi-backend products> | <OTel well-known values; list source values with no match> |
+
+**Content capture settings:**
+
+| Setting | Controlled by | Enables | Limits |
+|---------|---------------|---------|--------|
+| <setting, env var or logging option> | <vendor admin / user / cloud account> | <prompts / responses / reasoning / tool details> | <size limit, truncation, retention> |
+
+**ECS gen_ai field coverage:**
+
+| ECS field | Status | Source field | Notes |
+|-----------|--------|-------------|-------|
+| `gen_ai.request.model` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | <notes> |
+| `gen_ai.input.messages` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | <opt-in needed, and who controls it? format?> |
+| `gen_ai.usage.input_tokens` | ✅ / 🔄 / 🔍 / ⛔ | <source_field> | <are cached tokens included?> |
+| <every other field from Phase 4 step 6> | | | |
+
+Status key: ✅ sent by default · 🔄 derived/transformed · 🔍 obtainable but needs extra work (a source-side setting, request parameter, endpoint, transport or new data stream; say which, and who controls it) or still needs investigation · ⛔ not available or not applicable (say which).
+
+**Source values with no ECS field** (custom field candidates; never `gen_ai.*`):
+
+| Source field | Custom field candidate | Notes |
+|-------------|------------------------|-------|
+| <e.g., cache_read_input_tokens> | `<package_name>.<datastream_name>.<field>` | <e.g., OpenTelemetry has an attribute for it; ECS does not> |
+
+See `genai-mapping-analysis.md` for the full per-field analysis and `references/genai-coverage.md` for the raw source findings.
+
 ## 6. Configuration Plan
 
 > Variables listed below must come from the standard-variable tables in `references/data-collection-methods.md`, plus any documented vendor-specific variables (e.g., tenant ID for a multi-tenant API). **Never list `preserve_duplicate_custom_fields`, `event.ingested` toggles, trailing `event.original` removal flags, or any other deprecated pipeline-behavior variable here**, even if you saw them in legacy integrations under `elastic/integrations`. Pipeline behavior is the pipeline builder's concern, not configuration. The only valid `preserve_*` var is `preserve_original_event` (file/syslog inputs only, never CEL).
@@ -307,7 +344,7 @@ See `entity-mapping-analysis.md` for the full per-field analysis and `references
 
 | Data stream name | Input type | Stream kind | Source | Description |
 |-----------------|------------|-------------|--------|-------------|
-| <stream_name> | <input_type> | event \| entity | <endpoint/file/topic> | <what it collects> |
+| <stream_name> | <input_type> | event \| entity \| GenAI (<kind>) | <endpoint/file/topic> | <what it collects> |
 
 ### 7.3 Architecture rationale
 
@@ -341,9 +378,9 @@ See `entity-mapping-analysis.md` for the full per-field analysis and `references
 ## Usage notes
 
 - Sections 1-4 form the factual research foundation.
-- Section 5 (ECS mapping) is an analysis layer that requires the ECS reference skill. Section 5.5 (Entity field coverage) applies only to entity-classified streams; populate it when section 7.2 shows any stream as `entity`.
+- Section 5 (ECS mapping) is an analysis layer that requires the ECS reference skill. Section 5.5 (Entity field coverage) applies only to entity-classified streams; populate it when section 7.2 shows any stream as `entity`. Section 5.6 (GenAI field coverage) applies only to GenAI-classified streams; populate it when section 7.2 shows any stream as `GenAI`.
 - Section 6 (Configuration) bridges research to implementation planning.
-- Section 7 (Architecture) is the integration design recommendation. The `Stream kind` column in section 7.2 carries the entity/event classification forward to `/create-integration`.
+- Section 7 (Architecture) is the integration design recommendation. The `Stream kind` column in section 7.2 carries the event/entity/GenAI classification forward to `/create-integration`.
 - Section 8 (Open questions) captures what still needs human judgment.
 - Section 9 (Attribution) provides traceability for all claims.
 
@@ -357,6 +394,8 @@ The research brief is the primary output, but it is supported by additional file
 - **`references/`** -- Curated research artifacts: detailed field analyses, API spec notes, sample events. These are polished enough for downstream consumers.
 - **`references/entity-coverage.md`** -- *(entity streams only)* Entity inventory endpoint details, required scopes/permissions, per-record schema, stable key, and MFA/permission/ownership attributes found by Track F. Written by the Track F subagent.
 - **`entity-mapping-analysis.md`** -- *(entity streams only)* Per-field ECS entity coverage table (✅/🔄/🔍/⛔ status) alongside `ecs-mapping-analysis.md`. Written during Phase 4 step 5. **No processors or field YAML** — findings only.
+- **`references/genai-coverage.md`** -- *(GenAI streams only)* Record types, payload and body schemas, content-capture settings, other transports and endpoints, accepted request parameters, and token usage reporting found by Track G. Written by the Track G subagent.
+- **`genai-mapping-analysis.md`** -- *(GenAI streams only)* Per-field ECS `gen_ai.*` coverage table (✅/🔄/🔍/⛔ status), source values with no ECS field, and the content-capture settings to document. Written during Phase 4 step 6. **No processors or field YAML** — findings only.
 - **`temp/`** -- Raw downloaded artifacts: cloned repos, SDK sources, large schema files, analysis scripts. Retained as reference for the human and for reproducibility. Not cleaned up unless disk space is critical.
 
 When the brief references detailed findings that are too large to include inline, it should point to the appropriate file in `references/` or `temp/` with a path and one-line description.

@@ -3,7 +3,7 @@
 ### Build configuration
 
 - [ ] `_dev/build/build.yml` exists when any field files are present -- **HIGH** if missing
-- [ ] ECS reference pinned to `git@v9.3.0` for standard integrations -- **HIGH** if wrong version; must match `ecs.version` set in the pipeline. For packages with entity data streams (`event.kind: asset`), apply the `entity_ecs_pin_minimum` floor from the [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix) -- a pin at or above the floor is not a finding even below the new-package recommendation
+- [ ] ECS reference pinned to `git@v9.3.0` for standard integrations -- **HIGH** if wrong version; must match `ecs.version` set in the pipeline. For packages with entity data streams (`event.kind: asset`), apply the `entity_ecs_pin_minimum` floor from the [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix) -- a pin at or above the floor is not a finding even below the new-package recommendation. For packages with GenAI data streams (`gen_ai.*` fields), apply the `genai_ecs_pin_minimum` floor (`git@v9.5.0`) from the [GenAI field catalog](../../genai-mappings/references/genai-field-catalog.md#ecs-availability-matrix)
 - [ ] ECS pin consistent with `ecs.version` set in pipeline -- **HIGH** if mismatch
 
 ### base-fields.yml
@@ -43,6 +43,7 @@
 - [ ] `event.outcome`: only `failure`, `success`, `unknown` -- **HIGH** if invalid
 - [ ] Values are semantically appropriate for the data source -- **MEDIUM**
 - [ ] `event.kind: asset` and entity/inventory data streams (one-document-per-entity snapshots of users, hosts, devices, apps) go together: entity streams set `asset` (not `event` or `state`), and `asset` never appears on event logs, metric streams, or findings streams -- **MEDIUM** either way
+- [ ] GenAI data streams: run the review checklist in the [GenAI field catalog](../../genai-mappings/references/genai-field-catalog.md#review-checklist) (`nested` and `flattened` definitions, fields not in the pinned ECS release, provider and operation values, message shape, content-capture docs) -- severities as listed there
 
 ### When reviewing a diff
 

@@ -49,6 +49,10 @@ option requires a higher version:
   [entity field catalog](../../entity-mappings/references/entity-field-catalog.md#ecs-availability-matrix)
   rather than a version restated here. A matched pin at or above that floor is
   not a finding, even when it sits below the new-package recommendation.
+  GenAI data streams have a floor too: apply the `genai_ecs_pin_minimum` rule in
+  [consistency-rules.md](consistency-rules.md#build-config-to-pipeline-consistency)
+  and the
+  [GenAI field catalog](../../genai-mappings/references/genai-field-catalog.md#ecs-availability-matrix).
 
 'Could be newer' or 'below current standard' is NOT a finding. Only flag when
 the current value causes a concrete problem (missing feature, lint failure,

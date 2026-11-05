@@ -70,6 +70,7 @@ processor examples, test fixture formats, and field mapping patterns you need.
    - **`references/mapping-type-matrix.md`** — field type selection for custom fields
    - **`references/root-and-core-fields.md`** — ECS root and core field definitions
    - **`entity-mappings/references/entity-pipeline-patterns.md` and `entity-mappings/references/entity-field-catalog.md`** — read these **only if** the orchestrator's task prompt states this is an entity data stream, or the data is an inventory/snapshot of users, hosts, devices, groups, or apps rather than a timeline of events. If the entity pin is required (`git@v9.5.0`), the orchestrator's prompt will say so explicitly — do not change the pin otherwise.
+   - **`genai-mappings/references/genai-field-catalog.md` and `genai-mappings/references/genai-pipeline-patterns.md`** — read these **only if** the orchestrator's task prompt states this is a GenAI data stream, or the data describes model calls, agent or tool executions, prompts and responses, or LLM token usage. If the GenAI pin is required (`git@v9.5.0`), the orchestrator's prompt will say so explicitly — do not change the pin otherwise. Never add a `gen_ai.*` field that is not in the pinned ECS release, even if OpenTelemetry defines it.
 
 3. **`integration-testing` skill** — then **read `references/pipeline-testing.md`
    fully**: test fixture format, config files, expected output generation,
@@ -175,8 +176,8 @@ custom fields.
   `log.flags`) not present in `base-fields.yml`, add them to `fields/beats.yml`
 - Ensure `_dev/build/build.yml` exists at the package root with
   `dependencies.ecs.reference: "git@v9.3.0"` for standard streams, or `"git@v9.5.0"` for
-  entity data streams (those with `event.kind: asset`). The orchestrator will specify which
-  to use. Do not change an existing pin without being told to.
+  entity data streams (those with `event.kind: asset`) and GenAI data streams (`gen_ai.*`
+  fields). The orchestrator will specify which to use. Do not change an existing pin without being told to.
 - Follow the field mapping guidance from the `ecs-field-mappings` skill
 
 ### 5. Create test fixtures
