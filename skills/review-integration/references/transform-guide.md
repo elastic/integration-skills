@@ -201,7 +201,7 @@ _meta:
 ```
 
 - `fleet_transform_version` -- required. Bump on any transform code change to trigger delete + reinstall + restart during package upgrade.
-- `managed: true` -- Fleet manages the transform lifecycle (start/stop/delete). Used for CDR transforms. `managed: false` means the user manages the transform; used for TI, ML, and custom transforms.
+- `managed: true` -- Fleet manages the transform lifecycle (start/stop/delete). Used for CDR transforms and most TI transforms (50 of 63 `ti_*` latest transforms). `managed: false` means the user manages the transform; used for ML, custom, and some TI transforms.
 - `run_as_kibana_system: false` -- controls execution privileges. When `false`, the transform runs under the installing user's credentials rather than `kibana_system`. Used by 70+ transforms in the repo.
 
 ## Transform manifest.yml
@@ -273,6 +273,10 @@ Transform output fields live at `elasticsearch/transform/<name>/fields/fields.ym
 
 For CDR (cloud security) integrations, see `cdr-transform-requirements.md` in this skill's references.
 
+## Threat intelligence transforms
+
+For `ti_*` packages, see `ti-transform-requirements.md` in this skill's references. Every indicator data stream in a `ti_*` package must be read by a latest transform; the file also covers the `labels.is_ioc_transform_source` labels that Elastic's built-in indicator match rules depend on, unique keys, destination fields and IOC expiration.
+
 ## Review checklist
 
 - [ ] Transform type matches purpose (pivot for aggregation, latest for dedup/current-state) -- **MEDIUM** if wrong
@@ -292,4 +296,5 @@ For CDR (cloud security) integrations, see `cdr-transform-requirements.md` in th
 - [ ] Transform manifest.yml has appropriate `destination_index_template` -- **MEDIUM**
 - [ ] No hardcoded index names bypassing data stream routing -- **HIGH**
 - [ ] CDR naming conventions followed when applicable -- **MEDIUM**
+- [ ] TI IOC transforms meet `ti-transform-requirements.md` when applicable (source label `labels.is_ioc_transform_source: "true"` is **HIGH**) -- see that file for severities
 - [ ] Changelog entry for transform changes -- **MEDIUM**
