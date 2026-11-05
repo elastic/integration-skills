@@ -56,13 +56,18 @@ endpoint name, a documented field, a sample record).
 
 1. **Definitive:** the pipeline or fields declare any `gen_ai.*` field → in scope.
 2. **Definitive:** handwritten fixtures (`_dev/test/pipeline/test-*.log|json`, mock API
-   responses, `_dev/deploy/` samples) contain a model identifier, token counts, a `messages` or
-   `contents` array, a request/response body, a tool/function call, or an agent/session id → in
-   scope.
+   responses, `_dev/deploy/` samples) contain an LLM model identifier (such as `gpt-4o`,
+   `claude-sonnet-4-5`, `anthropic.claude-*`, `gemini-*`) or LLM token counts (input/output,
+   prompt/completion tokens) → in scope.
 3. **Strong:** the package is about an LLM provider, AI gateway, agent platform or AI
    assistant, and the stream is not an admin audit or billing stream without a model
    dimension → in scope.
 4. Otherwise → out of scope. State the reason in one sentence.
+
+On their own, a `messages` or `contents` array, a request/response body, a tool/function call,
+or an agent or session id are **not** evidence: chat, email, identity and EDR packages carry
+them too (Slack messages, Okta session ids, Elastic Agent or EDR `agent.id`). Count them only
+in a package that passes check 3, where they confirm the record type (see the audit-log trap).
 
 Prefer handwritten inputs over generated `*-expected.json` and `sample_event.json`: the
 question is what the **source** sends, not what the current pipeline keeps.

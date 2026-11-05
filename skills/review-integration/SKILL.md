@@ -155,10 +155,11 @@ These references live in this skill's `references/` directory and provide review
 5. **Negative gate (overrides 3 and 4):** root `manifest.yml` categories include `cloudsecurity_cdr` AND the stream sets `result.evaluation` or `vulnerability.*` — this is CDR state, not entity asset. Load CDR references only.
 If any stream fires checks 1–4 (and the negative gate does not override), load both entity references for that stream.
 
-**GenAI data stream detection:** Apply the review-time rule from `genai-mappings/references/genai-datastream-classification.md` (first hit wins) to each data stream in scope:
+**GenAI data stream detection:** Apply this rule (first hit wins) to each data stream in scope. It is the review-time rule from `genai-mappings/references/genai-datastream-classification.md`, summarized here; you do not need to read that file to apply it:
 1. **Definitive:** any pipeline or `fields/*.yml` sets or declares a `gen_ai.*` field.
-2. **Definitive:** handwritten input fixtures (pipeline test inputs, mock API responses, `_dev/deploy/` samples) carry a model identifier, token counts, a `messages` or `contents` array, a model request/response body, a tool/function call, or an agent/session id.
+2. **Definitive:** handwritten input fixtures (pipeline test inputs, mock API responses, `_dev/deploy/` samples) carry an LLM model identifier (such as `gpt-4o`, `claude-sonnet-4-5`, `anthropic.claude-*`, `gemini-*`) or LLM token counts.
 3. **Strong:** the package is about an LLM provider, AI gateway, agent platform or AI assistant, and the stream is not an admin audit or billing stream without a model dimension.
+A `messages` or `contents` array, a request/response body, a tool/function call, or an agent or session id is **not** evidence on its own: chat, email, identity and EDR packages carry them too. Count them only in a package that passes check 3.
 If any stream fires checks 1–3, load both GenAI references for that stream and run the catalog's review checklist. Do not flag missing `gen_ai.*` fields on streams the classification marks out of scope.
 
 **Federated Identity detection:** Load `input-configurations/references/federated-identity-aws.md` when any of:
