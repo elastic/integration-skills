@@ -103,6 +103,14 @@ Enforced by CI — calibrate, do not duplicate:
   new packages land anywhere from 3.4.x to 3.6.x) — "could be newer" remains
   a non-finding.
 
+## Deprecating data streams and inputs
+
+When a data stream, input, or policy template is deprecated in favour of a replacement, the deprecated stream must not remain the default collection path: set `enabled: false` on the deprecated stream in its data stream manifest (and on the deprecated input's streams in the root manifest where applicable) so new policies default to the replacement. Repo precedents: `o365/data_stream/audit/manifest.yml` (`o365audit` input, `enabled: false`) and `island_browser/data_stream/admin_actions/manifest.yml`. Titles/descriptions carry the `DEPRECATED -` prefix and point at the replacement. Packages on `format_version >= 3.6.0` should additionally use the formal `deprecated:` field with `replaced_by` and the `deprecation` changelog type (elastic/package-spec#1053); older packages rely on the title/description convention alone.
+
+- FLAG: a stream newly marked deprecated (title/description or `deprecated:` field) whose manifest leaves the stream enabled by default (no `enabled: false`) — new policies would still collect via the deprecated path despite the migration guidance.
+- FLAG: deprecation wording that does not name the replacement stream/input.
+- DO NOT FLAG: absence of the formal `deprecated:` field on packages below `format_version` 3.6.0; pre-existing deprecated streams not touched by the PR.
+
 ## Bot-authored changes (non-findings)
 
 Weekday-scheduled `requires:` dependency bumps in input-package consumers
