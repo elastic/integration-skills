@@ -136,6 +136,7 @@ Create this before creating any data streams. For new packages, always use `git@
 - Set `owner` (github team/org)
 - Set `format_version: "3.6.5"` for new packages. The scaffold may generate a different version — always override to `3.6.5` (see `package-spec`). This already covers Federated Identity / `provider_permissions`, which needs `3.6.4` or later. When adding to an existing package, match the package's current `format_version` instead — see `add-datastream-workflow.md` for the decision rule.
 - Set `conditions.kibana.version: "^9.4.0"` for new packages. For Federated Identity / `use_cloud_connectors`, set `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` instead. When adding to an existing package, match the current value instead — only bump if required.
+- If any policy template has a `cel` or `httpjson` input, add the `deployment_modes` block with `agentless.enabled: true` and `release: beta` to that template. See `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs** for the block, the owner-team values, and why other inputs in the template need no change.
 
 ### 3. Update `changelog.yml`
 
@@ -144,6 +145,8 @@ Align version and description with the actual change.
 ### 4. Edit `_dev/build/docs/README.md`
 
 Fill in the comment-guided sections with integration-specific content while preserving the scaffold structure and static sections. Do not replace the entire template with a hand-written README.
+
+The scaffold's commented "Agentless deployment" block uses the old name and old links. For an agentless-enabled package, replace it with the "Elastic Managed enabled integration" and "Agent-based installation" subsections from `package-spec` -> `references/manifest-rules.md`; otherwise delete it.
 
 The `{{ event "stream" }}` directive requires `sample_event.json` to exist at build time. If system tests are not yet set up, remove or leave this directive commented; add it back once `sample_event.json` is generated.
 

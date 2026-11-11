@@ -125,6 +125,8 @@ See `references/manifest-rules.md` -> **Variable shadowing** for full rules, exa
   different field with the same name. See `references/manifest-rules.md` ->
   **Input names are not validated**.
 
+- **API inputs run agentless** -- a policy template with a `cel` or `httpjson` input enables `deployment_modes.agentless` (`release: beta` whenever agentless support is added; `ga` only after the Agentless ORR, plus `organization`/`division`/`team`, `format_version` >= 3.6.3). Other inputs in the same template that are on Fleet's `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `tcp`, ...) need no change. See `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
+
 See `references/manifest-rules.md` for complete rules, correct/incorrect examples, and the review checklist.
 
 ---
@@ -214,7 +216,7 @@ See `references/format-version-features.md` for the curated feature-to-version t
 
 | File | Contains |
 |------|----------|
-| `references/manifest-rules.md` | Full rules for format_version selection, variable shadowing, Handlebars variable declarations, routing rules, YAML structure, and severity-tagged review checklist |
+| `references/manifest-rules.md` | Full rules for format_version selection, variable shadowing, Handlebars variable declarations, routing rules, YAML structure, agentless deployment for API inputs, and severity-tagged review checklist |
 | `references/changelog-patterns.md` | Changelog entry patterns, semver rules, breaking-change checklist, CI examples |
 | `references/format-version-features.md` | Feature-to-version table sourced from elastic/package-spec, including recent spec additions |
 | `references/var-groups-and-provider-permissions.md` | Schema for `var_groups` and `provider_permissions`, floors, validators; handoff to Federated Identity procedure |

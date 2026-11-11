@@ -156,6 +156,10 @@ Declare `enable_request_tracer` in the data stream manifest, not at the input le
 - **Package-level** vars in the root `manifest.yml` under `policy_templates[].inputs[].vars`: shared across streams (e.g., `url`, auth credentials)
 - **Data-stream-level** vars in `data_stream/<stream>/manifest.yml` under `streams[].vars`: stream-specific (e.g., `interval`, `batch_size`, `initial_interval`)
 
+### Agentless deployment
+
+A policy template with a `cel` input must enable agentless (Elastic Managed) deployment. The block, the `release` and owner-team values, and the README wording are in `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**. Whether the stream's pipeline needs the `remove_agentless_tags` processor depends on the package's Kibana constraint, not on the CEL program; see `ingest-pipelines` -> "CEL-only opening processors".
+
 ## Scope of the CEL program
 
 The CEL program's responsibility is **data collection only**:
