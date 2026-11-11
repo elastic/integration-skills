@@ -61,6 +61,7 @@ elastic-package create data-stream --name <stream_name> --type <logs|metrics> --
 4. Update `data_stream/<stream>/manifest.yml`: set correct title and description, review vars.
 5. For CEL inputs: strip the verbose generic scaffold vars (the subagent will configure the template properly), and ensure only vars referenced by `cel.yml.hbs` remain.
 6. Wire package-level config if needed: add new package-level vars (shared auth, URL) to root `manifest.yml` under `policy_templates[].inputs[]`.
+   - If the new stream adds a `cel` or `httpjson` input to a policy template that does not enable agentless, enable it in the same change: add `deployment_modes.agentless` with `release: beta` and the owner-team metadata, add the Elastic Managed README subsections, and raise `format_version` to 3.6.3 if it is lower. Existing inputs in that template whose type is on Fleet's `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `azure-blob-storage`, `tcp`, ...) need no change. Follow `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**, and give enabling agentless its own `enhancement` changelog entry.
 
 7. Validate the scaffold:
 
@@ -128,7 +129,7 @@ Dispatch a subagent per the **Dispatch convention** above, pointing it at `inges
 The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
-2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and the system test mock data it produced. Point it to the mock API response files so it understands the data format.
+2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and the system test mock data it produced. Point it to the mock API response files so it understands the data format. Pass the package's `conditions.kibana.version` and whether it enables agentless, so the builder can decide whether `remove_agentless_tags` is needed (`ingest-pipelines` -> "CEL-only opening processors"). If sibling CEL pipelines already carry it, keep the new pipeline consistent with them.
 3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it whether the input is CEL or not, so it knows whether to include CEL-only opening processors.
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
@@ -230,6 +231,7 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - **`format_version`, `conditions.kibana.version`, and ECS reference — match existing package versions, do not bump unconditionally:**
   - **New package:** always use `format_version: "3.6.5"`, `conditions.kibana.version: "^9.4.0"` (see `package-spec`), and `_dev/build/build.yml` ECS reference `git@v9.3.0`.
   - **Adding to an existing shipped package:** match the package's current `format_version`, `conditions.kibana.version`, and `_dev/build/build.yml` ECS reference. Only bump if the new stream requires a feature or field unavailable in the current versions (check `package-spec/references/format-version-features.md`). Bumping unconditionally inflates the diff beyond the feature being added. If you do bump, call it out explicitly in the changelog entry. See the `package-spec` skill for the minimum-version principle.
+  - **Agentless `release`:** enabling agentless for a new `cel` or `httpjson` input is a justifying feature for `format_version` >= `"3.6.3"`. Call the bump out in the changelog.
   - **Federated Identity / `provider_permissions`:** this is a justifying feature. Use `format_version` >= `"3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` (see `input-configurations` -> `references/federated-identity-aws.md`). Call the bump out in the changelog.
   - These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars (package-level and data stream-level). If a var is not used in `cel.yml.hbs`, remove it.

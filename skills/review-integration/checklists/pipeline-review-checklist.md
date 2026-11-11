@@ -49,7 +49,8 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 
 ### CEL-only opening processors
 
-- [ ] CEL-opening Agentless block (`remove` processor for agentless metadata `organization`/`division`/`team` when all are strings, tagged `remove_agentless_tags`, followed by `terminate` processor on the collector-error placeholder shape): required only on NEW CEL data streams in packages whose manifest enables agentless deployment (`deployment_modes.agentless.enabled: true`), or where sibling pipelines in the same package already carry the block (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
+- [ ] CEL-opening block (`terminate` processor on the collector-error placeholder shape): required on NEW CEL data streams, or where sibling pipelines in the same package already carry it (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
+- [ ] `remove_agentless_tags` (`remove` of `organization`/`division`/`team` when all are strings, before the `terminate`): required only when the package enables agentless AND its `conditions.kibana.version` admits a Kibana release without elastic/kibana#230479 (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1). Not required on packages limited to fixed releases (all new packages on `^9.4.0`); its presence on existing packages is a harmless no-op, not a finding -- **MEDIUM** when missing in the required case on a NEW CEL stream
 - [ ] These processors must NOT be present for non-CEL streams -- **MEDIUM** if present for wrong input type
 
 ### Deduplication for re-collected data

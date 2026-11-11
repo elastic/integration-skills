@@ -33,14 +33,41 @@ changelog entry `Add group field to package manifest.` (enhancement).
 - `deployment_modes.agentless.release: beta|ga` (spec 3.6.3,
   elastic/package-spec#1130) is now set on all agentless-enabled packages
   (#18552 baseline; #20421/#20463 GA'd security/SSI families). FLAG a
-  new/changed agentless block that omits `release`; expect `beta` for new
-  packages. The block also carries `organization`/`division`/`team`.
+  new/changed agentless block that omits `release`. The block also carries
+  `organization`/`division`/`team`.
+- FLAG (MEDIUM): `release: ga` in a PR that adds agentless support, to a new
+  or an existing package. New agentless support always ships as `beta`;
+  `ga` is set only after the integration passes the Agentless ORR, in a
+  separate change. DO NOT FLAG an existing `ga` value the PR leaves
+  unchanged, or a PR whose only purpose is the post-ORR `beta` → `ga` move.
 - The agentless-enabled condition (`deployment_modes.agentless.enabled: true`)
-  is what gates the CEL-opening `remove_agentless_tags` block check — see
-  `checklists/pipeline-review-checklist.md`.
+  plus a Kibana constraint that admits a release without elastic/kibana#230479
+  (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1) is what gates the
+  CEL-opening `remove_agentless_tags` check — see
+  `checklists/pipeline-review-checklist.md`. Fleet stopped injecting
+  `organization`/`division`/`team` in those fixed releases, so new packages
+  on `^9.4.0` do not need it. DO NOT FLAG its absence there, or its presence
+  on existing packages.
 - DO NOT FLAG: agentless blocks on OS/endpoint packages that read host
   kernels/event logs/files/NICs — those packages must NOT have agentless at
   all; flag the block's presence instead.
+- FLAG (MEDIUM): a `cel` or `httpjson` input added or changed by the PR in a
+  policy template without `deployment_modes.agentless.enabled: true`, or an
+  agentless-enabled package README without the Elastic Managed subsection.
+  API inputs run agentless by default (rule and block in
+  `package-spec/references/manifest-rules.md`, "Agentless (Elastic Managed)
+  deployment for API inputs"). Precedent: Netskope REST API v2 support
+  (#21358) shipped without it. On an existing package where the PR does not
+  touch those inputs, report it once as a LOW modernization suggestion.
+- DO NOT FLAG: inputs in an agentless policy template that lack
+  `deployment_modes: ["default"]` when their type is on Fleet's
+  `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `azure-blob-storage`,
+  `azure-eventhub`, `gcp-pubsub`, `tcp`, `udp`, `http_endpoint`,
+  `filestream`, `logfile`, `winlog`, `o365audit`, `streaming`; source:
+  elastic/kibana `x-pack/platform/plugins/shared/fleet/common/constants/agentless.ts`).
+  Fleet hides them in agentless mode on its own. Also do not demand agentless
+  for inputs other than `cel`/`httpjson`; AWS, Azure metrics, cloudbeat and
+  entity-analytics packages follow their own guidance.
 
 ## `owner.type: elastic` reversal
 

@@ -66,8 +66,8 @@ When moving a value from a **custom or vendor field** into an **ECS field**, **p
 
 For **CEL-based** integrations only, include these **before** the standard `message` → `event.original` handling when they apply:
 
-- **`remove`**: drop Agentless metadata fields (`organization`, `division`, `team`) when all are strings, so they do not collide with ECS. Use `ignore_missing: true` and a conditional `if`.
-- **`terminate`**: stop processing when the document is an error placeholder from the collector (`ctx.error?.message != null && ctx.message == null && ctx.event?.original == null`).
+- **`terminate`**: stop processing when the document is an error placeholder from the collector (`ctx.error?.message != null && ctx.message == null && ctx.event?.original == null`). Every CEL stream needs this.
+- **`remove`** (tag `remove_agentless_tags`): drop the Agentless metadata fields (`organization`, `division`, `team`) when all are strings, so they do not collide with ECS `organization.*`. Use `ignore_missing: true` and a conditional `if`. Include it **only when the package is agentless-enabled and its `conditions.kibana.version` admits a Kibana release that still injects those fields**: anything below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, or 9.1.0–9.1.1. Older agentless policies added the fields to every event with an `add_fields` processor (elastic/kibana#221312). Fleet stopped doing so in 8.18.5, 8.19.2, 9.0.5, 9.1.2 and 9.2.0 (elastic/kibana#230479), and still filters them out of user-defined global data tags. New packages require Kibana `^9.4.0`, so they omit this processor. On an existing package it is harmless (the type check makes it a no-op); leave it in place until the Kibana floor moves past the affected releases.
 
 **Non-CEL** integrations (logs, syslog, filebeat-style inputs) **must not** copy this block blindly — those fields and error shapes are specific to the CEL/Agentless path. See the `create-integration` skill: the orchestrator must only expect this block when the data stream uses CEL input.
 
@@ -84,6 +84,8 @@ processors:
       value: '9.3.0'
 
   # --- CEL input only (omit for log/syslog-only streams) ---
+  # remove_agentless_tags: only when the Kibana constraint admits a release
+  # without elastic/kibana#230479 (see above); omit on ^9.4.0 packages.
   - remove:
       field:
         - organization

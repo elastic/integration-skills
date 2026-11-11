@@ -1,6 +1,6 @@
 # Manifest Rules Reference
 
-Comprehensive rules for `manifest.yml` validation in Elastic integration packages. Covers format_version selection, variable scoping, Handlebars template declarations, routing rules, and YAML structure.
+Comprehensive rules for `manifest.yml` validation in Elastic integration packages. Covers format_version selection, variable scoping, Handlebars template declarations, routing rules, YAML structure, and agentless deployment for API inputs.
 
 ---
 
@@ -371,6 +371,88 @@ integration package.)*
 
 ---
 
+## Agentless (Elastic Managed) deployment for API inputs
+
+### The rule
+
+A policy template that contains a `cel` or `httpjson` input MUST enable agentless deployment. This applies to new packages, and to existing packages when a change adds a `cel` or `httpjson` input to a policy template that does not have it yet. Users see agentless as "Elastic Managed" in Kibana; see `review-integration/references/repo-conventions.md` for the naming rule.
+
+The two inputs only call a remote API, so Elastic can run them for the user. Shipping one without agentless is a gap reviewers have had to catch by hand: Netskope's REST API v2 data export support (elastic/integrations#21358) shipped without it.
+
+```yaml
+policy_templates:
+  - name: <vendor>
+    title: ...
+    description: ...
+    deployment_modes:
+      default:
+        enabled: true
+      agentless:
+        enabled: true
+        release: beta
+        organization: security
+        division: engineering
+        team: security-service-integrations
+    inputs:
+      - type: cel
+        ...
+```
+
+- `release` is always `beta` when agentless support is added, for a new package or an existing one. It changes to `ga` only after the integration passes the Agentless ORR (operational readiness review), in its own change. Never set `ga` in the PR that adds agentless support. A package that is already `ga` keeps that value when a stream is added. `release` needs `format_version` >= `3.6.3` (new packages already use `3.6.5`). Bump an older existing package to the lowest version that has it, and say so in the changelog.
+- `organization`, `division` and `team` identify the team that owns the package. Packages owned by `elastic/security-service-integrations` use the values above. Copy the values from a sibling package with the same `owner.github` for any other team (for example `organization: observability`, `team: obs-signals-integrations-team`).
+
+### Scope: `cel` and `httpjson` only
+
+The rule is limited to `cel` and `httpjson` on purpose. Across elastic/integrations, they are the inputs our API packages actually run agentless (`cel` in 118 agentless-enabled packages, `httpjson` in 46). Other agentless-capable inputs belong to packages with their own guidance:
+
+- `aws-cloudwatch` and `aws/metrics` (AWS packages): follow `input-configurations` -> `references/federated-identity-aws.md`.
+- `azure/metrics`, cloudbeat inputs, `connectors-py`: owned by other teams; do not add or remove agentless on them as part of this rule.
+- `entity-analytics`: the `entityanalytics_*` packages run agentless; follow `review-integration/checklists/entity-analytics-review-checklist.md`.
+
+Do not enable agentless on packages that read the host (kernel, event logs, local files, network interfaces), even if they also have an API input. See `review-integration/references/repo-conventions.md`.
+
+### Other inputs in the same policy template
+
+Fleet decides per input whether it shows in agentless mode (`x-pack/platform/plugins/shared/fleet/common/services/agentless_policy_helper.ts` in elastic/kibana):
+
+1. If the input declares `deployment_modes`, that list wins.
+2. Otherwise the input is allowed unless its type is in `AGENTLESS_DISABLED_INPUTS` (`x-pack/platform/plugins/shared/fleet/common/constants/agentless.ts`). That list includes `tcp`, `udp`, `filestream`, `logfile`, `http_endpoint`, `winlog`, `aws-s3`, `gcs`, `azure-blob-storage`, `azure-eventhub`, `gcp-pubsub`, `o365audit` and `streaming`.
+
+So a template that mixes `cel` with `aws-s3`, `gcs` or `tcp` needs no extra configuration: Fleet hides the listed inputs in agentless mode. Read the Kibana file for the current list rather than relying on the copy above. Add input-level `deployment_modes: ["default"]` only to an input whose type is not on the list but cannot run agentless:
+
+```yaml
+    inputs:
+      - type: cel
+        ...
+      - type: some-input-not-on-the-fleet-list
+        deployment_modes: ["default"]
+        ...
+```
+
+### What goes with it
+
+- **README**: `_dev/build/docs/README.md` needs the "Elastic Managed enabled integration" and "Agent-based installation" subsections. The `elastic-package create package` template still has an older commented "Agentless deployment" block; replace it with the current wording, for example from `packages/sentinel_one/_dev/build/docs/README.md`:
+
+  ```markdown
+  This integration supports both Elastic Managed and Agent-based installations.
+
+  ### Elastic Managed enabled integration
+
+  Elastic Managed integrations are only supported on Elastic Cloud Serverless and Elastic Cloud Hosted deployments. An Elastic Managed integration lets you ingest data from a cloud source while avoiding the orchestration, management, and maintenance associated with standard ingest infrastructure. Elastic runs the collector for you, so you can focus on your data instead of the infrastructure that collects it.
+
+  For more information, refer to [Elastic Managed integrations](https://www.elastic.co/docs/manage-data/ingest/managed-integrations/managed-integrations) and the [Elastic Managed integrations FAQ](https://www.elastic.co/docs/manage-data/ingest/managed-integrations/managed-integrations-faq).
+
+  ### Agent-based installation
+
+  Elastic Agent must be installed. For more details, check the Elastic Agent [installation instructions](docs-content://reference/fleet/install-elastic-agents.md). You can install only one Elastic Agent per host.
+  ```
+
+- **Ingest pipeline**: no change for new packages. The `remove_agentless_tags` processor is only needed when the package's `conditions.kibana.version` admits a Kibana release that still injects `organization`/`division`/`team` (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1; fixed in elastic/kibana#230479). When enabling agentless on an existing package with such a constraint, add it to each CEL stream's pipeline. See `ingest-pipelines` -> "CEL-only opening processors".
+- **Changelog**: enabling agentless on an existing package is an `enhancement` with a minor bump. Keep it a separate entry from any bugfix in the same release.
+- **Testing**: `elastic-package test system` runs agent-based only. Agentless is checked by `elastic-package check` (manifest schema) and by a manual install on Elastic Cloud or Serverless.
+
+---
+
 ## format_version selection
 
 ### The rule
@@ -425,6 +507,8 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] Routing rules have dynamic_dataset + dynamic_namespace -- **HIGH** if routing_rules.yml present but flags missing
 - [ ] YAML uses nested structure, not dotted keys -- **MEDIUM**
 - [ ] Input names verified against agent capabilities, not a green lint -- **MEDIUM**
+- [ ] A PR that adds agentless support sets `release: beta`, not `ga`; `ga` comes only after the Agentless ORR -- **MEDIUM**
+- [ ] A policy template with a `cel` or `httpjson` input enables agentless (`deployment_modes.agentless.enabled: true` with `release`, `organization`, `division`, `team`) and the README has the Elastic Managed subsection -- **MEDIUM** when the input is new or changed in the PR (see **Agentless (Elastic Managed) deployment for API inputs**)
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**
 - [ ] Deprecated streams/inputs set `enabled: false` so the replacement is the default collection path (precedent: `o365` `audit`, `island_browser` `admin_actions`; formal `deprecated:` field available from format_version 3.6.0) -- **MEDIUM**

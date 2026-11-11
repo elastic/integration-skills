@@ -18,7 +18,7 @@ Default scope: **full review** when no restriction is given.
 
 1. Identify the package directory and read its root `manifest.yml`.
 2. Read any `@`-mentioned files; fetch any documentation URLs provided.
-3. List all data streams and their input types.
+3. List all data streams and their input types. Note any policy template with a `cel` or `httpjson` input that does not enable agentless; the reviewer reports it per `review-integration/references/repo-conventions.md`.
 4. Determine review scope: full package, specific streams, or specific aspects.
 
 ## Phase 2: Automated validation

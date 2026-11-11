@@ -52,6 +52,7 @@ See `package-spec` for why these are the new-package defaults.
 
 **Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, keep `format_version: "3.6.5"` and use `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`. Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
 
+**Agentless (Elastic Managed):** if any planned data stream uses a `cel` or `httpjson` input, enable agentless on its policy template now (`deployment_modes.agentless.enabled: true`, `release: beta`, owner-team metadata) and add the Elastic Managed README subsections. Follow `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
 3. **Start the Elastic stack** (needed for system tests later):
 
 ```bash
@@ -127,7 +128,7 @@ Dispatch a subagent per the **Dispatch convention** above, pointing it at `inges
 The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
-2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow CEL-only opening processors, `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream — see item 7), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
+2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow CEL-only opening processors (the collector-error `terminate`; no `remove_agentless_tags`, because the `^9.4.0` floor already has the Fleet fix), `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream — see item 7), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
 3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it whether the input is CEL or not, so it knows whether to include CEL-only opening processors.
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
@@ -250,6 +251,7 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - Treat `manifest.yml` as a placeholder until aligned with implemented templates and requirements.
 - **Root `manifest.yml` must set `format_version` and `conditions.kibana.version` to the minimum that supports the package's features.** Default: `format_version: "3.6.5"` and `conditions.kibana.version: "^9.4.0"`. For Federated Identity / `provider_permissions`, use `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` instead (see `input-configurations` -> `references/federated-identity-aws.md`). The scaffold may generate different values — override accordingly. These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars. If a var is not used in `cel.yml.hbs`, remove it.
+- **A policy template with a `cel` or `httpjson` input must enable agentless** (`release: beta`; never `ga`, which comes only after the Agentless ORR) and the README must carry the Elastic Managed subsections. See `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
 - Run from the correct directory: `packages/` for package creation, `packages/<name>/` for data-stream creation.
 - Run `elastic-package build` before any system test whenever package files changed.
 - **Always create `_dev/build/build.yml` immediately after scaffolding the package, before creating data streams.** Required for ECS field resolution.
