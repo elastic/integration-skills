@@ -61,6 +61,9 @@ order of importance:
 - Changed aggregation operations (e.g. `terms` to `count`,
   `average` to `sum`)
 - Changed or reorganized layer structure in lens panels
+- Changed ES|QL queries (source, `WHERE`, `STATS` grouping)
+- Added, removed, or renamed sections, or panels moved between
+  sections
 - New, changed, or removed filters (global or per-panel)
 - Changed controls (added, removed, different fields or types)
 - Changed global query
@@ -97,7 +100,10 @@ For each suspected problem:
 2. Inspect the relevant section — e.g. for a "no filter" finding,
    check `embeddableConfig.attributes.state.datasourceStates`
    column-level `filter` fields, not just panel-level and
-   state-level filters.
+   state-level filters. For an ES|QL panel (`textBased`
+   datasource), read the query in
+   `embeddableConfig.attributes.state.query.esql`: its `FROM` and
+   `WHERE` are the panel's scope.
 3. Note the line number(s) in the JSON file where the issue occurs.
 4. If the raw JSON confirms the issue, report it with line numbers
    so reviewers can locate it directly.

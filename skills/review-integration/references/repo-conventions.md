@@ -124,7 +124,11 @@ YAML sources in `_dev/shared/kibana/*.yaml` compile to
 `kibana/dashboard/*.json` and both must be committed in sync
 (`validate-yaml-dashboards.yml`). Regeneration PRs are expected to touch only
 `adHocDataViews`/`internalReferences`/layer `index`. Saved-object queries must
-filter on `data_stream.dataset`, never `event.dataset`. Full checks live in
+filter on `data_stream.dataset`, never `event.dataset`. ES|QL panels read
+`logs-<pkg>.<dataset>-*` (never a fixed namespace), and all-ES|QL dashboards
+keep a dashboard-level `data_stream.dataset` filter for the package-spec
+`SVR00002` check. Dashboard settings must not need a Kibana version above the
+package's `conditions.kibana.version` floor. Full checks live in
 `dashboard-review/SKILL.md`.
 
 ## Secrets
