@@ -13,7 +13,8 @@ Severities for the Kibana 9.x checks in `dashboard-review/SKILL.md`:
 |---------|----------|
 | Dashboards API request body committed in `kibana/dashboard/` instead of a saved object | HIGH |
 | ES\|QL `FROM` hard-codes a namespace (for example `-default`) | HIGH |
-| Setting needs a Kibana version above the package's floor (ES\|QL-sourced control values, ES\|QL metric trend background, gradient area fill) | MEDIUM |
+| ES\|QL-sourced control values (`values_source: esql`) on a package whose Kibana floor is below 9.5 -- the controls are silently dropped | MEDIUM |
+| ES\|QL metric trend background or gradient area fill on a package whose Kibana floor is below 9.6 -- ignored, cosmetic only | LOW |
 | All-ES\|QL dashboard without a dashboard-level `data_stream.dataset` filter, or a new `SVR00002` exclusion without a documented reason | MEDIUM |
 | Dashboard title does not follow `[<Logs\|Metrics> <Package>] <Name>` | LOW |
 | New dashboard on a 9.4+ package without a description, or without sections at roughly 6+ visualization panels | LOW |

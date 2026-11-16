@@ -127,7 +127,8 @@ rules and ES|QL patterns. The rules that matter most:
 - **Dashboard-level filter:** also set a dashboard filter on
   `data_stream.dataset`. The package-spec validator (`SVR00002`, "no filter
   found") does not read filters inside ES|QL queries, so an all-ES|QL dashboard
-  without a dashboard-level filter fails `elastic-package check`. Exclude
+  without a dashboard-level filter fails `elastic-package check`; adding the
+  dashboard-level filter is enough to pass. Exclude
   `SVR00002` in the package's `validation.yml` only when the panels read
   indices that have no `data_stream.dataset` field, such as transform
   destination indices.
@@ -137,15 +138,21 @@ rules and ES|QL patterns. The rules that matter most:
 Some settings Kibana writes when you build on a newer stack, or that design
 skills produce by default, do not exist at the 9.4 floor:
 
-| Setting | Needs Kibana | Fallback when the package floor is lower |
-|---|---|---|
-| Options-list control whose values come from an ES\|QL query (`values_source: esql`) | 9.5 | Control on a data view field |
-| Trend background chart on an ES\|QL metric | 9.5 | Metric without a background chart |
-| Gradient area fill (`styling.areas.fill: gradient`) | 9.6 | Solid area fill (omit the setting) |
+| Setting | Needs Kibana | On an older Kibana | Fallback when the package floor is lower |
+|---|---|---|---|
+| Options-list control whose values come from an ES\|QL query (`values_source: esql`) | 9.5 | The control is silently dropped: the dashboard loads with no control | Control on a data view field |
+| Trend background chart on an ES\|QL metric | 9.6 | The metric shows its value without the trend | Metric without a background chart |
+| Gradient area fill (`styling.areas.fill: gradient`) | 9.6 | Ignored; areas render with a solid fill | Solid area fill (omit the setting) |
+
+These were checked by building a dashboard on Kibana 9.6 and importing it into
+9.4.2, 9.5.3 and 9.5.6. The `kibana-dashboards` skill in `elastic/agent-skills`
+lists the trend background as 9.5; on 9.5.3 and 9.5.6 it did not render.
 
 Use a setting only when the package floor is at or above the version in the
 table; otherwise use the fallback. Do not raise the package's Kibana floor
-just to use one of these.
+just to use one of these. The Kibana 9.6 Dashboards API sets the gradient fill
+on every area layer by default, so remove it from exports when the floor is
+lower.
 
 ## Naming conventions
 

@@ -42,8 +42,8 @@ security dashboard:
 ## Controls
 
 Add 3–5 options-list controls for the fields users filter by most. On a 9.4
-floor, back them with a data view field. ES|QL-sourced control values need 9.5
-(see `../SKILL.md`).
+floor, back them with a data view field. ES|QL-sourced control values need 9.5;
+Kibana 9.4 silently drops those controls (see `../SKILL.md`).
 
 ## Charts
 

@@ -107,11 +107,13 @@ change summary for each dashboard.
   newer Kibana than the floor (see `dashboard-guidelines`, "Settings
   that need a newer Kibana"). In saved-object JSON look for:
   - an options-list control in `pinned_panels` with
-    `"values_source": "esql"` (needs 9.5)
+    `"values_source": "esql"` (needs 9.5; Kibana 9.4 silently drops
+    the control)
   - an `lnsMetric` panel on the `textBased` (ES|QL) datasource whose
     visualization state has a `trendlineLayerId` (trend background,
-    needs 9.5)
-  - `"areaFill": "gradient"` in an XY visualization state (needs 9.6)
+    needs 9.6; older versions show the value without the trend)
+  - `"areaFill": "gradient"` in an XY visualization state (needs 9.6;
+    older versions ignore it and draw a solid fill)
 
   Dashboards built through the 9.6 Dashboards API set the gradient
   fill on every area layer by default, so expect it in exports from
