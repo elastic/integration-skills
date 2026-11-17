@@ -123,21 +123,28 @@ change summary for each dashboard.
   The panel then shows nothing for policies using another namespace.
   Expect `logs-<pkg>.<dataset>-*`, or a broad pattern followed by
   `WHERE data_stream.dataset == "…"`.
-- **All-ES|QL dashboard without a dashboard-level filter:** The
-  package-spec validator does not read filters inside ES|QL queries,
-  so it needs a `data_stream.dataset` filter at dashboard level
-  (`kibanaSavedObjectMeta.searchSourceJSON.filter`) or it fails with
-  `SVR00002`. Flag a new `SVR00002` exclusion in `validation.yml`
-  unless the panels read indices without `data_stream.dataset`
-  (for example transform destination indices).
+- **All-ES|QL dashboard without a dashboard-level filter:** Expect a
+  `data_stream.dataset` filter at dashboard level
+  (`kibanaSavedObjectMeta.searchSourceJSON.filter`). The package-spec
+  validator does not read filters inside ES|QL queries and only checks
+  panels of type `lens`, `map` or `visualization`:
+  - panels of type `lens`: a missing filter fails `SVR00002` in CI
+  - panels of type `vis` (recent UI exports): CI passes; report the
+    missing filter as a scoping gap
+
+  Flag a new `SVR00002` exclusion in `validation.yml` unless the
+  panels read indices without `data_stream.dataset` (for example
+  transform destination indices).
 - **Dashboards API body committed as an asset:** A file in
   `kibana/dashboard/` with top-level `panels`, `pinned_panels` or
   panel `config.data_source` keys is a Kibana Dashboards API request
   body, not a saved object. Flag it; it must be exported from Kibana
   or compiled from YAML.
-- **Dashboard title convention:** Dashboard titles follow
-  `[<Logs|Metrics> <Package>] <Name>`. Flag other styles such as
-  `<Vendor Product> - <Name>`.
+- **Dashboard title convention (new dashboards):** Titles of added
+  dashboards follow `[<Logs|Metrics> <Package>] <Name>`, or
+  `[<Product> OTel] <Name>` in OTel content packages. Flag other
+  styles such as `<Vendor Product> - <Name>`. Do not flag the titles
+  of existing dashboards that a PR only edits.
 - **Layout of new dashboards (packages with a 9.4+ floor):** New
   dashboards should have a description and, with roughly 6 or more
   visualization panels, collapsible sections. Note their absence

@@ -32,7 +32,8 @@ Do not use this skill as the primary guide for:
 
 Before creating or updating dashboard assets, verify:
 1. you are in the correct package directory (`packages/<package_name>/`)
-2. Kibana/Elastic services are available for editing and exporting assets
+2. for the export path, Kibana/Elastic services are available for editing and
+   exporting assets (compiling YAML sources does not need a running Kibana)
 3. sample data exists and dashboards can be validated against realistic events/metrics
 4. the package's Kibana floor is known: the lowest version admitted by
    `conditions.kibana.version` in `manifest.yml`. New packages use `^9.4.0`
@@ -125,10 +126,18 @@ rules and ES|QL patterns. The rules that matter most:
   `WHERE data_stream.dataset == "<package>.<dataset>"`.
 - Data-view panels: filter on `data_stream.dataset`, never `event.dataset`.
 - **Dashboard-level filter:** also set a dashboard filter on
-  `data_stream.dataset`. The package-spec validator (`SVR00002`, "no filter
-  found") does not read filters inside ES|QL queries, so an all-ES|QL dashboard
-  without a dashboard-level filter fails `elastic-package check`; adding the
-  dashboard-level filter is enough to pass. Exclude
+  `data_stream.dataset`, so the dashboard is scoped as a whole. The
+  package-spec validator (`SVR00002`, "no filter found") does not read filters
+  inside ES|QL queries, and it only checks by-value panels of type `lens`,
+  `map` or `visualization`:
+  - ES|QL panels of type `lens` (kb-dashboard output, older exports): without
+    a dashboard-level filter `elastic-package check` fails; adding the filter
+    is enough to pass.
+  - Panels of type `vis` (recent Kibana UI exports): the validator skips them,
+    so the check passes without a filter. Add the dashboard-level filter
+    anyway.
+
+  Exclude
   `SVR00002` in the package's `validation.yml` only when the panels read
   indices that have no `data_stream.dataset` field, such as transform
   destination indices.
@@ -142,7 +151,7 @@ skills produce by default, do not exist at the 9.4 floor:
 |---|---|---|---|
 | Options-list control whose values come from an ES\|QL query (`values_source: esql`) | 9.5 | The control is silently dropped: the dashboard loads with no control | Control on a data view field |
 | Trend background chart on an ES\|QL metric | 9.6 | The metric shows its value without the trend | Metric without a background chart |
-| Gradient area fill (`styling.areas.fill: gradient`) | 9.6 | Ignored; areas render with a solid fill | Solid area fill (omit the setting) |
+| Gradient area fill (`"areaFill": "gradient"` in saved-object JSON; `styling.areas.fill: gradient` in the Dashboards API) | 9.6 | Ignored; areas render with a solid fill | Solid area fill (omit the setting) |
 
 These were checked by building a dashboard on Kibana 9.6 and importing it into
 9.4.2, 9.5.3 and 9.5.6. The `kibana-dashboards` skill in `elastic/agent-skills`
@@ -161,8 +170,11 @@ lower.
 - Dashboard title:
   - `[<Metrics | Logs> <PACKAGE NAME>] <Name>`
   - examples: `[Metrics System] Host overview`, `[Logs Nginx] Access overview`
-  - keep this convention for 9.4+ dashboards too; do not use other title styles
-    (such as `<Vendor Product> - <Name>`) that dashboard generators may produce
+  - OTel content packages use `[<Product> OTel] <Name>`
+    (example: `[ActiveMQ OTel] Overview`)
+  - keep these conventions for 9.4+ dashboards too; do not use other title
+    styles (such as `<Vendor Product> - <Name>`) that dashboard generators may
+    produce
 - Dashboard asset file:
   - `{PACKAGE_NAME}-{identifier}.json`
   - example: `nginx-046212a0-a2a1-11e7-928f-5dbe6f6f5519.json`
@@ -204,7 +216,8 @@ lower.
 - committing a Dashboards API request body instead of saved-object JSON
 - using settings from a newer Kibana than the package floor (see the table above)
 - hard-coding the `default` namespace in ES|QL `FROM` clauses
-- all-ES|QL dashboards without a dashboard-level filter, which fail `SVR00002`
+- all-ES|QL dashboards without a dashboard-level filter (unscoped, and they
+  fail `SVR00002` when the panels are of type `lens`)
 - using generic, unfiltered `logs-*`/`metrics-*` queries that cause noisy or slow panels
 - keeping stale field references after pipeline/field mapping changes
 - overloading one dashboard instead of splitting into overview and deep-dive views
