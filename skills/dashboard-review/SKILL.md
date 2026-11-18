@@ -110,8 +110,11 @@ change summary for each dashboard.
     `"values_source": "esql"` (needs 9.5; Kibana 9.4 silently drops
     the control)
   - an `lnsMetric` panel on the `textBased` (ES|QL) datasource whose
-    visualization state has a `trendlineLayerId` (trend background,
-    needs 9.6; older versions show the value without the trend)
+    visualization state has a `trendlineLayerId` (trend background;
+    older versions show the value without the trend). It needs 9.5
+    when `datasourceStates.textBased.layers` contains that layer ID
+    (the query filters on `?_tstart`/`?_tend` or uses `TS`), and 9.6
+    when the layer is missing
   - `"areaFill": "gradient"` in an XY visualization state (needs 9.6;
     older versions ignore it and draw a solid fill)
 
