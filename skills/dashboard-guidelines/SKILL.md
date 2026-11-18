@@ -150,12 +150,20 @@ skills produce by default, do not exist at the 9.4 floor:
 | Setting | Needs Kibana | On an older Kibana | Fallback when the package floor is lower |
 |---|---|---|---|
 | Options-list control whose values come from an ES\|QL query (`values_source: esql`) | 9.5 | The control is silently dropped: the dashboard loads with no control | Control on a data view field |
-| Trend background chart on an ES\|QL metric | 9.6 | The metric shows its value without the trend | Metric without a background chart |
+| Trend background chart on an ES\|QL metric, query filters `@timestamp` on `?_tstart`/`?_tend` (or uses `TS`) | 9.5 | The metric shows its value without the trend | Metric without a background chart |
+| Trend background chart on an ES\|QL metric, query without a time filter | 9.6 | The metric shows its value without the trend | Add the time filter (floor 9.5), or no background chart |
 | Gradient area fill (`"areaFill": "gradient"` in saved-object JSON; `styling.areas.fill: gradient` in the Dashboards API) | 9.6 | Ignored; areas render with a solid fill | Solid area fill (omit the setting) |
 
-These were checked by building a dashboard on Kibana 9.6 and importing it into
-9.4.2, 9.5.3 and 9.5.6. The `kibana-dashboards` skill in `elastic/agent-skills`
-lists the trend background as 9.5; on 9.5.3 and 9.5.6 it did not render.
+The trend background needs a separate trendline layer with a time-bucketed
+query. From 9.5, Kibana stores that layer in the saved object when the metric's
+query exposes a time field: a `WHERE @timestamp ... ?_tstart ... ?_tend` filter
+or a `TS` source. Without one, no layer is stored; only Kibana 9.6 rebuilds it
+when the dashboard loads. Kibana 9.4 shows no ES\|QL trend background even when
+the layer is stored.
+
+These were checked by building dashboards through the Dashboards API on 9.6
+(imported into 9.4.2, 9.5.3 and 9.5.6) and on 9.5.3 (imported into 9.4.2). The
+`TS` case comes from the Kibana source and was not run.
 
 Use a setting only when the package floor is at or above the version in the
 table; otherwise use the fallback. Do not raise the package's Kibana floor
