@@ -83,6 +83,7 @@ For every file in scope, classify into a domain:
 | `_dev/test/pipeline/*` | tests |
 | `_dev/test/system/*` | tests |
 | `kibana/**/*.json` | dashboard |
+| `_dev/shared/kibana/*.yaml` | dashboard |
 | `_dev/build/docs/README.md` | docs |
 | `elasticsearch/transform/**` | transform |
 | `*-expected.json`, `sample_event*.json` | generated (excluded from review; CI-owned) |
@@ -248,7 +249,7 @@ Every issue must include exactly one domain tag:
 | `domain:input` | Agent stream template issues -- all input types including CEL, HTTPJSON, AWS S3, TCP, etc. |
 | `domain:fields` | Field definitions, types, duplicates, geo nesting, ECS mapping strategy |
 | `domain:tests` | Handwritten pipeline input fixtures, system test configs, test-common-config.yml, and scenario coverage; excludes generated expected/sample outputs |
-| `domain:dashboard` | Kibana dashboard JSON at package root (kibana/), TSVB, dataset filters, by-reference panels |
+| `domain:dashboard` | Kibana dashboard JSON at package root (kibana/) and YAML sources (`_dev/shared/kibana/`), TSVB, dataset filters, by-reference panels, ES\|QL scope, settings above the Kibana floor |
 | `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR, TI |
 | `domain:docs` | README content, placeholder text, title/description quality |
 | `domain:anonymization` | Real data in committed files, non-synthetic IPs/hostnames/credentials |
