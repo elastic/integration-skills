@@ -15,9 +15,8 @@ Use this reference for understanding package topology, required files, and manif
 Index write permissions for an input package are derived from
 `policy_templates[].type`: a template declaring `logs` yields an agent API key
 scoped to `logs-*-*` and nothing else (the one exception, `dynamic_signal_types`,
-is below). There is no `dynamic_type` counterpart to
-`dynamic_dataset`/`dynamic_namespace`, so a `data_stream.type` **variable cannot
-widen the grant** — routing follows the variable, the writes are denied, and the
+is below). Nothing widens that grant to another type, so a `data_stream.type`
+**variable cannot change the signal type** — routing follows the variable, the writes are denied, and the
 only trace is a `security_exception` in the agent event log:
 
     action [indices:admin/auto_create] is unauthorized for API key ... on
