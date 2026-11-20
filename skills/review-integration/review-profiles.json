@@ -28,7 +28,8 @@
       "review-integration/checklists/field-review-checklist.md",
       "review-integration/references/domains/fields/rubric.md",
       "entity-mappings/references/entity-field-catalog.md",
-      "genai-mappings/references/genai-field-catalog.md"
+      "genai-mappings/references/genai-field-catalog.md",
+      "genai-mappings/references/genai-detection-conventions.md"
     ],
     "input": [
       "cel-programs/SKILL.md",

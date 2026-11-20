@@ -64,6 +64,7 @@ minimum for GenAI work.**
 | `v9.1.0` – `v9.4.0` | Old field set: `gen_ai.system` (no `gen_ai.provider.name`), token counts typed `integer`, **no** `input.messages`, `output.messages`, `system_instructions`, `tool.definitions`, `tool.call.arguments`, `tool.call.result`. |
 | `v9.5.0` | Current field set: `gen_ai.system` removed and replaced by `gen_ai.provider.name`, counts typed `long`, the six `flattened` content fields added. |
 | ECS `main` (unreleased) | Adds `gen_ai.conversation.id`. Not usable until an ECS release includes it. |
+| RFC 0060 (accepted, unreleased) | `gen_ai.tool.source.*`, `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`. Wait for an ECS release. |
 
 **Pin rule:** packages with GenAI data streams must set `dependencies.ecs.reference:
 "git@v9.5.0"` (or newer) in `_dev/build/build.yml`, and set the matching `ecs.version` in
@@ -97,7 +98,17 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
   package's pin. OTel defines more GenAI attributes than ECS, and unreleased ECS `main` has
   `gen_ai.conversation.id`; neither is a reason to add them. ECS may adopt them under a
   different name or type, which would then conflict with the package's definition. Anything
-  without an ECS field goes to `<integration>.<data_stream>.<field>`.
+  without an ECS field goes to `<integration>.<data_stream>.<field>`. Check names against the
+  pinned release's `ecs_nested.yml` (`references/genai-detection-conventions.md`, section 1),
+  in gap analyses and in builds alike.
+- **Detection conventions.** elastic/integrations#22224 and #22225 fix how integrations fill
+  `gen_ai.*` for detection rules and ML jobs: provider and operation values per source, one
+  record per tool call or order-aligned arrays, call results, the stable principal in
+  `user.name`, tool definition types, tool results under `role: tool`. They are in
+  `references/genai-detection-conventions.md`.
+- **Published fields change in two releases.** Find the rules, ML jobs and dashboards that read
+  a field before renaming or removing it. Add the new field and deprecate the old one in a
+  minor, and remove it in the next major, after the consumers have moved.
 - **Values come from OTel.** ECS `gen_ai` is defined as a match of the OTel GenAI semantic
   conventions. Use OTel's well-known values for `gen_ai.provider.name`,
   `gen_ai.operation.name`, `gen_ai.output.type` and `gen_ai.tool.type`, and the OTel JSON
@@ -119,8 +130,8 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
 
 | Mode | How it's triggered | What to load |
 |---|---|---|
-| **Standalone gap analysis** | User invokes `/genai-mappings @packages/<name>` | Read `references/gap-analysis-workflow.md`, then the classification, source-discovery, catalog and pipeline-patterns references as the workflow phases ask. Dispatch per-stream subagents with `references/analysis-subagent-guidance.md`. |
-| **Build-time** | An orchestrator passes `references/genai-field-catalog.md` and `references/genai-pipeline-patterns.md` by path to the pipeline builder subagent | The builder reads both references. This SKILL.md does not need to be loaded in the orchestrator thread. |
+| **Standalone gap analysis** | User invokes `/genai-mappings @packages/<name>` | Read `references/gap-analysis-workflow.md`, then the classification, source-discovery, catalog, detection-conventions and pipeline-patterns references as the workflow phases ask. Dispatch per-stream subagents with `references/analysis-subagent-guidance.md`. |
+| **Build-time** | An orchestrator passes `references/genai-field-catalog.md` and `references/genai-pipeline-patterns.md` by path to the pipeline builder subagent | The builder reads both references, and `references/genai-detection-conventions.md` when the stream has tool calls, a caller identity, or changes a published field. This SKILL.md does not need to be loaded in the orchestrator thread. |
 | **Review-time** | A reviewer finds `gen_ai.*` fields, or a stream classified as GenAI | Reviewer reads `genai-field-catalog.md` (checklist at the end) and `genai-pipeline-patterns.md`. |
 | **Research-time** | `research-integration` (orchestrator reads the classification; the Track G subagent reads both) | Load only `references/genai-datastream-classification.md` and `references/genai-source-discovery.md`. **Do not load the catalog or pipeline patterns during research**: they are implementation material. |
 
@@ -142,6 +153,12 @@ The development workflow loads these references automatically:
   `gen_ai.agent.version`, `gen_ai.tool.description`, …) are not used under `gen_ai.*`. The
   source values stay in the vendor namespace. Research still records them, so that they can be
   moved once ECS adds the fields.
+- **Wait for an ECS release:** `gen_ai.tool.source.*` and
+  `gen_ai.usage.cache_read.input_tokens` / `cache_write.input_tokens` are accepted in RFC 0060
+  (elastic/ecs#2711) but not in a release. Copy the vendor values to them in the minor after
+  the release that ships them.
+- **Tool results on provider logs** (#22225 section 2) were an open question on 2026-11-20.
+  Until it is answered, results stay in the input messages (detection conventions, section 5).
 - **`nested`-typed ECS fields**: once elastic/ecs#2560 is fixed, the local `keyword`
   overrides can become `external: ecs`.
 
@@ -156,6 +173,9 @@ The development workflow loads these references automatically:
 - `references/genai-pipeline-patterns.md` — tested processor patterns: constants, operation
   mapping, token totals, finish reasons, decoding serialized bodies, normalizing messages,
   tool calls, reasoning blocks
+- `references/genai-detection-conventions.md` — the #22224 / #22225 conventions: the ECS field
+  check, provider and operation values per source, tool calls and results, categorization,
+  identity, tool definitions, change classes and the release sequence for breaking changes
 - `references/genai-datastream-classification.md` — which data streams are in scope and which
   field groups apply to each kind of stream
 - `references/gap-analysis-workflow.md` — standalone audit of an existing package

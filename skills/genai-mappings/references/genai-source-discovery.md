@@ -151,7 +151,7 @@ Tool results are `role: tool` messages with `tool_call_id` in the **next** reque
 | `request.max_tokens` / `temperature` / `top_p` | `max_output_tokens` / `temperature` / `top_p` |
 | `tool.definitions` | `tools[]` |
 | `tool.name` / `tool.call.id` / `tool.call.arguments` | `output[type=function_call]` `name` / `call_id` / `arguments` (JSON string) |
-| `response.finish_reasons` | derived from `status` + `incomplete_details.reason` |
+| `response.finish_reasons` | the provider value, verbatim: `incomplete_details.reason` when the response is incomplete, else `status` (`completed`, `failed`, `cancelled`); the normalized value goes to the output message `finish_reason` (pipeline patterns, *Other formats*) |
 | `usage.*` | `usage.input_tokens` (includes cached), `usage.output_tokens` (includes reasoning), `usage.input_tokens_details.cached_tokens`, `usage.output_tokens_details.reasoning_tokens` |
 | vendor namespace (previous response) | `previous_response_id` |
 | vendor namespace (conversation; `gen_ai.conversation.id` once ECS releases it) | `conversation.id` when the response belongs to a conversation |
@@ -186,7 +186,8 @@ body. The parameters that can appear depend on it.
 | gen_ai field | Envelope field |
 |---|---|
 | `provider.name` | `aws.bedrock` (always) |
-| `operation.name` | from `operation`: `Converse`, `ConverseStream`, `InvokeModel`, `InvokeModelWithResponseStream` → `chat` for chat/text models; embedding models → `embeddings`. The model family decides. |
+| `operation.name` | from `operation`: `Converse`, `ConverseStream` → `chat`. `InvokeModel`, `InvokeModelWithResponseStream`: `chat` for a `messages` body, `text_completion` for a single `prompt`/`inputText` string with no messages, `embeddings` for embedding models; unset for image, video and rerank models. The model family decides, or the body shape when the `modelId` is an ARN that doesn't name the family. `ApplyGuardrail` → unset. The operation stays in `event.action`. |
+| `user.name` | from `identity.arn` (`genai-detection-conventions.md`, section 7) |
 | `request.model` | `modelId` (model id, inference profile id or ARN, as requested) |
 | `usage.input_tokens` / `output_tokens` | `input.inputTokenCount` / `output.outputTokenCount`, unless the body has a fuller breakdown (cache tokens) |
 | Everything else | Decode `input.inputBodyJson` / `output.outputBodyJson` with the model family's table, or the Converse table |
@@ -196,7 +197,7 @@ body. The parameters that can appear depend on it.
 
 | gen_ai field | Source |
 |---|---|
-| `input.messages` | `messages[]` with `content[]` blocks: `text`, `image`, `document`, `toolUse`, `toolResult`, `reasoningContent` |
+| `input.messages` | `messages[]` with `content[]` blocks: `text`, `image`, `document`, `toolUse`, `toolResult` (sent in a `user` turn; goes under `role: tool`), `reasoningContent` |
 | `system_instructions` | `system[]` (`{text}` blocks) |
 | `request.max_tokens` / `temperature` / `top_p` / `stop_sequences` | `inferenceConfig.maxTokens` / `.temperature` / `.topP` / `.stopSequences` |
 | `request.top_k` | `additionalModelRequestFields.top_k` (model-specific) |
@@ -305,9 +306,11 @@ doc URL or a fixture.
 | `token.type` | Are rows split by token kind? |
 | `tool.definitions` | Are tool schemas in the request? Built-in/server tools? MCP tools? |
 | `tool.name` / `tool.call.id` / `tool.call.arguments` | Where are the model's tool calls? One per record or many? Arguments as a JSON string or an object? Is the real tool name hidden behind a placeholder (MCP)? Which field is the tool's input, and which is product metadata about the call? |
-| `tool.call.result` | Are tool results logged, and under which opt-in? In this record, in the next request, or in a different signal (span event)? |
-| `tool.type` | Does the source say where the tool runs (client function, agent-side extension, datastore)? |
+| `tool.call.result` | Are tool results logged, and under which opt-in? In this record, in the next request, or in a different signal (span event)? Does the record show the tool run (option A), or only a provider invocation (option B, see the open question in `genai-detection-conventions.md`, section 5)? |
+| `tool.type` | Does the source say where the tool runs (client function, agent-side extension, datastore)? Which native tool types occur (built-in, server, MCP, retrieval)? |
 | `agent.id` / `name` / `description` | Is there a hosted agent resource with a stable id? |
+| `user.name` | Which identity field is stable across sessions? Does any form of it (an assumed-role session, a per-invocation token) change per session? |
+| tool source (vendor namespace until ECS releases `gen_ai.tool.source.*`) | Does the record name the MCP server, gateway target or registry the tool came from? |
 
 ### Adjacent ECS fields
 
@@ -315,7 +318,9 @@ Security detections on GenAI data also rely on these. Check them in the same pas
 
 | ECS field | Typical source |
 |---|---|
-| `user.*` (`user.id`, `user.email`, `user.name`) | Caller identity: IAM ARN, API key owner, account email, `metadata.user_id` |
+| `user.*` (`user.id`, `user.email`, `user.name`) | Caller identity: IAM ARN, API key owner, account email, `metadata.user_id`. `user.name` must be the principal that stays the same across sessions (for an assumed-role ARN, the role name, not the session); see `genai-detection-conventions.md`, section 7 |
+| `related.user` | Session names and other actor labels that are not the stable principal |
+| `event.action` | The native operation verb, event name or gateway operation |
 | `source.ip`, `user_agent.*` | Caller IP and client |
 | `organization.*`, `cloud.account.id`, `cloud.region` | Tenant, account, region |
 | `file.path` | Tool arguments of file read/write/edit tools |

@@ -13,17 +13,21 @@ noise, and treating an in-scope stream as out of scope hides real gaps.
 | Kind | What one record is | Examples | Field groups that apply |
 |---|---|---|---|
 | **Inference** | One model call: request and/or response | Bedrock model invocation logs, Azure OpenAI / APIM gateway request-response logs, Vertex AI request-response logs, LiteLLM spend logs, OpenAI Responses objects, Anthropic Compliance API `/v1/messages` records | Identity, request parameters, response, usage, content, tool (as `tool_call` parts and name/id arrays) |
-| **Agent / orchestration** | One agent invocation, step or run | Bedrock AgentCore runtime logs, ChatGPT Enterprise custom agent runs, agent spans | Identity (`operation.name: invoke_agent` / `create_agent`), agent, content when logged |
-| **Tool execution** | One tool / connector / MCP call | AgentCore gateway logs, Claude Code `tool_result` / `tool_decision` events, ChatGPT Enterprise app and connector logs | Identity (`operation.name: execute_tool`), all `gen_ai.tool.*`; plus `file.*`, `url.*`, `destination.*` from the tool arguments |
+| **Agent / orchestration** | One agent invocation, step or run | Bedrock AgentCore runtime logs, ChatGPT Enterprise custom agent runs, agent spans | Identity (`operation.name: invoke_agent` / `create_agent`), agent (`gen_ai.agent.*`, a key separate from the caller in `user.*`), content when logged |
+| **Tool execution** | One tool / connector / MCP call | AgentCore gateway logs, Claude Code `tool_result` / `tool_decision` events, ChatGPT Enterprise app and connector logs | Identity (`operation.name: execute_tool` where the tool ran; the native verb in `event.action`), all `gen_ai.tool.*` (option A, `genai-detection-conventions.md`), `event.outcome` of the call; plus `file.*`, `url.*`, `destination.*` from the tool arguments |
 | **Conversation / message** | One message in a conversation | ChatGPT Enterprise conversation messages, Claude Code `user_prompt` events | Identity, the message in `input.messages` (user) or `output.messages` (assistant), `response.model`/`response.id` on assistant messages |
 | **Usage / cost metrics** | An aggregate per time bucket and model | Anthropic Admin usage and cost reports, OpenAI usage API, Vertex AI and Azure OpenAI platform metrics | `provider.name`, `request.model` (as a dimension), `usage.input_tokens` / `usage.output_tokens` as bucket totals, `token.type` on rows broken down by token type. Cache token counts stay in the vendor namespace. |
 | **Product telemetry** (OTel-native apps) | One event or span emitted by an AI application | Claude Code / Claude Cowork OTel events, Codex logs | Map per event type: each event type is one of the kinds above (an `api_request` event is inference, a `tool_result` event is tool execution) |
 | **Out of scope** | Records that only mention an AI product | Admin audit logs (user invited, key created, setting changed), billing without a model dimension, generic infrastructure metrics | None. At most `gen_ai.provider.name` when it helps correlation. Do not report missing fields. |
 
 **Time-series (TSDB) metric streams** (`index_mode: time_series`): adding a new `dimension: true`
-field changes the time-series identity of every document. When `gen_ai.request.model` copies a
+field changes the time-series identity of the documents that carry it. When `gen_ai.request.model` copies a
 field that is already a dimension (such as a CloudWatch `ModelId`), define it **without**
 `dimension: true`. Token counts copied to `gen_ai.usage.*` keep the source's `metric_type`.
+The other way round: when a change adds a source field that **splits** series (a new CloudWatch
+dimension such as a context-window size), define it with `dimension: true`, or documents that
+differ only in that field get the same time-series id and are rejected as duplicates.
+Usage metric streams get no `gen_ai.operation.name`: a bucket is not one operation.
 
 A stream can hold several kinds, discriminated by an event-type field (product telemetry, Admin
 API audit logs that contain `compliance_api_accessed` records with request bodies). Classify
@@ -79,7 +83,7 @@ question is what the **source** sends, not what the current pipeline keeps.
 | Package | Stream | Kind | Deciding evidence |
 |---|---|---|---|
 | `aws_bedrock` | `invocation` | Inference | Model invocation logs with `input.inputBodyJson`, `output.outputBodyJson`, token counts |
-| `aws_bedrock` | `runtime`, `guardrails` | Usage metrics (TSDB) | CloudWatch metrics; `runtime` has per-model token counts with the model id as a dimension |
+| `aws_bedrock` | `runtime`, `guardrails` | Usage metrics (TSDB) | CloudWatch metrics; `runtime` has per-model token counts with the model id as a dimension. `guardrails` has no model dimension but is the GenAI service's own metrics: `gen_ai.provider.name` only. |
 | `aws_bedrock_agentcore` | `runtime_application_logs` | Agent | `InvokeAgentRuntime` records with session id and prompt payload |
 | `aws_bedrock_agentcore` | `gateway_application_logs` | Tool execution | Gateway tool invocations with tool name and target |
 | `aws_bedrock_agentcore` | `memory_application_logs` | Agent (memory) | Check for memory operations → `operation.name` memory values |

@@ -201,7 +201,9 @@ make sure they are copied there before `_temp` is removed.
 ## Messages
 
 Build `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions` and
-`gen_ai.tool.definitions` in one `script` per vendor format. The target shape is in the
+`gen_ai.tool.definitions` in one `script` per vendor format. The message fields are for chat,
+text completion and content generation; embeddings, rerank and image records leave them
+unset. The target shape is in the
 catalog's *Message shapes* section. Rules the scripts follow:
 
 - Every message is `{role, parts: [...]}`. Every part has a `type`.
@@ -272,6 +274,17 @@ of the chat history).
         input.add(['role': m.role, 'parts': parts]);
       }
       if (!input.isEmpty()) { g.input = ['messages': input]; }
+      List defs = new ArrayList();
+      for (def t : ctx._temp?.request?.tools ?: []) {
+        if (!(t instanceof Map)) { continue; }
+        Map fn = t.function instanceof Map ? t.function : t;
+        if (fn.name == null) { continue; }
+        Map d = ['type': 'function', 'name': fn.name];
+        if (fn.description != null) { d.description = fn.description; }
+        if (fn.parameters != null) { d.parameters = fn.parameters; }
+        defs.add(d);
+      }
+      if (!defs.isEmpty()) { g.tool = ['definitions': defs]; }
       List output = new ArrayList();
       List reasons = new ArrayList();
       List toolNames = new ArrayList();
@@ -299,27 +312,54 @@ of the chat history).
         g.response.finish_reasons = reasons;
       }
       if (!toolNames.isEmpty()) {
-        g.tool = ['name': toolNames];
-        if (!toolIds.isEmpty()) { g.tool.call = ['id': toolIds]; }
+        // Option B: the response's calls, in generation order. Chat Completions tools are all
+        // client-side functions, so every type is function.
+        g.tool = g.tool instanceof Map ? g.tool : new HashMap();
+        g.tool.name = toolNames;
+        List toolTypes = new ArrayList();
+        for (def n : toolNames) { toolTypes.add('function'); }
+        g.tool.type = toolTypes;
+        // An id array shorter than the name array would pair names with the wrong ids.
+        if (toolIds.size() == toolNames.size()) { g.tool.call = ['id': toolIds]; }
       }
       if (!g.isEmpty()) { ctx.gen_ai = g; }
 ```
 
-Add `tools[].function` → `gen_ai.tool.definitions` (`{type: 'function', name, description,
-parameters}`) in the same script when the request carries tools.
+`tools[].function` becomes `gen_ai.tool.definitions` entries `{type: function, name,
+description, parameters}`. The name, type and id arrays list only the response's calls: the
+`tool_calls` of earlier assistant turns in `messages[]` are history and stay in
+`gen_ai.input.messages` (`genai-detection-conventions.md`, section 4).
 
 ### Anthropic Messages format
 
 Covers the Anthropic API, Bedrock `InvokeModel` for Claude models, and Anthropic Compliance API
-request bodies. `system` goes to `system_instructions`. `thinking` becomes `reasoning`. Tool
-results stay in the `user` turn where Anthropic puts them.
+request bodies. `system` goes to `system_instructions`. `thinking` becomes `reasoning`.
+Anthropic sends tool results inside a `user` turn. OTel puts them in a `role: tool` message, so
+the script splits that turn and keeps the order of its blocks (#22225 section 5).
 
 ```yaml
 - script:
     tag: script_normalize_anthropic_messages
-    description: Normalize Anthropic Messages request and response bodies into the OTel GenAI message shape.
+    description: >-
+      Normalize Anthropic Messages request and response bodies into the OTel GenAI message
+      shape. Tool results move from the user turn to a role tool message. Tool definition types
+      become OTel values: client tools are function, server tools are extension. The tool name,
+      type and id arrays list the response's tool calls in generation order.
     lang: painless
     if: ctx._temp?.request instanceof Map || ctx._temp?.response instanceof Map
+    params:
+      function_tool_prefixes:
+        - bash_
+        - text_editor_
+        - computer_
+        - memory_
+      finish_reasons:
+        end_turn: stop
+        stop_sequence: stop
+        max_tokens: length
+        model_context_window_exceeded: length
+        tool_use: tool_call
+        refusal: content_filter
     source: |
       List toParts(def content) {
         List out = new ArrayList();
@@ -346,44 +386,82 @@ results stay in the `user` turn where Anthropic puts them.
         }
         return out;
       }
+      String toolType(def nativeType, Map p) {
+        if (!(nativeType instanceof String) || nativeType == 'custom') { return 'function'; }
+        for (def x : p.function_tool_prefixes) {
+          if (nativeType.startsWith(x)) { return 'function'; }
+        }
+        return 'extension';
+      }
       Map rb = ctx._temp?.request;
       Map resp = ctx._temp?.response;
       Map g = ctx.gen_ai instanceof Map ? ctx.gen_ai : new HashMap();
+      Map defTypes = new HashMap();
       if (rb != null) {
         List sys = toParts(rb.system);
         if (!sys.isEmpty()) { g.system_instructions = sys; }
         List input = new ArrayList();
         for (def m : rb.messages ?: []) {
-          if (m instanceof Map && m.role != null) { input.add(['role': m.role, 'parts': toParts(m.content)]); }
+          if (!(m instanceof Map) || m.role == null) { continue; }
+          List cur = new ArrayList();
+          String curRole = m.role;
+          for (def p : toParts(m.content)) {
+            String r = p.type == 'tool_call_response' ? 'tool' : m.role;
+            if (r != curRole && !cur.isEmpty()) {
+              input.add(['role': curRole, 'parts': cur]);
+              cur = new ArrayList();
+            }
+            curRole = r;
+            cur.add(p);
+          }
+          input.add(['role': curRole, 'parts': cur]);
         }
         if (!input.isEmpty()) { g.input = ['messages': input]; }
         if (rb.tools instanceof List && !rb.tools.isEmpty()) {
           List defs = new ArrayList();
           for (def t : rb.tools) {
             if (!(t instanceof Map)) { continue; }
-            Map d = ['type': t.type ?: 'function', 'name': t.name];
+            // A built-in tool without a name takes its native type as name.
+            Map d = ['type': toolType(t.type, params), 'name': t.name ?: t.type];
             if (t.description != null) { d.description = t.description; }
             if (t.input_schema != null) { d.parameters = t.input_schema; }
             defs.add(d);
+            if (d.name != null) { defTypes.putIfAbsent(d.name, d.type); }
           }
           g.tool = ['definitions': defs];
         }
       }
       if (resp != null) {
-        Map fr = ['end_turn': 'stop', 'stop_sequence': 'stop', 'max_tokens': 'length', 'tool_use': 'tool_call', 'refusal': 'content_filter'];
         Map om = ['role': resp.role ?: 'assistant', 'parts': toParts(resp.content)];
         if (resp.stop_reason != null) {
-          om.finish_reason = fr.getOrDefault(resp.stop_reason, resp.stop_reason);
+          om.finish_reason = params.finish_reasons.getOrDefault(resp.stop_reason, resp.stop_reason);
           g.response = g.response ?: new HashMap();
           g.response.finish_reasons = [resp.stop_reason];
         }
         g.output = ['messages': [om]];
+        List names = new ArrayList();
+        List types = new ArrayList();
+        List ids = new ArrayList();
+        for (def p : om.parts) {
+          if (p.type == 'tool_call' && p.name != null) {
+            names.add(p.name);
+            types.add(defTypes.getOrDefault(p.name, 'function'));
+            if (p.id != null) { ids.add(p.id); }
+          }
+        }
+        if (!names.isEmpty()) {
+          g.tool = g.tool instanceof Map ? g.tool : new HashMap();
+          g.tool.name = names;
+          g.tool.type = types;
+          if (ids.size() == names.size()) { g.tool.call = ['id': ids]; }
+        }
       }
       if (!g.isEmpty()) { ctx.gen_ai = g; }
 ```
 
 The `redacted_thinking` block falls into the generic branch and keeps only its type: its data
-is encrypted.
+is encrypted. Server tools (`web_search_*`, `code_execution_*`) are `extension`; add the
+retrieval tools of the API version you map to a `datastore` list if it has any.
 
 ### Other formats
 
@@ -391,9 +469,22 @@ Adapt one of the two scripts. The table lists the differences:
 
 | Format | Messages | System | Tool call / result | Reasoning | Finish reason → OTel |
 |---|---|---|---|---|---|
-| Bedrock Converse | `messages[].content[]` blocks keyed by name (`{text}`, `{toolUse}`, `{toolResult}`) | `system[].text` | `toolUse{toolUseId,name,input}` / `toolResult{toolUseId,content}` | `reasoningContent.reasoningText.text` | `end_turn`,`stop_sequence`→`stop`; `max_tokens`→`length`; `tool_use`→`tool_call`; `guardrail_intervened`,`content_filtered`→`content_filter` |
+| Bedrock Converse | `messages[].content[]` blocks keyed by name (`{text}`, `{toolUse}`, `{toolResult}`) | `system[].text` | `toolUse{toolUseId,name,input}` → `tool_call`; `toolResult{toolUseId,content,status}` → `tool_call_response` in a **`role: tool`** message (Bedrock sends it in a `user` turn; split it as the Anthropic script does) | `reasoningContent.reasoningText.text` | see the table below |
 | Gemini / Vertex | `contents[]` with `role` `user`/`model` (→`assistant`), `parts[]` | `systemInstruction.parts[].text` | `functionCall{name,args,id?}` / `functionResponse{name,response,id?}` | parts with `thought: true` | `STOP`→`stop`; `MAX_TOKENS`→`length`; `SAFETY`,`RECITATION`,`BLOCKLIST`,`PROHIBITED_CONTENT`,`SPII`→`content_filter`; `MALFORMED_FUNCTION_CALL`→`error` |
-| OpenAI Responses | `input` (string or items) | `instructions` | `output[type=function_call]{call_id,name,arguments}`; results are `function_call_output` items in a later `input` | `output[type=reasoning].summary[].text` | from `status`/`incomplete_details.reason`: `completed`→`stop`; `max_output_tokens`→`length`; `content_filter`→`content_filter`; `failed`/`cancelled`→`error` |
+| OpenAI Responses | `input` (string or items) | `instructions` | `output[type=function_call]{call_id,name,arguments}`; results are `function_call_output` items in a later `input` (→ `role: tool`) | `output[type=reasoning].summary[].text` | from `status`/`incomplete_details.reason`: `completed`→`stop`; `max_output_tokens`→`length`; `content_filter`→`content_filter`; `failed`/`cancelled`→`error` |
+
+**Worked example: Bedrock `stopReason` → output message `finish_reason`.** The per-message value
+uses the OTel enumeration; `gen_ai.response.finish_reasons` keeps the Bedrock value. Values from
+the Bedrock Converse API reference; the OTel value is the closest match where none is exact.
+
+| Bedrock `stopReason` | `finish_reason` |
+|---|---|
+| `end_turn`, `stop_sequence` | `stop` |
+| `tool_use` | `tool_call` |
+| `max_tokens`, `model_context_window_exceeded` | `length` |
+| `guardrail_intervened`, `content_filtered` | `content_filter` |
+| `malformed_model_output`, `malformed_tool_use` | `error` |
+| anything else | the Bedrock value, unchanged |
 
 ---
 
@@ -434,12 +525,204 @@ calls) set the scalar tool fields directly:
 `Json.load("42")` returns a number, so the scalar check runs after decoding, not instead of it.
 Use the same script for `gen_ai.tool.call.arguments`.
 
+When a gateway prefixes the tool name with its target (`<target>___<tool>`), split it:
+`gen_ai.tool.name` gets `<tool>`, and the target stays in the vendor namespace until
+`gen_ai.tool.source.*` is released (detection conventions, section 4).
+
 When a product hides the real tool name behind a placeholder (for example `mcp_tool`), resolve
 the real name from the tool parameters before setting `gen_ai.tool.name`, and keep the
 placeholder in the vendor namespace.
 
 Extract `file.path`, `url.full`/`url.domain`, `destination.address` and
 `process.command_line` from the decoded arguments of file, fetch and shell tools.
+
+Set `gen_ai.operation.name: execute_tool` only when the record shows that the tool ran. Set
+`gen_ai.tool.type` from the source (`genai-detection-conventions.md`, section 8), keep the native
+verb in `event.action`, and let `event.outcome` / `error.type` describe the tool call. On these
+records `event.category` may follow what the tool did (`genai-detection-conventions.md`,
+section 6). Never set `event.category` on calls taken from a provider log.
+
+---
+
+## Identity
+
+`user.name` holds the stable principal (`genai-detection-conventions.md`, section 7). For AWS
+caller ARNs, the same rules as `aws.cloudtrail` (from `aws_bedrock` 2.4.0):
+
+```yaml
+- grok:
+    tag: grok_user_name_from_identity_arn
+    description: >-
+      user.name is the IAM user name (without its path), the federated user name, or the role
+      name of an assumed role. The session name of an assumed role changes per session, so it
+      goes to related.user only. Root and other principals leave user.name unset.
+    field: user.id
+    patterns:
+      - '^arn:[^:]+:iam::[^:]*:user/(?:[^/]+/)*%{NOT_SLASH:user.name}$'
+      - '^arn:[^:]+:sts::[^:]*:assumed-role/%{NOT_SLASH:user.name}/%{NOT_SLASH:_temp.user.session_name}$'
+      - '^arn:[^:]+:sts::[^:]*:federated-user/%{NOT_SLASH:user.name}$'
+    pattern_definitions:
+      NOT_SLASH: '[^/]+'
+    if: >-
+      ctx.user?.id instanceof String && ctx.user.id.startsWith('arn:') &&
+      (ctx.user.id.contains(':user/') || ctx.user.id.contains(':assumed-role/') || ctx.user.id.contains(':federated-user/'))
+    ignore_failure: true
+- append:
+    tag: append_related_user_user_name
+    field: related.user
+    value: '{{{user.name}}}'
+    allow_duplicates: false
+    if: ctx.user?.name != null
+- append:
+    tag: append_related_user_session_name
+    field: related.user
+    value: '{{{_temp.user.session_name}}}'
+    allow_duplicates: false
+    if: ctx._temp?.user?.session_name != null
+```
+
+When the session name is an email address, `aws_bedrock` also copies it to `user.email`. The
+README states the derivation.
+
+---
+
+## Flattened safety
+
+Three processors, in this order, at the end of the pipeline (catalog rules 2 and 2b).
+
+### Serialize with `Json.dump`
+
+Any value that must become a JSON string (a subtree over the depth limit, a raw body kept as
+text) is made with `Json.dump`. Never concatenate strings or use `toString()`: a `Map`'s
+`toString()` is not JSON, and hand-built JSON breaks on quotes and backslashes in the content.
+
+### Empty-value cleanup skips tool schemas
+
+A recursive "drop null and empty values" script changes tool definitions (and, the same way,
+`gen_ai.tool.call.arguments` and `.result`, which are what the model and the tool sent: skip
+them too where the package sets them): it turns
+`enum: ['', null, 'ok']` into `['ok']` and removes empty property schemas, which are part of
+the tool interface. Take the subtree out first and put it back after:
+
+```yaml
+- script:
+    tag: script_drop_empty_values_keep_tool_definitions
+    description: >-
+      Drop null and empty values recursively. gen_ai.tool.definitions is left out, because
+      empty and null values in a tool's parameter schema are part of the tool interface.
+    lang: painless
+    source: |
+      boolean drop(Object o) {
+        if (o == null || o == '') {
+          return true;
+        } else if (o instanceof Map) {
+          ((Map) o).values().removeIf(v -> drop(v));
+          return ((Map) o).size() == 0;
+        } else if (o instanceof List) {
+          ((List) o).removeIf(v -> drop(v));
+          return ((List) o).size() == 0;
+        }
+        return false;
+      }
+      def defs = null;
+      if (ctx.gen_ai?.tool instanceof Map && ctx.gen_ai.tool.definitions != null) {
+        defs = ctx.gen_ai.tool.remove('definitions');
+      }
+      drop(ctx);
+      if (defs != null) {
+        if (!(ctx.gen_ai instanceof Map)) { ctx.gen_ai = new HashMap(); }
+        if (!(ctx.gen_ai.tool instanceof Map)) { ctx.gen_ai.tool = new HashMap(); }
+        ctx.gen_ai.tool.definitions = defs;
+      }
+```
+
+Packages without such a script don't need one.
+
+### Depth cap
+
+```yaml
+- script:
+    tag: script_cap_flattened_depth
+    description: >-
+      A flattened field rejects the whole document when an object is nested more than 20
+      levels deep, which a deep tool schema, tool input or tool result can reach. Store any
+      object below max_depth levels as a JSON string. Values within the limit are unchanged.
+    lang: painless
+    params:
+      max_depth: 20
+      fields:
+        - [gen_ai, input, messages]
+        - [gen_ai, output, messages]
+        - [gen_ai, system_instructions]
+        - [gen_ai, tool, definitions]
+        - [gen_ai, tool, call, arguments]
+        - [gen_ai, tool, call, result]
+    source: |
+      int depth(def v) {
+        int d = 0;
+        if (v instanceof Map) {
+          for (def x : v.values()) { d = (int) Math.max(d, depth(x)); }
+          return d + 1;
+        }
+        if (v instanceof List) {
+          for (def x : v) { d = (int) Math.max(d, depth(x)); }
+        }
+        return d;
+      }
+      def cap(def v, int level, int maxDepth) {
+        if (v instanceof Map) {
+          if (level > maxDepth) { return Json.dump(v); }
+          Map out = new HashMap();
+          for (def e : v.entrySet()) { out.put(e.getKey(), cap(e.getValue(), level + 1, maxDepth)); }
+          return out;
+        }
+        if (v instanceof List) {
+          List out = new ArrayList();
+          for (def x : v) { out.add(cap(x, level, maxDepth)); }
+          return out;
+        }
+        return v;
+      }
+      for (def path : params.fields) {
+        def parent = ctx;
+        for (int i = 0; i < path.size() - 1 && parent instanceof Map; i++) {
+          parent = parent.get(path.get(i));
+        }
+        if (!(parent instanceof Map)) { continue; }
+        String leaf = path.get(path.size() - 1);
+        def v = parent.get(leaf);
+        if (v != null && depth(v) > params.max_depth) {
+          parent.put(leaf, cap(v, 1, params.max_depth));
+        }
+      }
+```
+
+Add to `fields` every vendor field mapped as `flattened`, including raw body copies that
+`preserve_duplicate_custom_fields` keeps. Run the cap after the cleanup, so that the strings it
+creates are not touched.
+
+---
+
+## Truncation marker
+
+When the pipeline removes content or cuts it to a maximum length, append a tag that names the
+field. Not a new field (#22225 section 5):
+
+```yaml
+- script:
+    tag: script_remove_oversized_request_body
+    description: >-
+      A keyword copy of the request body longer than 32766 characters would reject the
+      document. Remove it and mark the removal in tags.
+    lang: painless
+    if: ctx.vendor?.request_body instanceof String && ctx.vendor.request_body.length() > 32766
+    source: |
+      ctx.vendor.remove('request_body');
+      if (!(ctx.tags instanceof List)) { ctx.tags = new ArrayList(); }
+      if (!ctx.tags.contains('vendor_request_body_removed')) { ctx.tags.add('vendor_request_body_removed'); }
+```
+
+Name the tag `<field>_removed` or `<field>_truncated` and list the tags in the README.
 
 ---
 
@@ -461,8 +744,17 @@ Pipeline test inputs must cover, per vendor format:
 - Content capture **off** (no bodies): only identity, model and usage fields appear
 - String content and block/array content
 - A system prompt as a string and as blocks (where the format allows both)
-- A response with tool calls, including more than one call
+- A response with tool calls, including more than one call and two calls to the same tool
+  (the arrays keep both, in order)
+- A request with tool results in a user turn next to text (the results come out under
+  `role: tool`)
 - A tool result as JSON, as plain text and as a number
+- Tool definitions of each native kind (client, server/built-in, MCP, retrieval) and a schema
+  with `''`, `null` and empty values
+- A tool input or result nested more than 20 levels deep
+- Content above each removal or truncation threshold (the tag appears)
+- Each identity form the source sends (for AWS: assumed role, IAM user with a path, federated
+  user, root), with account ids anonymized
 - Reasoning/thinking content, and redacted reasoning
 - Several choices/candidates (where the API allows `n` / `candidateCount`)
 - A body that is not valid JSON (expect `error.message`, no partial `gen_ai` content)
@@ -470,4 +762,8 @@ Pipeline test inputs must cover, per vendor format:
 
 Pipeline tests validate fields against their definitions but do **not** index into the real
 mapping, so they cannot catch `flattened` or `nested` rejections. System tests do. Add at least
-one system test document whose message content is longer than 32766 bytes.
+one system test document whose message content is longer than 32766 bytes, and one with a
+tool schema deeper than 20 levels. If the test stack runs logs data streams in LogsDB, the
+length rejection doesn't show: also index the long document into an index in standard mode with
+the package's mappings. Check `<data stream>::failures` after the test (the failure store hides
+rejections).
