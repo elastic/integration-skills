@@ -134,6 +134,7 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
 | **Build-time** | An orchestrator passes `references/genai-field-catalog.md` and `references/genai-pipeline-patterns.md` by path to the pipeline builder subagent | The builder reads both references, and `references/genai-detection-conventions.md` when the stream has tool calls, a caller identity, or changes a published field. This SKILL.md does not need to be loaded in the orchestrator thread. |
 | **Review-time** | A reviewer finds `gen_ai.*` fields, or a stream classified as GenAI | Reviewer reads `genai-field-catalog.md` (checklist at the end) and `genai-pipeline-patterns.md`. |
 | **Research-time** | `research-integration` (orchestrator reads the classification; the Track G subagent reads both) | Load only `references/genai-datastream-classification.md` and `references/genai-source-discovery.md`. **Do not load the catalog or pipeline patterns during research**: they are implementation material. |
+| **Apply-time** | User invokes `/apply-mappings @packages/<name> @<report>.md` with a report from this skill | The `apply-mappings` skill reads the report, asks the user about design decisions, and dispatches the pipeline builder with `genai-field-catalog.md`, `genai-pipeline-patterns.md` and `genai-detection-conventions.md` by path. In a GenAI report ✅ means the package already populates the field. |
 
 The development workflow loads these references automatically:
 

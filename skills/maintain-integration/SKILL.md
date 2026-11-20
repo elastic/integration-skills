@@ -21,6 +21,9 @@ Use `create-integration` instead when:
 - creating a new integration package from scratch
 - adding a new data stream to an existing package (`create-integration` → `references/add-datastream-workflow.md`)
 
+Use `apply-mappings` instead when the work is applying a `genai-mappings` or `entity-mappings`
+gap analysis report to existing data streams.
+
 ## Modes
 
 ### Review only (read-only, no edits)
