@@ -76,6 +76,7 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
 | **Build-time** | Orchestrator (`create-integration` or `add-datastream`) passes `references/entity-field-catalog.md` and `references/entity-pipeline-patterns.md` by path to the pipeline builder subagent | Pipeline builder reads both references; this skill's SKILL.md is not loaded into the orchestrator thread. |
 | **Review-time** | `review-integration` Step 4 loads the two references when the entity detection rule fires | Reviewer reads `entity-field-catalog.md` + `entity-pipeline-patterns.md`; this SKILL.md is not required in the reviewer thread. |
 | **Research-time** | `research-integration` loads only `references/entity-datastream-classification.md` | **Do not load the rest of this skill during research** — the catalog and pipeline patterns are implementation material and violate the research guardrail against prescribing pipeline/field details. |
+| **Apply-time** | User invokes `/apply-mappings @packages/<name> @<report>.md` with a report from this skill | The `apply-mappings` skill reads the report, asks the user about design decisions, and dispatches the pipeline builder with `entity-field-catalog.md` and `entity-pipeline-patterns.md` by path. In an entity report ✅ and 🔄 are mapping instructions, not a statement that the package already does it. |
 
 ## Open questions / deferred scope
 

@@ -35,6 +35,7 @@ body:
         - /ecs-field-mappings
         - /entity-mappings
         - /genai-mappings
+        - /apply-mappings
         - /input-configurations
         - /package-spec
         - /integration-testing
