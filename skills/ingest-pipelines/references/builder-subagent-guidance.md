@@ -128,8 +128,12 @@ custom fields.
 
 - Choose the parsing strategy (grok, dissect, json, kv, or combination)
 - Plan the processor chain following the ordering from the `ingest-pipelines` skill:
-  1. `ecs.version` (`9.3.0`) and, **for CEL streams only**, Agentless `remove` /
-     `terminate` when applicable
+  1. `ecs.version` (`9.3.0`), then the API-input opening processors: the
+     collector-error `terminate` for **CEL streams only**, and the Agentless
+     `remove` (`remove_agentless_tags`) for `cel` and `httpjson` streams only
+     when the package's Kibana constraint admits a release that still injects
+     the fields (see `ingest-pipelines` SKILL.md, "Opening processors for API
+     inputs")
   2. `event.original` handling (JSE00001 rename+remove pattern)
   3. Parsing on `event.original` (grok/dissect/json/kv) — **never mutate
      `event.original`**

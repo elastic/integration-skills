@@ -21,6 +21,7 @@ This reference covers package structure; it does not introduce a standalone
 
 | Domain | Finding | New package | Existing package |
 |--------|---------|------------|-----------------|
+| Manifest | Policy template with a `cel` or `httpjson` input does not enable agentless (`deployment_modes.agentless.enabled: true` with `release`, `organization`, `division`, `team`) -- see `../../repo-conventions.md`, "Agentless → Elastic Managed" | MEDIUM | MEDIUM when the PR adds or changes the `cel`/`httpjson` input; otherwise LOW, reported once as a modernization suggestion |
 | Changelog | An added changelog `link` is not this PR's pull request URL: a placeholder number (`1`, `9999`, `99999`, `12345`), a URL that is not `/pull/<n>` (an issue link counts), or another PR's number on a PR without the `changelog-link-check:skip` label -- see `../conflicts-core.md` | Placeholder: informational note only (first-version leniency). Non-PR URL or wrong PR: LOW | LOW, reported once (`check_changelog_entries.sh` also fails a wrong PR number pre-merge; do not escalate or repeat per line) |
 
 ## Version-related rules
