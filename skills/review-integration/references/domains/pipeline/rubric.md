@@ -21,7 +21,7 @@ Also read the [relevant conflict resolutions](conflict-resolutions.md).
 | Pipeline | Missing pipeline-level on_failure | HIGH | Missing entirely: HIGH. Wrong structure/order: LOW |
 | Pipeline | `preserve_duplicate_custom_fields` (manifest var, template tag, pipeline conditional, or test-config tag) | HIGH -- applies to new packages AND to a new data stream added to an existing package | Not a finding when the use pre-exists in an unchanged data stream (was officially recommended before deprecation). MEDIUM when the PR touches the processors that implement the pattern; HIGH when the PR refactors that pipeline |
 | Pipeline | Missing processor tag | MEDIUM | LOW (only enforced from format_version 3.6.0) |
-| Pipeline | Collector-error `terminate` missing on a NEW CEL stream, or where sibling pipelines already carry it. `remove_agentless_tags` missing only counts when the package is agentless-enabled and its `conditions.kibana.version` admits a release without elastic/kibana#230479 (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1) | MEDIUM | LOW at most (Agentless-era additions; pre-Agentless integrations don't have them — absence there is not a finding) |
+| Pipeline | Collector-error `terminate` missing on a NEW CEL stream, or where sibling pipelines already carry it. `remove_agentless_tags` missing on a NEW `cel` or `httpjson` stream only counts when the package is agentless-enabled and its `conditions.kibana.version` admits a release without elastic/kibana#230479 (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1) | MEDIUM | LOW at most (Agentless-era additions; pre-Agentless integrations don't have them — absence there is not a finding) |
 | Pipeline | JSE00001 pattern differs from current standard | HIGH | MEDIUM (if event.original is preserved by alternate means) |
 | Pipeline | Geo enrichment without ASN companion | HIGH | MEDIUM (newer standard) |
 
@@ -62,16 +62,12 @@ section in `../fields/rubric.md`.
   integration, which honors the `preserve_original_event` tag — so the
   package's toggle is NOT a no-op without an in-pipeline remove. Never ask
   for the processor to be added — its *presence* is the finding.
-- A missing CEL-opening Agentless block (the `remove` of `organization`/
-  `division`/`team` tagged `remove_agentless_tags`, plus the collector-error
-  `terminate`) on an EXISTING pipeline. These are Agentless-era additions;
-  pre-Agentless pipelines don't have them and retrofitting is a modernization
-  choice, not a defect. Flag the absence only on a NEW CEL data stream in a
-  package whose manifest enables agentless deployment, or where sibling
-  pipelines in the same package already carry the block (a consistency gap).
-- A missing `remove_agentless_tags` processor when the package's
-  `conditions.kibana.version` admits only Kibana releases with
-  elastic/kibana#230479 (8.18.5+, 8.19.2+, 9.0.5+, 9.1.2+, 9.2.0+; every new
-  package on `^9.4.0`). Fleet no longer injects `organization`/`division`/
-  `team`, so the processor is dead code there. Its presence on an existing
-  package is not a finding either; it is a harmless no-op.
+- A missing collector-error `terminate` on an EXISTING pipeline. Flag it on
+  a NEW CEL stream, and when sibling pipelines in the package already have
+  it.
+- A missing `remove_agentless_tags` processor on an EXISTING pipeline. Flag
+  it on a NEW `cel` or `httpjson` stream only when the package enables
+  agentless and `conditions.kibana.version` still matches a release without
+  the Fleet fix elastic/kibana#230479 (below 8.18.5, 8.19.0–8.19.1,
+  9.0.0–9.0.4, or 9.1.0–9.1.1). On `^9.4.0`, absence is not a finding, and
+  presence on an existing package is not a finding either.

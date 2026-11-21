@@ -43,7 +43,7 @@ changelog entry `Add group field to package manifest.` (enhancement).
 - The agentless-enabled condition (`deployment_modes.agentless.enabled: true`)
   plus a Kibana constraint that admits a release without elastic/kibana#230479
   (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1) is what gates the
-  CEL-opening `remove_agentless_tags` check — see
+  `remove_agentless_tags` check on `cel` and `httpjson` streams — see
   `checklists/pipeline-review-checklist.md`. Fleet stopped injecting
   `organization`/`division`/`team` in those fixed releases, so new packages
   on `^9.4.0` do not need it. DO NOT FLAG its absence there, or its presence
@@ -120,9 +120,13 @@ Enforced by CI — calibrate, do not duplicate:
 
 - A package's `format_version` must be >= the version introducing any spec
   feature it uses: `var_groups`/named inputs/`sections`/`show_divider` >=
-  3.6.1, agentless `release` >= 3.6.3 (advisory — older declarations exist in
-  the wild), `provider_permissions` >= 3.6.4, `group:` >= 3.6.6. Pipeline
+  3.6.1, `provider_permissions` >= 3.6.4, `group:` >= 3.6.6. Pipeline
   processor-tag and global-`on_failure` validations are BREAKING since 3.6.0.
+- Agentless `release` is the exception: package-spec added it in 3.6.3, but
+  no older spec version rejects it (about 150 packages declare it below
+  3.6.3, most on 3.3.2) and Kibana reads it only from 9.5.0. DO NOT FLAG
+  `release` on a lower `format_version`, and do not ask for a
+  `format_version` or Kibana bump to add agentless.
 - Data-stream manifest categories must match policy-template categories
   (semantic validation since 3.6.1; repo-wide sync #19911/#17523) — a
   category added to one side only is a finding.

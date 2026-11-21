@@ -125,7 +125,7 @@ See `references/manifest-rules.md` -> **Variable shadowing** for full rules, exa
   different field with the same name. See `references/manifest-rules.md` ->
   **Input names are not validated**.
 
-- **API inputs run agentless** -- a policy template with a `cel` or `httpjson` input enables `deployment_modes.agentless` (`release: beta` whenever agentless support is added; `ga` only after the Agentless ORR, plus `organization`/`division`/`team`, `format_version` >= 3.6.3). Other inputs in the same template that are on Fleet's `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `tcp`, ...) need no change. See `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
+- **API inputs run agentless** -- a policy template with a `cel` or `httpjson` input enables `deployment_modes.agentless` (`release: beta` whenever agentless support is added; `ga` only after the Agentless ORR, plus the owning team's `organization`/`division`/`team`). Enabling it on an existing package needs no `format_version` or Kibana bump. Other inputs in the same template that are on Fleet's `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `tcp`, ...) need no change. See `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
 
 See `references/manifest-rules.md` for complete rules, correct/incorrect examples, and the review checklist.
 

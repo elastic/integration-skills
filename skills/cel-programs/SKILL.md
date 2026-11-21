@@ -158,7 +158,7 @@ Declare `enable_request_tracer` in the data stream manifest, not at the input le
 
 ### Agentless deployment
 
-A policy template with a `cel` input must enable agentless (Elastic Managed) deployment. The block, the `release` and owner-team values, and the README wording are in `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**. Whether the stream's pipeline needs the `remove_agentless_tags` processor depends on the package's Kibana constraint, not on the CEL program; see `ingest-pipelines` -> "CEL-only opening processors".
+A policy template with a `cel` input must enable agentless (Elastic Managed) deployment. The block, the `release` and owner-team values, and the README wording are in `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**. Whether the stream's pipeline needs the `remove_agentless_tags` processor depends on the package's Kibana constraint, not on the CEL program; see `ingest-pipelines` -> "Opening processors for API inputs".
 
 ## Scope of the CEL program
 

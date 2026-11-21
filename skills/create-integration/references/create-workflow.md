@@ -128,8 +128,8 @@ Dispatch a subagent per the **Dispatch convention** above, pointing it at `inges
 The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
-2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow CEL-only opening processors (the collector-error `terminate`; no `remove_agentless_tags`, because the `^9.4.0` floor already has the Fleet fix), `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream — see item 7), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
-3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it whether the input is CEL or not, so it knows whether to include CEL-only opening processors.
+2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow the API-input opening processors (the collector-error `terminate`; no `remove_agentless_tags`, because the `^9.4.0` floor already has the Fleet fix), `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream — see item 7), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
+3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it the input type, so it knows whether the API-input opening processors apply (`terminate` for `cel` only, `remove_agentless_tags` for `cel` and `httpjson` only).
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
 6. Expected ECS categorization if known.

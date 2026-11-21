@@ -390,16 +390,17 @@ policy_templates:
       agentless:
         enabled: true
         release: beta
-        organization: security
-        division: engineering
-        team: security-service-integrations
+        organization: <organization>
+        division: <division>
+        team: <owning-team>
     inputs:
       - type: cel
         ...
 ```
 
-- `release` is always `beta` when agentless support is added, for a new package or an existing one. It changes to `ga` only after the integration passes the Agentless ORR (operational readiness review), in its own change. Never set `ga` in the PR that adds agentless support. A package that is already `ga` keeps that value when a stream is added. `release` needs `format_version` >= `3.6.3` (new packages already use `3.6.5`). Bump an older existing package to the lowest version that has it, and say so in the changelog.
-- `organization`, `division` and `team` identify the team that owns the package. Packages owned by `elastic/security-service-integrations` use the values above. Copy the values from a sibling package with the same `owner.github` for any other team (for example `organization: observability`, `team: obs-signals-integrations-team`).
+- `release` is always `beta` when agentless support is added, for a new package or an existing one. It changes to `ga` only after the integration passes the Agentless ORR (operational readiness review), in its own change. Never set `ga` in the PR that adds agentless support. A package that is already `ga` keeps that value when a stream is added.
+- `release` does not justify a `format_version` or Kibana bump. package-spec added it in 3.6.3 (elastic/package-spec#1130), but no older spec version rejects it: about 150 packages on elastic/integrations main declare it on lower `format_version` values, most on 3.3.2. Kibana reads it only from 9.5.0. When enabling agentless on an existing package, keep its `format_version` and `conditions.kibana.version`. A bump to 3.6.x is costly: Fleet only installs packages up to its built-in spec maximum (3.4 on Kibana 8.19 and 9.1, 3.5 on 9.2 and 9.3, 3.6 from 9.4), so a 3.6.x package also needs a `^9.4.0` Kibana floor and drops users on older stacks. It also turns on the 3.6.0 pipeline tag and `on_failure` validators.
+- `organization`, `division` and `team` identify the team that owns the package; replace the placeholders, never copy another team's values. Take them from a sibling package with the same `owner.github`. For example, packages owned by `elastic/security-service-integrations` use `organization: security`, `division: engineering`, `team: security-service-integrations`, and observability packages use values such as `organization: observability`, `team: obs-signals-integrations-team`.
 
 ### Scope: `cel` and `httpjson` only
 
@@ -447,7 +448,7 @@ So a template that mixes `cel` with `aws-s3`, `gcs` or `tcp` needs no extra conf
   Elastic Agent must be installed. For more details, check the Elastic Agent [installation instructions](docs-content://reference/fleet/install-elastic-agents.md). You can install only one Elastic Agent per host.
   ```
 
-- **Ingest pipeline**: no change for new packages. The `remove_agentless_tags` processor is only needed when the package's `conditions.kibana.version` admits a Kibana release that still injects `organization`/`division`/`team` (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1; fixed in elastic/kibana#230479). When enabling agentless on an existing package with such a constraint, add it to each CEL stream's pipeline. See `ingest-pipelines` -> "CEL-only opening processors".
+- **Ingest pipeline**: no change for new packages. The `remove_agentless_tags` processor is only needed when the package's `conditions.kibana.version` admits a Kibana release that still injects `organization`/`division`/`team` (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1; fixed in elastic/kibana#230479). When enabling agentless on an existing package with such a constraint, add it to each `cel` and `httpjson` stream's pipeline. See `ingest-pipelines` -> "Opening processors for API inputs".
 - **Changelog**: enabling agentless on an existing package is an `enhancement` with a minor bump. Keep it a separate entry from any bugfix in the same release.
 - **Testing**: `elastic-package test system` runs agent-based only. Agentless is checked by `elastic-package check` (manifest schema) and by a manual install on Elastic Cloud or Serverless.
 

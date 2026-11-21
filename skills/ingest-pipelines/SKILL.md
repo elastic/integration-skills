@@ -62,18 +62,18 @@ When moving a value from a **custom or vendor field** into an **ECS field**, **p
 
 **Every processor** in the pipeline should have a `tag` (not only processors that can fail). Tags make failures and telemetry attributable to a specific step.
 
-## CEL-only opening processors (Agentless metadata and error-only documents)
+## Opening processors for API inputs (Agentless metadata and CEL error documents)
 
-For **CEL-based** integrations only, include these **before** the standard `message` → `event.original` handling when they apply:
+For streams that collect through an API input (`cel`, `httpjson`), include these **before** the standard `message` → `event.original` handling when they apply:
 
-- **`terminate`**: stop processing when the document is an error placeholder from the collector (`ctx.error?.message != null && ctx.message == null && ctx.event?.original == null`). Every CEL stream needs this.
-- **`remove`** (tag `remove_agentless_tags`): drop the Agentless metadata fields (`organization`, `division`, `team`) when all are strings, so they do not collide with ECS `organization.*`. Use `ignore_missing: true` and a conditional `if`. Include it **only when the package is agentless-enabled and its `conditions.kibana.version` admits a Kibana release that still injects those fields**: anything below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, or 9.1.0–9.1.1. Older agentless policies added the fields to every event with an `add_fields` processor (elastic/kibana#221312). Fleet stopped doing so in 8.18.5, 8.19.2, 9.0.5, 9.1.2 and 9.2.0 (elastic/kibana#230479), and still filters them out of user-defined global data tags. New packages require Kibana `^9.4.0`, so they omit this processor. On an existing package it is harmless (the type check makes it a no-op); leave it in place until the Kibana floor moves past the affected releases.
+- **`remove`** (tag `remove_agentless_tags`), `cel` and `httpjson`: drop the Agentless metadata fields (`organization`, `division`, `team`) when all are strings, so they do not collide with ECS `organization.*`. Use `ignore_missing: true` and a conditional `if`. Include it **only when the package is agentless-enabled and its `conditions.kibana.version` admits a Kibana release that still injects those fields**: anything below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, or 9.1.0–9.1.1. Older agentless policies added the fields to every event of every input with an `add_fields` processor (elastic/kibana#221312). Fleet stopped doing so in 8.18.5, 8.19.2, 9.0.5, 9.1.2 and 9.2.0 (elastic/kibana#230479), and still filters them out of user-defined global data tags. New packages require Kibana `^9.4.0`, so they omit this processor. On an existing package it is harmless (the type check makes it a no-op); leave it in place until the Kibana floor moves past the affected releases.
+- **`terminate`**, `cel` only: stop processing when the document is an error placeholder from the CEL collector (`ctx.error?.message != null && ctx.message == null && ctx.event?.original == null`). Every CEL stream needs this.
 
-**Non-CEL** integrations (logs, syslog, filebeat-style inputs) **must not** copy this block blindly — those fields and error shapes are specific to the CEL/Agentless path. See the `create-integration` skill: the orchestrator must only expect this block when the data stream uses CEL input.
+Streams on inputs that never run agentless (logs, syslog, filebeat-style inputs on Fleet's `AGENTLESS_DISABLED_INPUTS` list) **must not** carry either processor: the Agentless fields never reach them and the error shape is CEL's. See the `create-integration` skill: the orchestrator must only expect these processors on `cel` and `httpjson` streams.
 
-## Standard opening: ECS, optional CEL block, JSE00001, then parse `event.original`
+## Standard opening: ECS, optional API-input block, JSE00001, then parse `event.original`
 
-After the optional CEL-only processors, the pipeline should follow this shape. **All parsing** (`json`, `csv`, `grok`, etc.) runs on **`event.original`**. **Never overwrite or mutate `event.original`** in later processors — derive structured fields into other paths (for example `json`, `_temp.*`, ECS fields).
+After the optional API-input processors, the pipeline should follow this shape. **All parsing** (`json`, `csv`, `grok`, etc.) runs on **`event.original`**. **Never overwrite or mutate `event.original`** in later processors — derive structured fields into other paths (for example `json`, `_temp.*`, ECS fields).
 
 ```yaml
 description: Parse <dataset> events.
@@ -83,9 +83,10 @@ processors:
       tag: set_ecs_version
       value: '9.3.0'
 
-  # --- CEL input only (omit for log/syslog-only streams) ---
-  # remove_agentless_tags: only when the Kibana constraint admits a release
-  # without elastic/kibana#230479 (see above); omit on ^9.4.0 packages.
+  # --- API inputs only (omit for log/syslog-only streams) ---
+  # remove_agentless_tags (cel and httpjson): only when the Kibana constraint
+  # admits a release without elastic/kibana#230479 (see above); omit on
+  # ^9.4.0 packages.
   - remove:
       field:
         - organization
@@ -97,11 +98,12 @@ processors:
       description: >-
         Removes the fields added by Agentless as metadata,
         as they can collide with ECS fields.
+  # terminate: cel only.
   - terminate:
       tag: data_collection_error
       if: ctx.error?.message != null && ctx.message == null && ctx.event?.original == null
       description: error message set and no data to process.
-  # --- end CEL-only ---
+  # --- end API inputs only ---
 
   - rename:
       field: message
@@ -152,7 +154,7 @@ on_failure:
 
 ## Single-path pattern (linear pipeline)
 
-Use this pattern when one parser flow handles all events. Combine the **standard opening** (ECS version, optional CEL-only block, JSE00001 rename/remove, parse from `event.original` without mutating it), middle processors with **tags on every step**, and the **pipeline-level `on_failure`** and **conditional `append` for `preserve_original_event`** shown above.
+Use this pattern when one parser flow handles all events. Combine the **standard opening** (ECS version, optional API-input block, JSE00001 rename/remove, parse from `event.original` without mutating it), middle processors with **tags on every step**, and the **pipeline-level `on_failure`** and **conditional `append` for `preserve_original_event`** shown above.
 
 Example middle section (illustrative):
 
@@ -393,7 +395,7 @@ The `elastic-package build` validator enforces that pipelines correctly handle t
 
 ### Required two-processor pattern
 
-Every pipeline that consumes a `message` field must include both processors (typically **after** `ecs.version` and **after** any CEL-only `remove`/`terminate` steps when applicable):
+Every pipeline that consumes a `message` field must include both processors (typically **after** `ecs.version` and **after** any API-input `remove`/`terminate` steps when applicable):
 
 ```yaml
 - rename:
