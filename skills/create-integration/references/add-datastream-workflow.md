@@ -61,6 +61,7 @@ elastic-package create data-stream --name <stream_name> --type <logs|metrics> --
 4. Update `data_stream/<stream>/manifest.yml`: set correct title and description, review vars.
 5. For CEL inputs: strip the verbose generic scaffold vars (the subagent will configure the template properly), and ensure only vars referenced by `cel.yml.hbs` remain.
 6. Wire package-level config if needed: add new package-level vars (shared auth, URL) to root `manifest.yml` under `policy_templates[].inputs[]`.
+   - If the new stream adds a `cel` or `httpjson` input to a policy template that does not enable agentless, enable it in the same change: add `deployment_modes.agentless` with `release: beta` and the owner-team metadata, and add the Elastic Managed README subsections. Keep the package's `format_version` and `conditions.kibana.version`; `release` does not need a bump. Existing inputs in that template whose type is on Fleet's `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `azure-blob-storage`, `tcp`, ...) need no change. Follow `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**, and give enabling agentless its own `enhancement` changelog entry.
 
 7. Validate the scaffold:
 
@@ -128,8 +129,8 @@ Dispatch a subagent per the **Dispatch convention** above, pointing it at `inges
 The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
-2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and the system test mock data it produced. Point it to the mock API response files so it understands the data format.
-3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it whether the input is CEL or not, so it knows whether to include CEL-only opening processors.
+2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and the system test mock data it produced. Point it to the mock API response files so it understands the data format. Pass the package's `conditions.kibana.version` and whether it enables agentless, so the builder can decide whether `remove_agentless_tags` is needed (`ingest-pipelines` -> "Opening processors for API inputs"). Do the same for `httpjson` streams. If sibling CEL pipelines already carry it, keep the new pipeline consistent with them.
+3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it the input type, so it knows whether the API-input opening processors apply (`terminate` for `cel` only, `remove_agentless_tags` for `cel` and `httpjson` only).
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
 6. Expected ECS categorization if known.
@@ -230,6 +231,8 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - **`format_version`, `conditions.kibana.version`, and ECS reference — match existing package versions, do not bump unconditionally:**
   - **New package:** always use `format_version: "3.6.5"`, `conditions.kibana.version: "^9.4.0"` (see `package-spec`), and `_dev/build/build.yml` ECS reference `git@v9.3.0`.
   - **Adding to an existing shipped package:** match the package's current `format_version`, `conditions.kibana.version`, and `_dev/build/build.yml` ECS reference. Only bump if the new stream requires a feature or field unavailable in the current versions (check `package-spec/references/format-version-features.md`). Bumping unconditionally inflates the diff beyond the feature being added. If you do bump, call it out explicitly in the changelog entry. See the `package-spec` skill for the minimum-version principle.
+  - **Agentless `release`:** not a justifying feature. It validates on any `format_version` and Kibana reads it only from 9.5.0, so enabling agentless needs no `format_version` or Kibana bump (see `package-spec` -> `references/manifest-rules.md`).
+  - **Any bump to `format_version` 3.6.x on an existing package** also needs `conditions.kibana.version` raised to `^9.4.0` or later. Fleet only installs packages up to its built-in spec maximum (3.4 on Kibana 8.19 and 9.1, 3.5 on 9.2 and 9.3, 3.6 from 9.4), so a 3.6.x package is not offered to older Kibana even if the constraint admits it. Bump only when a feature needs it, and call out both changes in the changelog.
   - **Federated Identity / `provider_permissions`:** this is a justifying feature. Use `format_version` >= `"3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` (see `input-configurations` -> `references/federated-identity-aws.md`). Call the bump out in the changelog.
   - These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars (package-level and data stream-level). If a var is not used in `cel.yml.hbs`, remove it.

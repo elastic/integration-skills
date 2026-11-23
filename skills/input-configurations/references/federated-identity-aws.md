@@ -183,7 +183,7 @@ sign-off. On each target policy template:
         enabled: true
       agentless:
         enabled: true
-        release: beta             # or ga; evaluated in Kibana 9.5.0+
+        release: beta             # beta when adding agentless; ga only after the Agentless ORR; keep an existing value. Evaluated in Kibana 9.5.0+
         organization: <org>
         division: engineering
         team: <owning-team>
