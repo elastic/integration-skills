@@ -17,7 +17,7 @@ metadata:
 Implements a gap analysis report on an existing package. The report comes from
 `/genai-mappings` or `/entity-mappings`. This skill does not research or assess. It reads the
 report, checks it against the package, asks the user about every design decision, dispatches
-the builders, validates, documents, and re-assesses.
+the builders, documents, validates, and checks the result against the report.
 
 ## When to use
 
@@ -41,33 +41,45 @@ the builders, validates, documents, and re-assesses.
 |---|---|
 | Package | `@packages/claude_code` |
 | Report(s) | `@genai-gap-analysis-claude_code.md`, `@entity-gap-analysis-authentik.md` (one per kind; both can be given) |
-| Stream scope (optional) | "only `user`", default: every stream in the report |
-| Constraints (optional) | "no stack available for system tests", "don't touch the CEL program" |
+| Stream scope (optional) | "only `user`". Default: every stream in the report |
+| Release scope (optional) | "the next minor", "the 3.0.0 scope". Default: asked when the report has Breaking rows (D3) |
+| Constraints (optional) | "no cloud credentials for system tests", "don't touch the CEL program" |
 
 ## Rules
 
 1. **Local only.** Never commit, push, open or update a pull request, or post anywhere. Leave
    every change uncommitted for the user.
 2. **The report is a list of hypotheses.** Verify each item against the package files before
-   changing anything. A stale or wrong item is reported, not applied.
-3. **Ask at every design decision** (`references/decision-points.md`), before editing.
-   Subagents cannot ask the user. The orchestrator collects decisions up front and re-asks when
-   a builder returns `DECISION NEEDED`. Never pick a breaking option silently.
-4. **One subagent at a time.** Finish the work of one stream or group before the next.
-5. **Only released ECS fields.** Follow the mapping skills: nothing under `gen_ai.*`, `entity.*`
+   changing anything. A stale or wrong item is reported, not applied. Where a report row and
+   the mapping skill's references disagree on a name, value or shape, the references win.
+3. **Ask at every design decision** (`references/decision-points.md`), before editing. When
+   the report already records the answer, take it from there and say so. Never pick a breaking
+   option silently.
+4. **One run builds one release.** Removing, renaming, retyping or changing the meaning of a
+   published field is a breaking change. The replacement ships in a minor, with the old field
+   deprecated. The removal is a later run, for the next major. It can be built early, and it
+   is released only after the rules, ML jobs and dashboards that read the field have moved
+   (D3).
+5. **Existing output only grows.** Outside a decision, a record the package handles today
+   comes out with the same values plus the new fields. New processors do not overwrite a value
+   the pipeline already sets, and a published vendor field that feeds an ECS field is copied,
+   not renamed.
+6. **Only released ECS fields.** Follow the mapping skills: nothing under `gen_ai.*`, `entity.*`
    or another ECS field set unless it is in the pinned ECS release. Everything else goes to
    `<integration>.<data_stream>.<field>`.
-6. **Published data is not rewritten without a go-ahead.** Removing, renaming, retyping or
-   changing the meaning of a published field is a breaking change and needs the user's answer
-   (decisions D2–D5). For GenAI, the replacement ships in a minor with the old field
-   deprecated, and the removal waits for the next major, after the rules and ML jobs that read
-   it have moved (D16).
-7. **Never hand-edit generated files**: `*-expected.json`, `sample_event.json`, the built
+7. **The integration implements what it controls**: its own request, call or input
+   configuration. What the user's environment or the vendor account controls (a logging
+   setting, an environment variable in the user's application) is documented in the README,
+   and the field is still mapped, so that it works once the setting is on. A variable that
+   makes the integration collect prompts, responses, tool details or other content is **off by
+   default**.
+8. **Never hand-edit generated files**: `*-expected.json`, `sample_event.json`, the built
    `docs/README.md` (edit `_dev/build/docs/README.md`).
-8. **Anonymize** every fixture and mock value.
-9. **Do not load domain skills into the orchestrator thread.** Delegate to the builders, which
-   load them in their own context. The one exception is the direct edits of Phase 9 and the
-   ECS pin in Phase 4, where the orchestrator loads `package-spec` and `elastic-package-cli`.
+9. **Anonymize** every fixture and mock value.
+10. **Delegate, one subagent at a time.** Do not load domain skills into the orchestrator
+    thread: the builders load them in their own context. The exceptions are the direct edits of
+    Phase 4 (ECS pin) and Phase 8 (README, changelog), for which the orchestrator loads
+    `package-spec` and `elastic-package-cli`.
 
 ## How the report is read
 
@@ -83,53 +95,35 @@ other. Whatever the status, check the package before acting (Phase 1).
 | ⛔ | Not applicable, or not available at the source. Nothing to do. | Not applicable. Nothing to do. |
 | ⚠️ | Populated, but wrongly. To fix. | Not used. |
 
-**Older GenAI reports** use 📥 (received, not mapped), 🔌 (available at source) and — (not
-applicable). Read 📥 as 🔍 *Extract from existing data*, and — as ⛔. Read 🔌 as a 🔍 whose
-recommendation follows from the *Controlled by* column of the report's content capture table:
-the integration controls it, so *Add API parameter or request setting* or *New API call*; the
-user or the vendor controls it, so *Source-side setting*; it arrives as a record type or
-transport no stream collects, so *New data stream*.
-
 | Report item | Action | Done by |
 |---|---|---|
-| GenAI ✅ | Nothing. | — |
+| GenAI ✅, any ⛔, entity *Cannot be collected* | Nothing. | — |
 | Entity ✅ / 🔄 | Check the package and implement what is missing. | pipeline builder |
 | GenAI 🔄 | Implement the derivation (constant, lookup, sum). | pipeline builder |
-| GenAI ⚠️ | Fix the published mapping, after D2, D3 or D4, in the release D16 gives it. | pipeline builder |
+| GenAI ⚠️ | Fix the published mapping. An Additive fix goes in this release, a Breaking one in the release D3 gives it. | pipeline builder |
 | 🔍 Extract from existing data (entity: *Extract from existing call*) | Map it from data the stream already receives. | pipeline builder |
-| 🔍 Add API parameter or request setting (entity: *Add API parameter*) | Add the parameter or setting to the request, with a manifest variable when it exposes content or changes volume. Update mock, system test config and README. Then map it. | CEL builder (or setup builder), then pipeline builder |
-| 🔍 New API call | Add the call to the same stream. Same as above. | CEL builder, then pipeline builder |
-| 🔍 Source-side setting (document only) | The integration cannot turn it on. Map the field anyway, so that it works once the user enables the setting, and document the setting in the README. | pipeline builder, README |
-| 🔍 New data stream | Not done here. Hand over to `create-integration` (add data stream) with the report section as the brief, and list it as deferred. | user |
-| ⛔ (and entity *Cannot be collected*) | Nothing. | — |
-| Values with no ECS field | Add a `<integration>.<data_stream>.<field>` definition and copy the value into it. | pipeline builder |
-| Adjacent ECS fields | Only when the user puts them in scope (D13). | pipeline builder |
+| 🔍 Add API parameter or request setting (entity: *Add API parameter*), 🔍 New API call | Add it to the request of the same stream (D4), and update mock, system test config and README. Then map it. | CEL builder (or setup builder), then pipeline builder |
+| 🔍 Source-side setting (document only) | Map the field and document the setting (rule 7). | pipeline builder, README |
+| 🔍 New data stream | Not done here. List it as deferred, to build with `create-integration` (add data stream) using the report section as the brief. | user |
+| Values with no ECS field (🔍 rows) | Add a `<integration>.<data_stream>.<field>` definition and copy the value into it. | pipeline builder |
+| Adjacent ECS fields | The ones the report's *Detection conventions* table asks for (identity, the native verb in `event.action`, categorization) are in scope. The others only after D10. | pipeline builder |
 
 ## Workflow
 
-Read `references/apply-workflow.md` fully before starting. Phases:
-
-0. **Intake**: package, reports, tools, report freshness
-1. **Work items**: turn the report into a verified per-stream list
-2. **Grouping**: one stream at a time, unless streams have the same shape
-3. **Decisions**: ask every design decision up front
-4. **Package prerequisites**: ECS pin and `ecs.version`
-5. **Source-side changes**: parameters, calls, variables (CEL or input builders)
-6. **Pipeline and fields**: pipeline builder per group
-7. **System tests**
-8. **Validation and review**
-9. **Docs and changelog**
-10. **Re-assess and report**
+Read `references/apply-workflow.md` fully before starting. Its phases: 0 intake, 1 work items,
+2 grouping, 3 decisions, 4 package prerequisites (ECS pin), 5 source-side changes, 6 pipeline
+and fields, 7 system tests, 8 docs and changelog, 9 validation and review, 10 check against
+the report.
 
 Kind-specific steps are in `references/genai-steps.md` and `references/entity-steps.md`. Read
-the one that matches the report. Reports of both kinds are applied one kind at a time, GenAI
-streams and entity streams never share a group.
+the one that matches the report. Reports of both kinds make one run and one release: phases 0
+to 4 and 8 to 10 run once, and phases 5 to 7 run for the GenAI groups, then for the entity
+groups. GenAI streams and entity streams never share a group.
 
 ## Subagents
 
-All specialised work goes to the platform's general-purpose subagent. The task prompt points at
-the manual **by path** (`references/work-item-template.md` has the prompt skeletons). Do not
-paste manual contents.
+The dispatch convention is in `references/apply-workflow.md`, and the task prompt skeletons in
+`references/work-item-template.md`. The manuals, passed **by path**:
 
 | Manual | Used for |
 |---|---|
@@ -138,13 +132,13 @@ paste manual contents.
 | `ingest-pipelines/references/builder-subagent-guidance.md` | Pipelines, field definitions, pipeline fixtures |
 | `integration-testing/references/builder-system-test-subagent-guidance.md` | System tests and `sample_event.json` generation |
 | `review-integration/references/reviewer-subagent-guidance.md` | Read-only review of the result |
-| `genai-mappings/references/analysis-subagent-guidance.md` or `entity-mappings/references/analysis-subagent-guidance.md` | Re-assessment of the changed streams |
+| `genai-mappings/references/analysis-subagent-guidance.md` or `entity-mappings/references/analysis-subagent-guidance.md` | Check of the applied rows against the report |
 
 ## References
 
-- `references/apply-workflow.md`: phases 0–10
+- `references/apply-workflow.md`: dispatch convention, phases 0–10, stop conditions
 - `references/decision-points.md`: every design decision, with the question and options
-- `references/work-item-template.md`: work item table and builder task prompt skeletons
+- `references/work-item-template.md`: work item table and task prompt skeletons
 - `references/genai-steps.md`: GenAI-specific steps
 - `references/entity-steps.md`: entity-specific steps
 - `references/apply-report-template.md`: the final report
