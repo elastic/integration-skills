@@ -9,6 +9,7 @@
       "description": "Build, review, and maintain Elastic integration packages.",
       "skills": [
         "./skills/anonymize-logs",
+        "./skills/apply-mappings",
         "./skills/cel-programs",
         "./skills/create-integration",
         "./skills/dashboard-guidelines",
@@ -16,6 +17,7 @@
         "./skills/ecs-field-mappings",
         "./skills/elastic-package-cli",
         "./skills/entity-mappings",
+        "./skills/genai-mappings",
         "./skills/ingest-pipelines",
         "./skills/input-configurations",
         "./skills/integration-testing",

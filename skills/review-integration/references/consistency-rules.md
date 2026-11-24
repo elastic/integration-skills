@@ -32,6 +32,10 @@ Rule key: `ecs_pin_judgment_residue` -- owned by the pipeline reviewer.
 
 Rule key: `entity_ecs_pin_minimum` -- reviewed against source by the reviewer; optional tooling provides evidence only.
 
+- A package containing a GenAI data stream must pin `git@v9.5.0` or higher in `_dev/build/build.yml`, with a matching `ecs.version` in the pipelines. Compare the pin against each data stream's GenAI classification: `gen_ai.provider.name` and the `flattened` content fields (`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `gen_ai.tool.definitions`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`) do not exist below `v9.5.0`, and older pins only have the removed `gen_ai.system`. **HIGH** on a new GenAI stream; **MEDIUM** on an existing GenAI stream that the change touches. See the [GenAI field catalog](../../genai-mappings/references/genai-field-catalog.md#ecs-availability-matrix).
+
+Rule key: `genai_ecs_pin_minimum` -- reviewed against source by the reviewer.
+
 ## Manifest to template consistency
 
 A stream template (`agent/stream/*.yml.hbs`) may reference a variable declared at any of three sites, and all three count as declared:
