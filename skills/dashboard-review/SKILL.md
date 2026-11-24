@@ -62,12 +62,14 @@ change summary for each dashboard.
 **Check for these issues:**
 
 - **TSVB panels:** Flag any `visualization` panel using TSVB. The
-  guidelines require Lens for all new visualizations. Migrating
-  existing TSVB to Lens is encouraged.
+  guidelines require Lens (form-based or ES|QL) for all new
+  visualizations. Migrating existing TSVB to Lens is encouraged.
 - **Missing dataset filter:** Each visualization should filter on
   `data_stream.dataset` or an equivalently specific scope. Flag
   panels that query broad index patterns (`metrics-*`, `logs-*`)
-  without scoping.
+  without scoping. An ES|QL panel is scoped when its `FROM` names the
+  package's data streams or a `WHERE` narrows on
+  `data_stream.dataset`.
 - **By-reference visualizations:** Visualization and lens panels
   should be embedded by value. kbdash flags by-reference `lens`,
   `visualization`, and `map` panels with `[!] <type> ref: …
@@ -99,6 +101,57 @@ change summary for each dashboard.
   `state.adHocDataViews`, `state.internalReferences`, and per-layer
   `index` keys (the ES|QL/Discover fix on Kibana 9.3+). Diffs beyond
   those keys in a "regenerate" PR deserve inspection.
+- **Settings above the package's Kibana floor:** Take the floor from
+  `conditions.kibana.version` in the package `manifest.yml` (the
+  lowest version the constraint admits). Flag settings that need a
+  newer Kibana than the floor (see `dashboard-guidelines`, "Settings
+  that need a newer Kibana"). In saved-object JSON look for:
+  - an options-list control in `pinned_panels` with
+    `"values_source": "esql"` (needs 9.5; Kibana 9.4 silently drops
+    the control)
+  - an `lnsMetric` panel on the `textBased` (ES|QL) datasource whose
+    visualization state has a `trendlineLayerId` (trend background;
+    older versions show the value without the trend). It needs 9.5
+    when `datasourceStates.textBased.layers` contains that layer ID
+    (the query filters on `?_tstart`/`?_tend` or uses `TS`), and 9.6
+    when the layer is missing
+  - `"areaFill": "gradient"` in an XY visualization state (needs 9.6;
+    older versions ignore it and draw a solid fill)
+
+  Dashboards built through the 9.6 Dashboards API set the gradient
+  fill on every area layer by default, so expect it in exports from
+  newer stacks.
+- **Hard-coded namespace in ES|QL:** Flag `FROM` clauses that name a
+  concrete namespace, such as `FROM logs-<pkg>.<dataset>-default`.
+  The panel then shows nothing for policies using another namespace.
+  Expect `logs-<pkg>.<dataset>-*`, or a broad pattern followed by
+  `WHERE data_stream.dataset == "…"`.
+- **All-ES|QL dashboard without a dashboard-level filter:** Expect a
+  `data_stream.dataset` filter at dashboard level
+  (`kibanaSavedObjectMeta.searchSourceJSON.filter`). The package-spec
+  validator does not read filters inside ES|QL queries and only checks
+  panels of type `lens`, `map` or `visualization`:
+  - panels of type `lens`: a missing filter fails `SVR00002` in CI
+  - panels of type `vis` (recent UI exports): CI passes; report the
+    missing filter as a scoping gap
+
+  Flag a new `SVR00002` exclusion in `validation.yml` unless the
+  panels read indices without `data_stream.dataset` (for example
+  transform destination indices).
+- **Dashboards API body committed as an asset:** A file in
+  `kibana/dashboard/` with top-level `panels`, `pinned_panels` or
+  panel `config.data_source` keys is a Kibana Dashboards API request
+  body, not a saved object. Flag it; it must be exported from Kibana
+  or compiled from YAML.
+- **Dashboard title convention (new dashboards):** Titles of added
+  dashboards follow `[<Logs|Metrics> <Package>] <Name>`, or
+  `[<Product> OTel] <Name>` in OTel content packages. Flag other
+  styles such as `<Vendor Product> - <Name>`. Do not flag the titles
+  of existing dashboards that a PR only edits.
+- **Layout of new dashboards (packages with a 9.4+ floor):** New
+  dashboards should have a description and, with roughly 6 or more
+  visualization panels, collapsible sections. Note their absence
+  (LOW). Do not ask existing dashboards to be redesigned.
 - **Missing Kibana asset tags:** kbdash shows a `Tags:` section for
   each dashboard (resolved from `kibana/tag/` when run on a package
   directory). New content-pack dashboards are expected to carry

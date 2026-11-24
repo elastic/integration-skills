@@ -56,26 +56,74 @@ Not every package uses every folder. Most observability integrations primarily u
 
 ## Dashboard JSON anatomy
 
-A typical dashboard asset file contains:
+Package dashboards are Kibana saved objects. A dashboard exported from a
+Kibana 9.4+ stack looks like:
 
 ```json
 {
   "attributes": { "...": "..." },
   "id": "package-identifier",
   "type": "dashboard",
-  "migrationVersion": { "dashboard": "8.x.x" },
+  "coreMigrationVersion": "8.8.0",
+  "typeMigrationVersion": "10.3.0",
   "references": [ { "...": "..." } ]
 }
 ```
 
-Key `attributes` members commonly used:
-- `panelsJSON`: embedded panel definitions (often by-value Lens panels)
-- `kibanaSavedObjectMeta.searchSourceJSON`: default query/filter scope
-- `optionsJSON`: dashboard-level display/options settings
-- `controlGroupInput`: dashboard-native controls (dropdowns, etc.)
+Older exports carry `migrationVersion: { "dashboard": "8.x.x" }` instead of
+`typeMigrationVersion`; both forms install.
+
+Key `attributes` members:
+- `title`, `description`
+- `panelsJSON`: panel definitions. A list in source files exported with
+  `elastic-package` (it decodes the string on export); a JSON string in older
+  or hand-edited source files and in built packages. Each panel has `gridData`
+  (`x`, `y`, `w`, `h`, and `sectionId` when it sits in a section) and an
+  inline `embeddableConfig` for by-value panels.
+- `sections`: collapsible sections (`gridData.sectionId` on a panel refers to
+  one).
+- `pinned_panels` (recent exports) or `controlGroupInput` (older exports):
+  dashboard controls.
+- `kibanaSavedObjectMeta.searchSourceJSON`: dashboard-level query and filters.
+- `optionsJSON`, `timeRestore`/`timeFrom`/`timeTo`, `refreshInterval`.
+
+Lens panels keep their data source in
+`embeddableConfig.attributes.state.datasourceStates`. ES|QL panels use the
+`textBased` datasource, and their query is in
+`embeddableConfig.attributes.state.query.esql`.
+
+This is a different shape from a Kibana Dashboards API request body
+(top-level `panels`, `pinned_panels`, `config.data_source`). API bodies are not
+package assets: export the saved object or compile YAML instead.
 
 `references` usually include index-pattern/search dependencies. Many dashboards point to broad index patterns (`logs-*`, `metrics-*`) and then scope with filters like:
 - `data_stream.dataset: <package>.<dataset>`
+
+The package-spec validator requires every dashboard to have a filter, either
+on every panel or at dashboard level (`SVR00002`). It does not read filters
+inside ES|QL queries, and it only checks by-value panels of type `lens`, `map`
+or `visualization`. An all-ES|QL dashboard of `lens` panels therefore fails
+without a dashboard-level filter; one of `vis` panels (recent Kibana UI
+exports) passes, but is still unscoped. Add the dashboard-level filter in both
+cases (see `../SKILL.md`).
+
+## YAML dashboard sources
+
+Packages may keep dashboards as YAML in `_dev/shared/kibana/*.yaml`, compiled
+with `kb-dashboard` into `kibana/dashboard/*.json`:
+
+```text
+packages/<package>/
+  _dev/shared/kibana/        # YAML sources (not shipped)
+    overview.yaml
+  kibana/dashboard/          # compiled JSON (shipped)
+    <package>-overview.json
+```
+
+Commit both. The integrations repo CI (`validate-yaml-dashboards.yml`) fails
+when the compiled JSON does not match the YAML. Never edit the compiled JSON by
+hand when a YAML source exists. Compiler usage and pinned versions are in the
+integrations repo's `docs/yaml_dashboards.md`.
 
 ## Naming and alignment rules
 
@@ -83,6 +131,7 @@ Use these together:
 
 - Dashboard title convention:
   - `[<Metrics | Logs> <PACKAGE NAME>] <Name>`
+  - OTel content packages: `[<Product> OTel] <Name>`
 - Visualization title convention:
   - `<Name>` only
 - File naming convention:
@@ -124,6 +173,14 @@ Representative patterns from the upstream `elastic/integrations` repository:
 - **auditd** — dashboard + search + `tags.yml`
 - **cisco_duo** — includes `map/` assets
 - **aws** — significant `alerting_rule_template/` usage
+- **anthropic_metrics** — 9.4+ UI exports with collapsible `sections` and
+  `pinned_panels` controls. Copy the structure only: its titles
+  (`[Anthropic] …`) do not follow the convention, its dashboards have no
+  dashboard-level `data_stream.dataset` filter (they pass `SVR00002` only
+  because their panels are of type `vis`), and one dashboard has no sections.
+- **activemq_otel** — YAML dashboard sources in `_dev/shared/kibana/` compiled
+  to all-ES|QL `lens` dashboards with descriptions and a dashboard-level
+  filter. It does not use sections.
 
 Note:
 - Some folders seen in upstream packages (for example `alerting_rule_template/`, `security_ai_prompt/`) may be package-specific patterns outside the baseline described in `kibana-spec.md`. Keep dashboard work aligned to the package's existing conventions and run validation commands.
@@ -133,16 +190,15 @@ Note:
 Use `elastic-package` commands from the target package directory:
 
 ```bash
-elastic-package service
-elastic-package export
-```
-
-Dashboard-specific helpers:
-
-```bash
+# export dashboards (and their dependencies) from Kibana into the package
 elastic-package export dashboards
+
+# make installed managed dashboards editable before exporting
 elastic-package edit dashboards
 ```
+
+`elastic-package export` has subcommands only (`dashboards`,
+`ingest-pipelines`, `workflows`); on its own it exports nothing.
 
 Recommended review loop after export:
 1. inspect changed files under `kibana/`

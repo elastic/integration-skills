@@ -47,6 +47,7 @@ The manifest `vars` section should define `tags` with a default that includes bo
 - name: tags
   type: text
   title: Tags
+  description: Tags to include in the published event.
   multi: true
   required: true
   show_user: false

@@ -33,14 +33,41 @@ changelog entry `Add group field to package manifest.` (enhancement).
 - `deployment_modes.agentless.release: beta|ga` (spec 3.6.3,
   elastic/package-spec#1130) is now set on all agentless-enabled packages
   (#18552 baseline; #20421/#20463 GA'd security/SSI families). FLAG a
-  new/changed agentless block that omits `release`; expect `beta` for new
-  packages. The block also carries `organization`/`division`/`team`.
+  new/changed agentless block that omits `release`. The block also carries
+  `organization`/`division`/`team`.
+- FLAG (MEDIUM): `release: ga` in a PR that adds agentless support, to a new
+  or an existing package. New agentless support always ships as `beta`;
+  `ga` is set only after the integration passes the Agentless ORR, in a
+  separate change. DO NOT FLAG an existing `ga` value the PR leaves
+  unchanged, or a PR whose only purpose is the post-ORR `beta` → `ga` move.
 - The agentless-enabled condition (`deployment_modes.agentless.enabled: true`)
-  is what gates the CEL-opening `remove_agentless_tags` block check — see
-  `checklists/pipeline-review-checklist.md`.
+  plus a Kibana constraint that admits a release without elastic/kibana#230479
+  (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1) is what gates the
+  `remove_agentless_tags` check on `cel` and `httpjson` streams — see
+  `checklists/pipeline-review-checklist.md`. Fleet stopped injecting
+  `organization`/`division`/`team` in those fixed releases, so new packages
+  on `^9.4.0` do not need it. DO NOT FLAG its absence there, or its presence
+  on existing packages.
 - DO NOT FLAG: agentless blocks on OS/endpoint packages that read host
   kernels/event logs/files/NICs — those packages must NOT have agentless at
   all; flag the block's presence instead.
+- FLAG (MEDIUM): a `cel` or `httpjson` input added or changed by the PR in a
+  policy template without `deployment_modes.agentless.enabled: true`, or an
+  agentless-enabled package README without the Elastic Managed subsection.
+  API inputs run agentless by default (rule and block in
+  `package-spec/references/manifest-rules.md`, "Agentless (Elastic Managed)
+  deployment for API inputs"). Precedent: Netskope REST API v2 support
+  (#21358) shipped without it. On an existing package where the PR does not
+  touch those inputs, report it once as a LOW modernization suggestion.
+- DO NOT FLAG: inputs in an agentless policy template that lack
+  `deployment_modes: ["default"]` when their type is on Fleet's
+  `AGENTLESS_DISABLED_INPUTS` list (`aws-s3`, `gcs`, `azure-blob-storage`,
+  `azure-eventhub`, `gcp-pubsub`, `tcp`, `udp`, `http_endpoint`,
+  `filestream`, `logfile`, `winlog`, `o365audit`, `streaming`; source:
+  elastic/kibana `x-pack/platform/plugins/shared/fleet/common/constants/agentless.ts`).
+  Fleet hides them in agentless mode on its own. Also do not demand agentless
+  for inputs other than `cel`/`httpjson`; AWS, Azure metrics, cloudbeat and
+  entity-analytics packages follow their own guidance.
 
 ## `owner.type: elastic` reversal
 
@@ -93,15 +120,27 @@ Enforced by CI — calibrate, do not duplicate:
 
 - A package's `format_version` must be >= the version introducing any spec
   feature it uses: `var_groups`/named inputs/`sections`/`show_divider` >=
-  3.6.1, agentless `release` >= 3.6.3 (advisory — older declarations exist in
-  the wild), `provider_permissions` >= 3.6.4, `group:` >= 3.6.6. Pipeline
+  3.6.1, `provider_permissions` >= 3.6.4, `group:` >= 3.6.6. Pipeline
   processor-tag and global-`on_failure` validations are BREAKING since 3.6.0.
+- Agentless `release` is the exception: package-spec added it in 3.6.3, but
+  no older spec version rejects it (about 150 packages declare it below
+  3.6.3, most on 3.3.2) and Kibana reads it only from 9.5.0. DO NOT FLAG
+  `release` on a lower `format_version`, and do not ask for a
+  `format_version` or Kibana bump to add agentless.
 - Data-stream manifest categories must match policy-template categories
   (semantic validation since 3.6.1; repo-wide sync #19911/#17523) — a
   category added to one side only is a finding.
 - There is NO format_version normalization wave (values range 3.0.2 → 3.6.x;
   new packages land anywhere from 3.4.x to 3.6.x) — "could be newer" remains
   a non-finding.
+
+## Deprecating data streams and inputs
+
+When a data stream, input, or policy template is deprecated in favour of a replacement, the deprecated stream must not remain the default collection path: set `enabled: false` on the deprecated stream in its data stream manifest (and on the deprecated input's streams in the root manifest where applicable) so new policies default to the replacement. Repo precedents: `o365/data_stream/audit/manifest.yml` (`o365audit` input, `enabled: false`) and `island_browser/data_stream/admin_actions/manifest.yml`. Titles/descriptions carry the `DEPRECATED -` prefix and point at the replacement. Packages on `format_version >= 3.6.0` should additionally use the formal `deprecated:` field with `replaced_by` and the `deprecation` changelog type (elastic/package-spec#1053); older packages rely on the title/description convention alone.
+
+- FLAG: a stream newly marked deprecated (title/description or `deprecated:` field) whose manifest leaves the stream enabled by default (no `enabled: false`) — new policies would still collect via the deprecated path despite the migration guidance.
+- FLAG: deprecation wording that does not name the replacement stream/input.
+- DO NOT FLAG: absence of the formal `deprecated:` field on packages below `format_version` 3.6.0; pre-existing deprecated streams not touched by the PR.
 
 ## Bot-authored changes (non-findings)
 
@@ -116,7 +155,12 @@ YAML sources in `_dev/shared/kibana/*.yaml` compile to
 `kibana/dashboard/*.json` and both must be committed in sync
 (`validate-yaml-dashboards.yml`). Regeneration PRs are expected to touch only
 `adHocDataViews`/`internalReferences`/layer `index`. Saved-object queries must
-filter on `data_stream.dataset`, never `event.dataset`. Full checks live in
+filter on `data_stream.dataset`, never `event.dataset`. ES|QL panels read
+`logs-<pkg>.<dataset>-*` (never a fixed namespace), and all-ES|QL dashboards
+keep a dashboard-level `data_stream.dataset` filter (required by the
+package-spec `SVR00002` check for `lens` panels; `vis` panels pass the check
+but still need the filter for scoping). Dashboard settings must not need a Kibana version above the
+package's `conditions.kibana.version` floor. Full checks live in
 `dashboard-review/SKILL.md`.
 
 ## Secrets

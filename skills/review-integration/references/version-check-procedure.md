@@ -56,7 +56,7 @@ Program using `sign_aws_from_static` and `truncate`:
 
 **Step 5 -- Maximum across all functions:** v9.3.0
 
-**Verification:** If the manifest says `conditions.kibana.version: "^8.19.0 || ^9.1.0"`:
+**Verification:** If an existing package's manifest says `conditions.kibana.version: "^8.19.0 || ^9.1.0"` (new packages start at `^9.4.0`, see `package-spec`):
 - FAIL. Neither `^8.19.0` (mito v1.22.0 < v1.24.0) nor `^9.1.0` (mito v1.22.0 < v1.24.0) includes v9.3.0.
 - Correct constraint: `^9.3.0`
 - Review comment: "`truncate` (Time extension) requires mito v1.24.0, first available in v9.3.0. Current constraint `^8.19.0 || ^9.1.0` does not include v9.3.0. Update to `^9.3.0`."

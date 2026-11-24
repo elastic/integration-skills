@@ -16,13 +16,13 @@ Curated table of features by `format_version`, sourced from the [elastic/package
 | Secret variables (`secret: true`) | 3.0.0 | Variables masked in Fleet UI |
 | `elasticsearch.source_mode` | 3.0.3 | Synthetic source, TSDB mode |
 
-### Current standard: 3.4.2
+### Current standard for new packages: 3.6.5
 
-This is the standard `format_version` for new integrations. All features up to 3.4.2 are available.
+This is the standard `format_version` for new integrations. All features up to 3.6.5 are available, and the 3.6.0 pipeline validators apply. It stays within the spec range supported by the new-package Kibana floor `^9.4.0` (see `../SKILL.md`).
 
 ### Recent additions (3.5.0+)
 
-These features require bumping beyond the current standard. Only use them if the package specifically needs the feature.
+Existing packages below these versions must bump to use these features. Only bump an existing package if it specifically needs the feature.
 
 | Feature | Minimum format_version | Package-spec reference |
 |---------|----------------------|----------------------|
@@ -82,7 +82,7 @@ Spec version 3.6.0 introduced **stricter validations** that are breaking changes
 1. **Pipeline tag validations**: every processor in an ingest pipeline must have a `tag` field. Packages at 3.6.0+ that lack tags will fail `elastic-package check`.
 2. **Pipeline on_failure validations**: the pipeline-level `on_failure` block must follow the expected structure. Missing or malformed `on_failure` blocks fail validation.
 
-Packages at the current default `3.4.2` are NOT subject to these stricter validations. Bumping to 3.6.0+ adds these requirements. Only bump if the package needs a 3.6.0+ feature AND the pipeline already complies with tag and on_failure rules (which they should, per the `ingest-pipelines` skill).
+New packages (default `3.6.5`) are subject to these validations from the start; pipelines built per the `ingest-pipelines` skill already comply. Existing packages below 3.6.0 are NOT subject to them, and bumping to 3.6.0+ adds these requirements. Only bump an existing package if it needs a 3.6.0+ feature AND the pipeline already complies with tag and on_failure rules.
 
 **Federated Identity note:** enabling Cloud Connectors requires `provider_permissions` and therefore `format_version >= 3.6.4`, so the 3.6.0 validators apply. Expect a possible hygiene PR before the federation change — see **Floors and hygiene** in `input-configurations` -> `references/federated-identity-aws.md`.
 

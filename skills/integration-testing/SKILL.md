@@ -31,6 +31,10 @@ Do not use this skill as the primary guide for:
 | System tests (generic) | Always load for any system test work — config fields, commands, teardown, debugging | `references/system-testing.md` |
 | Script tests | txtar failure/error tests, upgrade tests, mock services embedded in txtar | `references/script-testing.md` |
 
+### Policy tests
+
+Policy tests (`_dev/test/policy/*.yml` with a generated `.expected` sibling) render the agent policy for a set of `vars:` and snapshot the result. `elastic-package test policy --generate` records whatever the template renders, including a broken rendering, so a passing policy test does not prove the variables are wired. After generating, confirm that every variable the fixture sets has a visible effect in the `.expected`: its value appears, or the block it guards is rendered. A variable that is set in the fixture and absent from the output means the template reads a different name than the manifest declares (see `manifest-rules.md` in the `package-spec` skill). Fix the name mismatch, do not edit the `.expected` by hand.
+
 ### System test input-specific references
 
 In addition to the generic `system-testing.md`, load the reference file matching your data stream's input type:

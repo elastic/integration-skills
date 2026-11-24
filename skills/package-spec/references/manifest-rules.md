@@ -1,6 +1,6 @@
 # Manifest Rules Reference
 
-Comprehensive rules for `manifest.yml` validation in Elastic integration packages. Covers format_version selection, variable scoping, Handlebars template declarations, routing rules, and YAML structure.
+Comprehensive rules for `manifest.yml` validation in Elastic integration packages. Covers format_version selection, variable scoping, Handlebars template declarations, routing rules, YAML structure, and agentless deployment for API inputs.
 
 ---
 
@@ -94,9 +94,16 @@ Variables can be declared at any manifest scope:
 
 ### How to check
 
-1. Scan the `.yml.hbs` file for all `{{variable_name}}` references (excluding Handlebars helpers and built-in variables).
-2. For each variable, verify it exists in one of the manifest scopes above.
-3. Flag any variable that is not declared anywhere.
+Work per stream, in both directions. A manual scan that only looks for `{{variable_name}}` misses the references that cause real bugs, so collect every form:
+
+1. List every variable the `.yml.hbs` file references. Include all of these forms, not only the plain mustache:
+   - plain expressions: `{{x}}`, `{{ x }}` (spaces are common), `{{{x}}}`
+   - block helper arguments: `{{#if x}}`, `{{#unless x}}`, `{{else if x}}`, `{{#each x}}`, `{{#contains "value" x}}`
+   - helper arguments inside expressions: `{{escape_string x}}`, `{{url_encode x}}`
+   Exclude helper names, block parameters declared with `as |p|` and paths starting from them, string literals, comments, and the built-in variables listed below.
+2. List every variable the stream's manifest declares, at all four scopes above. For scopes in the root manifest, use the `policy_templates[].inputs[].vars` block whose `type` matches the stream's `input`.
+3. Compare both ways. A template variable missing from every scope is undeclared. A stream-level manifest variable that no template references is unused.
+4. Pair the results. An unused manifest variable next to an undeclared template variable with a similar name in the same stream is almost always a rename or typo, and the user-facing setting does nothing. Report that pairing as HIGH. A single-direction result on its own is often harmless (a `{{#if x}}` guard in a template shared by streams that declare `x` elsewhere, or a leftover branch for a removed setting) and needs judgment.
 
 ### Correct vs incorrect
 
@@ -139,6 +146,25 @@ resource.url: {{url}}/api/{{api_version}}/events
 #                         ^^^^^^^^^^^^^^^^ NOT in any manifest!
 ```
 
+```yaml
+# WRONG -- manifest declares "interval", template reads "bucket_list_interval"
+# data_stream/audit/manifest.yml
+streams:
+  - input: aws-s3
+    vars:
+      - name: interval
+        type: text
+        title: Bucket List Interval
+        default: 2m
+
+# data_stream/audit/agent/stream/aws-s3.yml.hbs
+{{#if bucket_list_interval }}
+bucket_list_interval: {{ bucket_list_interval }}
+{{/if}}
+```
+
+The template never reads `interval`, and `bucket_list_interval` is declared nowhere, so the `{{#if}}` is always false and the user's setting is ignored with no error. The reference sits inside a block helper argument with spaces around the name, which a scan for `{{variable_name}}` does not find. Policy tests do not catch it either: `elastic-package test policy --generate` records the broken rendering as the expected output. The fix is to make the names agree, usually by renaming the manifest variable to what the template reads.
+
 ### Built-in variables
 
 Some variables are provided by Fleet automatically and do NOT need declaration in manifests:
@@ -150,18 +176,19 @@ Some variables are provided by Fleet automatically and do NOT need declaration i
 
 ### Handlebars helpers (not variables)
 
-These are control-flow helpers, not variable references. Do not flag them:
+These are control-flow helpers, not variable references. Do not flag the helper names themselves, but do check their arguments: `var`, `items`, and `array` below are variable references and must be declared.
 
 - `{{#if var}}...{{/if}}`
 - `{{#unless var}}...{{/unless}}`
-- `{{#each items as |item|}}...{{/each}}`
+- `{{#each items as |item|}}...{{/each}}` (`item` is a block parameter and needs no declaration)
 - `{{#contains "value" array}}...{{/contains}}`
 
 ### Common mistakes
 
 1. **Copy-paste from another integration** -- template references a variable from the source integration that was never added to this package's manifest.
-2. **Renamed variable** -- manifest variable was renamed but the template still uses the old name.
-3. **Wrong scope** -- variable declared at package level but template expects it at data stream level. This works at runtime, but may confuse users when reviewing the code.
+2. **Renamed variable** -- manifest variable was renamed but the template still uses the old name. Shows up as an unused manifest variable paired with an undeclared template variable in the same stream.
+3. **Template copied from a sibling stream** -- the new stream's manifest was written by hand while the template was copied, so the two disagree on a name. Diff the new template against the one it was copied from and check any variable name that differs.
+4. **Wrong scope** -- variable declared at package level but template expects it at data stream level. This works at runtime, but may confuse users when reviewing the code.
 
 ---
 
@@ -344,13 +371,96 @@ integration package.)*
 
 ---
 
+## Agentless (Elastic Managed) deployment for API inputs
+
+### The rule
+
+A policy template that contains a `cel` or `httpjson` input MUST enable agentless deployment. This applies to new packages, and to existing packages when a change adds a `cel` or `httpjson` input to a policy template that does not have it yet. Users see agentless as "Elastic Managed" in Kibana; see `review-integration/references/repo-conventions.md` for the naming rule.
+
+The two inputs only call a remote API, so Elastic can run them for the user. Shipping one without agentless is a gap reviewers have had to catch by hand: Netskope's REST API v2 data export support (elastic/integrations#21358) shipped without it.
+
+```yaml
+policy_templates:
+  - name: <vendor>
+    title: ...
+    description: ...
+    deployment_modes:
+      default:
+        enabled: true
+      agentless:
+        enabled: true
+        release: beta
+        organization: <organization>
+        division: <division>
+        team: <owning-team>
+    inputs:
+      - type: cel
+        ...
+```
+
+- `release` is always `beta` when agentless support is added, for a new package or an existing one. It changes to `ga` only after the integration passes the Agentless ORR (operational readiness review), in its own change. Never set `ga` in the PR that adds agentless support. A package that is already `ga` keeps that value when a stream is added.
+- `release` does not justify a `format_version` or Kibana bump. package-spec added it in 3.6.3 (elastic/package-spec#1130), but no older spec version rejects it: about 150 packages on elastic/integrations main declare it on lower `format_version` values, most on 3.3.2. Kibana reads it only from 9.5.0. When enabling agentless on an existing package, keep its `format_version` and `conditions.kibana.version`. A bump to 3.6.x is costly: Fleet only installs packages up to its built-in spec maximum (3.4 on Kibana 8.19 and 9.1, 3.5 on 9.2 and 9.3, 3.6 from 9.4), so a 3.6.x package also needs a `^9.4.0` Kibana floor and drops users on older stacks. It also turns on the 3.6.0 pipeline tag and `on_failure` validators.
+- `organization`, `division` and `team` identify the team that owns the package; replace the placeholders, never copy another team's values. Take them from a sibling package with the same `owner.github`. For example, packages owned by `elastic/security-service-integrations` use `organization: security`, `division: engineering`, `team: security-service-integrations`, and observability packages use values such as `organization: observability`, `team: obs-signals-integrations-team`.
+
+### Scope: `cel` and `httpjson` only
+
+The rule is limited to `cel` and `httpjson` on purpose. Across elastic/integrations, they are the inputs our API packages actually run agentless (`cel` in 118 agentless-enabled packages, `httpjson` in 46). Other agentless-capable inputs belong to packages with their own guidance:
+
+- `aws-cloudwatch` and `aws/metrics` (AWS packages): follow `input-configurations` -> `references/federated-identity-aws.md`.
+- `azure/metrics`, cloudbeat inputs, `connectors-py`: owned by other teams; do not add or remove agentless on them as part of this rule.
+- `entity-analytics`: the `entityanalytics_*` packages run agentless; follow `review-integration/checklists/entity-analytics-review-checklist.md`.
+
+Do not enable agentless on packages that read the host (kernel, event logs, local files, network interfaces), even if they also have an API input. See `review-integration/references/repo-conventions.md`.
+
+### Other inputs in the same policy template
+
+Fleet decides per input whether it shows in agentless mode (`x-pack/platform/plugins/shared/fleet/common/services/agentless_policy_helper.ts` in elastic/kibana):
+
+1. If the input declares `deployment_modes`, that list wins.
+2. Otherwise the input is allowed unless its type is in `AGENTLESS_DISABLED_INPUTS` (`x-pack/platform/plugins/shared/fleet/common/constants/agentless.ts`). That list includes `tcp`, `udp`, `filestream`, `logfile`, `http_endpoint`, `winlog`, `aws-s3`, `gcs`, `azure-blob-storage`, `azure-eventhub`, `gcp-pubsub`, `o365audit` and `streaming`.
+
+So a template that mixes `cel` with `aws-s3`, `gcs` or `tcp` needs no extra configuration: Fleet hides the listed inputs in agentless mode. Read the Kibana file for the current list rather than relying on the copy above. Add input-level `deployment_modes: ["default"]` only to an input whose type is not on the list but cannot run agentless:
+
+```yaml
+    inputs:
+      - type: cel
+        ...
+      - type: some-input-not-on-the-fleet-list
+        deployment_modes: ["default"]
+        ...
+```
+
+### What goes with it
+
+- **README**: `_dev/build/docs/README.md` needs the "Elastic Managed enabled integration" and "Agent-based installation" subsections. The `elastic-package create package` template still has an older commented "Agentless deployment" block; replace it with the current wording, for example from `packages/sentinel_one/_dev/build/docs/README.md`:
+
+  ```markdown
+  This integration supports both Elastic Managed and Agent-based installations.
+
+  ### Elastic Managed enabled integration
+
+  Elastic Managed integrations are only supported on Elastic Cloud Serverless and Elastic Cloud Hosted deployments. An Elastic Managed integration lets you ingest data from a cloud source while avoiding the orchestration, management, and maintenance associated with standard ingest infrastructure. Elastic runs the collector for you, so you can focus on your data instead of the infrastructure that collects it.
+
+  For more information, refer to [Elastic Managed integrations](https://www.elastic.co/docs/manage-data/ingest/managed-integrations/managed-integrations) and the [Elastic Managed integrations FAQ](https://www.elastic.co/docs/manage-data/ingest/managed-integrations/managed-integrations-faq).
+
+  ### Agent-based installation
+
+  Elastic Agent must be installed. For more details, check the Elastic Agent [installation instructions](docs-content://reference/fleet/install-elastic-agents.md). You can install only one Elastic Agent per host.
+  ```
+
+- **Ingest pipeline**: no change for new packages. The `remove_agentless_tags` processor is only needed when the package's `conditions.kibana.version` admits a Kibana release that still injects `organization`/`division`/`team` (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1; fixed in elastic/kibana#230479). When enabling agentless on an existing package with such a constraint, add it to each `cel` and `httpjson` stream's pipeline. See `ingest-pipelines` -> "Opening processors for API inputs".
+- **Changelog**: enabling agentless on an existing package is an `enhancement` with a minor bump. Keep it a separate entry from any bugfix in the same release.
+- **Testing**: `elastic-package test system` runs agent-based only. Agentless is checked by `elastic-package check` (manifest schema) and by a manual install on Elastic Cloud or Serverless.
+
+---
+
 ## format_version selection
 
 ### The rule
 
 The `format_version` field in `manifest.yml` declares which package spec version the package conforms to. Always use the **minimum version that supports the features the package actually uses**, not the latest available spec version.
 
-The current **default** is `"3.4.2"`. Higher versions are correct when the package uses features that require them.
+New packages use `"3.6.5"` (see `../SKILL.md`). For existing packages, higher versions are correct when the package uses features that require them.
 
 ### Why minimum matters
 
@@ -398,7 +508,10 @@ A `format_version` bump is justified only when the PR also introduces a feature 
 - [ ] Routing rules have dynamic_dataset + dynamic_namespace -- **HIGH** if routing_rules.yml present but flags missing
 - [ ] YAML uses nested structure, not dotted keys -- **MEDIUM**
 - [ ] Input names verified against agent capabilities, not a green lint -- **MEDIUM**
+- [ ] A PR that adds agentless support sets `release: beta`, not `ga`; `ga` comes only after the Agentless ORR -- **MEDIUM**
+- [ ] A policy template with a `cel` or `httpjson` input enables agentless (`deployment_modes.agentless.enabled: true` with `release`, `organization`, `division`, `team`) and the README has the Elastic Managed subsection -- **MEDIUM** when the input is new or changed in the PR (see **Agentless (Elastic Managed) deployment for API inputs**)
 - [ ] All variables have title, description, type, required -- **MEDIUM**
 - [ ] Defaults present for optional variables -- **LOW**
+- [ ] Deprecated streams/inputs set `enabled: false` so the replacement is the default collection path (precedent: `o365` `audit`, `island_browser` `admin_actions`; formal `deprecated:` field available from format_version 3.6.0) -- **MEDIUM**
 - [ ] If `var_groups` includes `identity_federation`: `vars` is `[role_arn, supports_identity_federation]` (no `external_id`) and `iac_template_url` points at `cloudformation-federated-identity-aws-<Kibana-floor>.yml` with no `param_ElasticResourceId` — not the GuardDuty-only CFT -- **HIGH** when in scope (see `input-configurations` -> `references/federated-identity-aws.md`)
 - [ ] If `provider_permissions` is declared: `format_version >= 3.6.4` and IAM action names match the collector's real API calls -- **HIGH** when in scope

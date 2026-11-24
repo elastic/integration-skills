@@ -46,11 +46,14 @@ Before creating any files, verify all required tools are present. Run the Precon
 2. Run the package scaffold and apply all post-scaffold steps per `references/scaffold-commands.md` (scaffold command, `_dev/build/build.yml` creation, manifest edits, initial validation).
 
 **Default manifest version settings** — after scaffolding, verify the root `manifest.yml` has these values (the scaffold may generate different defaults):
-- `format_version: "3.4.2"`
-- `conditions.kibana.version: "^8.19.0 || ^9.1.0"`
+- `format_version: "3.6.5"`
+- `conditions.kibana.version: "^9.4.0"`
 
-**Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, use `format_version: "3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`. Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
+See `package-spec` for why these are the new-package defaults.
 
+**Exception — Federated Identity (Cloud Connectors):** if the package will use `provider_permissions` / `var_groups` for AWS identity federation, keep `format_version: "3.6.5"` and use `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"`. Follow `input-configurations` -> `references/federated-identity-aws.md` for the full procedure; see `package-spec` for schema floors.
+
+**Agentless (Elastic Managed):** if any planned data stream uses a `cel` or `httpjson` input, enable agentless on its policy template now (`deployment_modes.agentless.enabled: true`, `release: beta`, owner-team metadata) and add the Elastic Managed README subsections. Follow `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
 3. **Start the Elastic stack** (needed for system tests later):
 
 ```bash
@@ -126,8 +129,8 @@ Dispatch a subagent per the **Dispatch convention** above, pointing it at `inges
 The task prompt must include (in addition to the read-the-manual directive):
 
 1. Package and data stream paths.
-2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow CEL-only opening processors, `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream or a GenAI stream — see items 7 and 8), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
-3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it whether the input is CEL or not, so it knows whether to include CEL-only opening processors.
+2. **For CEL streams**: tell it the data structure is already known from the CEL builder output and system test mock data. Point it to the mock API response files. Require the pipeline to follow the API-input opening processors (the collector-error `terminate`; no `remove_agentless_tags`, because the `^9.4.0` floor already has the Fleet fix), `ecs.version: 9.3.0` (or `9.5.0` if this is an entity stream or a GenAI stream — see items 7 and 8), full `on_failure` baseline, JSE00001 rename/remove, parsing from `event.original`, and `rename` over `set` when mapping into ECS.
+3. **For non-CEL streams**: provide sample log data and log format details (JSON, syslog, CEF, key-value, etc.). Tell it the input type, so it knows whether the API-input opening processors apply (`terminate` for `cel` only, `remove_agentless_tags` for `cel` and `httpjson` only).
 4. Representative request/response payloads or raw-event fixtures.
 5. Links to authoritative requirement files.
 6. Expected ECS categorization if known.
@@ -248,8 +251,9 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - Always use `elastic-package create` for scaffolding. Never fabricate scaffold files manually.
 - Treat all scaffold output as placeholders. A passing scaffold validation does not mean the integration logic is implemented.
 - Treat `manifest.yml` as a placeholder until aligned with implemented templates and requirements.
-- **Root `manifest.yml` must set `format_version` and `conditions.kibana.version` to the minimum that supports the package's features.** Default: `format_version: "3.4.2"` and `conditions.kibana.version: "^8.19.0 || ^9.1.0"`. For Federated Identity / `provider_permissions`, use `format_version: "3.6.4"`, `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` instead (see `input-configurations` -> `references/federated-identity-aws.md`). The scaffold may generate different values — override accordingly. These settings belong only in the root manifest, not in data stream manifests.
+- **Root `manifest.yml` must set `format_version` and `conditions.kibana.version` to the minimum that supports the package's features.** Default: `format_version: "3.6.5"` and `conditions.kibana.version: "^9.4.0"`. For Federated Identity / `provider_permissions`, use `conditions.kibana.version: "^9.6.0"` and `conditions.agent.version: "^9.4.0"` instead (see `input-configurations` -> `references/federated-identity-aws.md`). The scaffold may generate different values — override accordingly. These settings belong only in the root manifest, not in data stream manifests.
 - For CEL streams, remove all unused manifest vars. If a var is not used in `cel.yml.hbs`, remove it.
+- **A policy template with a `cel` or `httpjson` input must enable agentless** (`release: beta`; never `ga`, which comes only after the Agentless ORR) and the README must carry the Elastic Managed subsections. See `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**.
 - Run from the correct directory: `packages/` for package creation, `packages/<name>/` for data-stream creation.
 - Run `elastic-package build` before any system test whenever package files changed.
 - **Always create `_dev/build/build.yml` immediately after scaffolding the package, before creating data streams.** Required for ECS field resolution.
@@ -267,3 +271,5 @@ Ensure subagents receive this instruction: all fixture data, mock API responses,
 - This workflow does not cover opening the PR. Once a PR exists, `changelog.yml`'s placeholder link (`pull/99999`) must be replaced with the real PR number and pushed before merge -- see `package-spec` skill's "Updating the changelog link after PR creation".
 - **Entity data streams**: set `event.kind: asset`, never `event`. The `entity.*` leaf fields (`entity.attributes.*`, `entity.lifecycle.*`, `entity.relationships.*`) require `git@v9.5.0` in `_dev/build/build.yml` with a matching `ecs.version: 9.5.0` in the pipeline; at `git@v9.3.0` they are undefined. Never apply entity fields to event log or CDR findings streams.
 - **GenAI data streams**: only `gen_ai.*` fields defined in ECS v9.5.0 (never OpenTelemetry attributes that ECS has not adopted, never `gen_ai.conversation.id` until an ECS release includes it); OTel well-known values for `gen_ai.provider.name` and `gen_ai.operation.name`; `finish_reasons` / `stop_sequences` / `encoding_formats` defined locally as `keyword`; the six `flattened` fields with `ignore_above: 8191`. The README must say how to enable any vendor-side content capture (prompts, responses, tool details). See `genai-mappings`.
+- **Threat intelligence packages must be named `ti_<vendor>`** so that `kibana_system` already has the privileges their ILM policies and transforms need; any other name requires an Elasticsearch role change and backports.
+- **Threat intelligence indicator data streams** (`ti_*` packages, pipeline sets `event.kind: enrichment` and `threat.indicator.*`): each one must be read by a latest transform in `elasticsearch/transform/`, with `labels.is_ioc_transform_source` on the source data stream and the destination. The transform is what expires indicators, and Elastic's built-in indicator match rules rely on the label to skip the raw data stream and match only the transform destination. The source data stream also needs short retention for both deployment types: an ILM policy in `elasticsearch/ilm/` referenced by `ilm_policy` in its manifest (self-managed and Elastic Cloud Hosted), and `lifecycle.yml` (Serverless). Follow `review-integration/references/ti-transform-requirements.md`; a `ti_*` package without a transform is incomplete.

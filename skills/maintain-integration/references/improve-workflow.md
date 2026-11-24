@@ -59,6 +59,8 @@ The task prompt must include (in addition to the read-the-manual directive):
 
 The reviewer returns a severity-ranked issue list with domain tags.
 
+**Agentless check:** whatever the issue list says, check whether a policy template with a `cel` or `httpjson` input lacks `deployment_modes.agentless`. If the task adds or changes such an input, enable agentless as part of the work (see `package-spec` -> `references/manifest-rules.md` -> **Agentless (Elastic Managed) deployment for API inputs**). If the task does not touch those inputs, list it as a recommended follow-up rather than folding it into an unrelated fix. Either way it gets its own `enhancement` changelog entry.
+
 ## Phase 2: Prioritize
 
 Categorize all issues by severity:

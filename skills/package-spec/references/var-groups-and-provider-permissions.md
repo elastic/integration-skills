@@ -11,7 +11,7 @@ For the Federated Identity (Cloud Connectors) procedure on an AWS integration, l
 | `var_groups` | 3.6.1 | Credential / setup method selector in Fleet UI |
 | `provider_permissions` | 3.6.4 | Declarations that feed IaC Provider IAM role rendering |
 
-Default new packages stay at `3.4.2`. Bump only when introducing these features.
+New packages default to `3.6.5`, which already supports these features. Bump an existing package only when introducing them.
 
 ## `var_groups`
 
@@ -67,7 +67,7 @@ Do not guess IAM action names — derive them from the collector's real API call
 ## Conditions with these features
 
 When a package uses Federated Identity / `use_cloud_connectors`:
-- `format_version: "3.6.4"`
+- `format_version` >= `"3.6.4"` (new packages: `"3.6.5"`)
 - `conditions.kibana.version: "^9.6.0"` (or higher) — external-ID-free connector flow
 - `conditions.agent.version: "^9.4.0"` (or higher) — `auth.aws` + libbeat cloud connectors shipped in agent 9.4.0, so the agent floor is deliberately lower than the Kibana floor ([elastic/integrations#21007](https://github.com/elastic/integrations/pull/21007))
 

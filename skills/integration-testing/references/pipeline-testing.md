@@ -132,13 +132,13 @@ multiline:
 
 Do **not** add `source.geo.*` (or other geo enrichment fields like `destination.geo.*`) to `dynamic_fields`. These fields are deterministic — they are produced by the `geoip` processor based on static IP-to-location databases and should produce consistent values in pipeline tests.
 
-If `source.geo` fields cause pipeline test failures (mismatches, missing fields), the root cause is almost certainly an incorrect `format_version` or `conditions.kibana.version` in the root `manifest.yml`. The correct values are:
+If `source.geo` fields cause pipeline test failures (mismatches, missing fields), the root cause is almost certainly an incorrect `format_version` or `conditions.kibana.version` in the root `manifest.yml`. For new packages the correct values are (see `package-spec`):
 
 ```yaml
-format_version: "3.4.2"
+format_version: "3.6.5"
 conditions:
   kibana:
-    version: "^8.19.0 || ^9.1.0"
+    version: "^9.4.0"
 ```
 
 Fix the root manifest first. If failures persist after correcting the manifest, ignore the specific lint/validate complaints for those geo fields rather than adding them to `dynamic_fields`.

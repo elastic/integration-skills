@@ -46,18 +46,24 @@ A stream template (`agent/stream/*.yml.hbs`) may reference a variable declared a
 
 Handlebars block parameters (`{{#each tags as |tag|}}` ... `{{tag}}`) and helper names (`#if`, `#contains`, `escape_string`) are not variables and need no declaration.
 
+Check per stream, not per diff hunk. For every data stream the change touches, list the variables its manifest declares and the variables its templates reference side by side, then reconcile in both directions. A template reference counts in every form: `{{x}}`, `{{ x }}`, `{{{x}}}`, and block helper arguments such as `{{#if x}}`, `{{#unless x}}`, `{{else if x}}`, `{{#each x}}`, `{{#contains "v" x}}`. The spaced and block-helper forms are where real bugs hide.
+
 - Every variable declared in data stream `manifest.yml` must be referenced in at least one stream template (`agent/stream/*.yml.hbs`).
-- No unused variables (declared but never `{{variable_name}}` in any template).
+- No unused variables (declared but never referenced, in any form above, in any template).
 - Variable names in manifest must match exactly what the template references.
 - A variable a template references but no site declares renders empty when the policy is compiled. Before reporting one as undeclared, read the root `manifest.yml` and check the `inputs[].vars` block for the stream's input type; a tool report or digest that lists only stream-level declarations is not sufficient evidence.
+- **Mismatch pairing is HIGH.** An unused manifest variable together with an undeclared template variable of a similar name in the same stream (`interval` / `bucket_list_interval`, `api_timeput` / `api_timeout`, `enrich_host_metadata` / `enrich_metadata`) means the user-facing setting does nothing. Report it as HIGH under `domain:consistency` even when the change did not introduce it. A single-direction result without a partner is often harmless (a `{{#if x}}` guard in a template shared by streams that declare `x`, a leftover branch for a removed setting) and stays a judgment call.
+- **Templates copied from a sibling stream.** When a new data stream's template was copied from an existing stream in the same package, diff the two templates in both directions and check every variable name that differs against the new stream's manifest. Comparing the copy only against its sibling makes a copied bug look correct.
+- **Policy test key presence.** Every variable set under `vars:` in a `_dev/test/policy/*.yml` fixture should produce a visible effect in the matching `.expected` file: the value appears, or a block guarded by the variable is rendered. A fixture that sets a variable whose value is absent from its `.expected` is direct evidence that the template does not read that name. Reading the `.expected` for this one key-presence check (for example, grepping for the fixture's value) is a narrow, explicit exception to the generated-output exclusion; do not read it for anything else.
+- **Pre-existing findings.** When this check surfaces a mismatch the change did not introduce, report it in a separate "Pre-existing" list under Cross-Domain Consistency. It keeps its severity so the package gets fixed, but it does not affect the verdict for the change under review.
 
 Rule key: `template_vars_judgment_residue` -- owned by the input reviewer.
 
 ## Root manifest to data stream manifest
 
 - Data stream `manifest.yml` must NOT set its own `format_version` or `conditions` -- these belong only in the root manifest.
-- Root manifest `format_version` should be `"3.4.2"` for new packages, or `"3.6.4"` when the package declares `provider_permissions` / `var_groups` (Federated Identity). For existing packages, the minimum version that supports all features used is acceptable. Flag as HIGH if the version is too low for features used or if a new package uses anything other than the applicable standard.
-- Root manifest `conditions.kibana.version` -- for new packages should be `"^8.19.0 || ^9.1.0"`, or `"^9.6.0"` with `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope. For existing packages, verify the constraint supports all agent features the package uses (CEL functions, config options, input types). Only flag HIGH if features require a higher version than declared, not merely because the constraint is older than the current standard.
+- Root manifest `format_version` should be `"3.6.5"` for new packages (this also covers Federated Identity, which needs `3.6.4` or later). For existing packages, the minimum version that supports all features used is acceptable. Flag as HIGH if the version is too low for features used or if a new package is below `3.6.5`.
+- Root manifest `conditions.kibana.version` -- for new packages should be `"^9.4.0"`, or `"^9.6.0"` with `conditions.agent.version: "^9.4.0"` when Federated Identity is in scope. Flag as HIGH if a new package's constraint admits any Kibana version below 9.4. For existing packages, verify the constraint supports all agent features the package uses (CEL functions, config options, input types). Only flag HIGH if features require a higher version than declared, not merely because the constraint is older than the current standard.
 
 Rule key: `stream_manifest_root_duplication` -- owned by the structure reviewer.
 
@@ -67,7 +73,7 @@ Rule key: `stream_manifest_root_duplication` -- owned by the structure reviewer.
 - Input fixtures follow naming: `test-<package>-<datastream>-<type>-sample.log` (or `.json`).
 - `test-common-config.yml` must include `fields.tags: [preserve_original_event]`.
 - `source.geo.*` fields should NOT be in `dynamic_fields`. For new packages, fix by ensuring `format_version` and `conditions.kibana.version` are current. For existing packages where updating those versions is not in scope, `source.geo` in `dynamic_fields` may be an acceptable workaround -- note as technical debt.
-- Do not read or compare generated expected outputs. Snapshot freshness, generation, and pipeline-output mismatches belong to `elastic-package` in CI, not review findings.
+- Do not read or compare generated expected outputs. Snapshot freshness, generation, and pipeline-output mismatches belong to `elastic-package` in CI, not review findings. The only exception is the policy test key-presence check described under "Manifest to template consistency".
 
 Rule key: `fixtures_cover_pipeline_branches` -- owned by the tests reviewer.
 
@@ -103,8 +109,29 @@ Rule key: `kibana_reference_resolution` -- reviewed against source by the review
 
 - ILM policies and lifecycle settings must be consistent across the package's data streams. Compare `data_stream/*/lifecycle.yml` and any `elasticsearch.ilm_policy` set in the data stream manifests: streams carrying the same kind of data should not have divergent retention without a reason visible in the change.
 - A lifecycle policy on some streams and not others is a finding only when the streams are comparable; a metrics stream and a logs stream legitimately differ.
+- A data stream whose input re-collects the whole collection every interval (see `cel_cursor_and_relist_bound` below) and has neither an attached ILM policy nor a `lifecycle.yml` is a finding regardless of what sibling streams do.
 
 Rule key: `ilm_lifecycle_consistency` -- owned by the structure reviewer.
+
+## Retention assets and README
+
+Fleet applies retention differently per deployment type. On stateful stacks (self-managed, Elastic Cloud Hosted) the data stream manifest's `ilm_policy` names a policy shipped at `elasticsearch/ilm/<name>.json`; `lifecycle.yml` is ignored there. On Serverless, ILM does not exist and Fleet applies `lifecycle.yml` (`data_retention`) instead. A package that bounds growth must therefore ship **both**, and they must agree.
+
+- A data stream with `elasticsearch/ilm/*.json` but no `ilm_policy:` in its `manifest.yml` is a finding: the policy is installed but never attached, so stateful backing indices fall back to the default `logs` policy, which never deletes (elastic/integrations#21661 fixed this in ti_misp).
+- A data stream with `ilm_policy` but no `lifecycle.yml` (or package-level `lifecycle.yml`) is a finding: Serverless deployments have no retention at all.
+- A data stream with `lifecycle.yml` but no ILM policy is a finding unless the package is Serverless-only: stateful deployments get the default `logs` policy.
+- The ILM delete age and the lifecycle `data_retention` should express the same intent. ILM `delete.min_age` counts from rollover, so the effective stateful retention is between `min_age` and `rollover.max_age + min_age`; a 2d/3d ILM policy next to a 30d lifecycle (or the reverse) is a finding.
+- Every data stream that ships retention must be covered in `_dev/build/docs/README.md`: the period, the reason (usually repeated collection per interval), which mechanism applies on stateful versus Serverless, and how to override each (edit the ILM policy; `PUT _data_stream/<name>/_lifecycle` on Serverless). Compare `data_stream/*/lifecycle.yml`, `data_stream/*/manifest.yml` `ilm_policy`, and `elasticsearch/ilm/` against the README.
+- README text that describes only ILM, or only a lifecycle, or states "deleted after N days" without saying which deployment type that applies to, is incomplete.
+
+Rule key: `retention_assets_and_readme` -- owned by the structure reviewer.
+
+## CEL cursor placement and re-list bound
+
+- In every CEL stream template, pagination position (page token, offset, next URL, worklist, "more pending" flag) must be read from and written to `state.cursor.*`. Top-level `state.<position>` is lost on restart and the walk restarts from the beginning. Compare the keys the program reads before its request against the keys it writes under `cursor`.
+- A CEL stream that sends no change-timestamp lower bound to the API (fetches the full collection every interval) must have a `fingerprint → _id` processor in `elasticsearch/ingest_pipeline/default.yml` and bounded retention on both deployment types: `ilm_policy` + `elasticsearch/ilm/*.json` for stateful and `lifecycle.yml` for Serverless (see `retention_assets_and_readme`). Compare the stream template, the pipeline, and the data stream directory.
+
+Rule key: `cel_cursor_and_relist_bound` -- owned by the input reviewer.
 
 ## README to package reality
 

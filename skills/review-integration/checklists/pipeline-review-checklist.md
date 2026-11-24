@@ -47,10 +47,16 @@ Severity-tagged checklist. Each item: what to check, violation criteria, severit
 - [ ] `event.category` and `event.type` are arrays: must use `append` processor, not `set` -- **HIGH** if using set
 - [ ] Categorization values are semantically appropriate for the data (not just valid but correct) -- **MEDIUM**
 
-### CEL-only opening processors
+### Opening processors for API inputs
 
-- [ ] CEL-opening Agentless block (`remove` processor for agentless metadata `organization`/`division`/`team` when all are strings, tagged `remove_agentless_tags`, followed by `terminate` processor on the collector-error placeholder shape): required only on NEW CEL data streams in packages whose manifest enables agentless deployment (`deployment_modes.agentless.enabled: true`), or where sibling pipelines in the same package already carry the block (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
-- [ ] These processors must NOT be present for non-CEL streams -- **MEDIUM** if present for wrong input type
+- [ ] Collector-error `terminate` (on the CEL error placeholder shape): required on NEW CEL data streams, or where sibling pipelines in the same package already carry it (consistency). On existing pre-Agentless pipelines its absence is NOT a finding (at most a LOW modernization note) -- **MEDIUM** when missing in those two cases only
+- [ ] `remove_agentless_tags` (`remove` of `organization`/`division`/`team` when all are strings, before any `terminate`) on `cel` and `httpjson` streams: required only when the package enables agentless AND its `conditions.kibana.version` admits a Kibana release without elastic/kibana#230479 (below 8.18.5, 8.19.0–8.19.1, 9.0.0–9.0.4, 9.1.0–9.1.1). Not required on packages limited to fixed releases (all new packages on `^9.4.0`); its presence on existing packages is a harmless no-op, not a finding -- **MEDIUM** when missing in the required case on a NEW `cel` or `httpjson` stream
+- [ ] `terminate` must NOT be present on non-CEL streams, and `remove_agentless_tags` must NOT be present on streams whose inputs never run agentless (types on Fleet's `AGENTLESS_DISABLED_INPUTS`, such as `tcp`, `aws-s3`, `logfile`) -- **MEDIUM** if present for the wrong input type
+
+### Deduplication for re-collected data
+
+- [ ] If the data stream's input re-collects the same records on every interval (inventory, posture, feed, or any CEL program with no time watermark), the pipeline sets `_id` with a `fingerprint` processor over the record identifier plus a change marker (for example `json.id` + `json.updatedAt`), `ignore_missing: true`, placed right after `event.original` is decoded -- **HIGH** if absent on such a stream
+- [ ] The fingerprint fields identify the *record version*, not the collection run: do not include `@timestamp`, `event.ingested`, or anything the collector sets per run, or every copy gets a fresh `_id` -- **HIGH** if a per-run field is in the fingerprint
 
 ### Performance
 

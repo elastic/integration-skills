@@ -83,6 +83,7 @@ For every file in scope, classify into a domain:
 | `_dev/test/pipeline/*` | tests |
 | `_dev/test/system/*` | tests |
 | `kibana/**/*.json` | dashboard |
+| `_dev/shared/kibana/*.yaml` | dashboard |
 | `_dev/build/docs/README.md` | docs |
 | `elasticsearch/transform/**` | transform |
 | `*-expected.json`, `sample_event*.json` | generated (excluded from review; CI-owned) |
@@ -142,10 +143,13 @@ These references live in this skill's `references/` directory and provide review
 | Federated Identity / Cloud Connectors in scope | `input-configurations/references/federated-identity-aws.md` -- input classification, `iac_template_url`, `auth.aws` / `use_cloud_connectors`, input gating |
 | Assessing the PR title/description (first review) | `references/commit-message-conventions.md` -- squash-merge commit-message conventions the PR title is judged against |
 | Cloud security / CDR integration | `ecs-field-mappings/references/cdr-field-requirements.md` + `ingest-pipelines/references/cdr-pipeline-requirements.md` + `references/cdr-transform-requirements.md` |
+| Threat intelligence (`ti_*`) package with indicator data streams or transforms in scope | `references/ti-transform-requirements.md` |
 | Entity / entity-inventory data stream | `entity-mappings/references/entity-field-catalog.md` + `entity-mappings/references/entity-pipeline-patterns.md` |
 | GenAI data stream (`gen_ai.*` fields, LLM / agent / AI assistant telemetry) | `genai-mappings/references/genai-field-catalog.md` + `genai-mappings/references/genai-pipeline-patterns.md` + `genai-mappings/references/genai-detection-conventions.md` |
 
 **CDR detection:** Check the root `manifest.yml` categories. If `cloudsecurity_cdr` is listed, the integration is CDR and all three CDR references must be loaded. Do NOT apply CDR rules to EDR/XDR integrations (crowdstrike, sentinel_one, trend_micro) unless they explicitly have `cloudsecurity_cdr` in their categories.
+
+**TI transform detection:** Load `references/ti-transform-requirements.md` when the package name starts with `ti_` and the review touches `elasticsearch/transform/` or any data stream whose pipeline sets `event.kind: enrichment`. This includes new `ti_*` packages and new indicator data streams that ship without a transform: the missing transform is itself a finding. The reference's "When these requirements apply" section decides which data streams and transforms it covers; do not apply it to alert-copying transforms or to non-`ti_*` packages.
 
 **Entity data stream detection:** Apply the review-time rule from `entity-mappings/references/entity-datastream-classification.md` (first hit wins) to each data stream in scope:
 1. **Definitive:** any pipeline sets `event.kind: asset`.
@@ -218,7 +222,7 @@ After individual file inspection, check cross-domain consistency (load `referenc
 
 - Fields set in pipeline processors must be declared in `fields/ecs.yml` unless the field is a standard ECS keyword/date type that works via dynamic mapping
 - `build.yml` ECS version must match `ecs.version` set in pipeline
-- Manifest variables must be referenced in stream templates; a template variable counts as declared if it appears in the data stream manifest `streams[].vars`, the root manifest `policy_templates[].vars`, or the root manifest `policy_templates[].inputs[].vars` for that input type (Handlebars block parameters such as `{{#each tags as |tag|}}` are not variables)
+- Manifest variables must be referenced in stream templates; a template variable counts as declared if it appears in the data stream manifest `streams[].vars`, the root manifest `policy_templates[].vars`, or the root manifest `policy_templates[].inputs[].vars` for that input type (Handlebars block parameters such as `{{#each tags as |tag|}}` are not variables). Reconcile per touched stream in both directions, counting block helper arguments (`{{#if x}}`) and spaced forms (`{{ x }}`) as references. An unused manifest variable paired with a similarly named undeclared template variable in the same stream is HIGH. For a new stream whose template was copied from a sibling, diff the two templates and check every variable name that differs.
 - Data stream manifest must not duplicate root manifest fields (`format_version`, `conditions`)
 - Handwritten test configurations and input fixtures should exercise relevant pipeline branches and failure scenarios. Do not use generated expected/sample outputs to establish coverage or freshness.
 
@@ -235,6 +239,7 @@ Read `references/review-output-template.md` for the exact output format and rend
 ### Verdict rules
 
 - Any critical or high finding -> `NEEDS_CHANGES`
+- Findings listed under "Pre-existing" keep their severity but do not count toward the verdict
 - Only medium/low findings -> `APPROVED_WITH_SUGGESTIONS`
 - No findings after reviewing permitted source -> `APPROVED`
 - Only excluded generated outputs changed -> `NOT_REVIEWED`
@@ -252,8 +257,8 @@ Every issue must include exactly one domain tag:
 | `domain:input` | Agent stream template issues -- all input types including CEL, HTTPJSON, AWS S3, TCP, etc. |
 | `domain:fields` | Field definitions, types, duplicates, geo nesting, ECS mapping strategy |
 | `domain:tests` | Handwritten pipeline input fixtures, system test configs, test-common-config.yml, and scenario coverage; excludes generated expected/sample outputs |
-| `domain:dashboard` | Kibana dashboard JSON at package root (kibana/), TSVB, dataset filters, by-reference panels |
-| `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR |
+| `domain:dashboard` | Kibana dashboard JSON at package root (kibana/) and YAML sources (`_dev/shared/kibana/`), TSVB, dataset filters, by-reference panels, ES\|QL scope, settings above the Kibana floor |
+| `domain:transform` | Transform configuration at package root (elasticsearch/transform/), sync, field definitions, CDR, TI |
 | `domain:docs` | README content, placeholder text, title/description quality |
 | `domain:anonymization` | Real data in committed files, non-synthetic IPs/hostnames/credentials |
 | `domain:consistency` | Cross-domain issues: pipeline-fields mismatch, build.yml-pipeline ECS mismatch, unused manifest vars |
@@ -302,6 +307,7 @@ load the compatibility indexes in addition to those same references.
 | `input-configurations/references/federated-identity-aws.md` | Federated Identity detection (see Step 4) | AWS Cloud Connectors procedure: `iac_template_url`, `use_cloud_connectors`, input gating |
 | `references/transform-guide.md` | Transform in scope | Transform types, config, fields, sync, review checklist |
 | `references/cdr-transform-requirements.md` | CDR transforms | CDR latest transform requirements, destination naming, keys, retention |
+| `references/ti-transform-requirements.md` | TI packages (see TI transform detection) | Latest transform required for every indicator data stream, source retention (ILM + `lifecycle.yml`), `labels.is_ioc_transform_source` for built-in indicator match rules, unique key, destination fields, IOC expiration, review checklist |
 | `references/repo-conventions.md` | Always | elastic/integrations repo conventions: `group` field, Elastic Managed rename + agentless `release`, owner.type, changelog/backport automation, version-constraint hygiene (dated reference) |
 | `references/entity-analytics-provider-matrix.md` | entity-analytics in scope | Provider capability matrix (azure-ad, okta, activedirectory, jamf), legacy vs minimal-state sync/marker/deletion semantics |
 | `checklists/pipeline-review-checklist.md` | Pipeline in scope | Severity-tagged pipeline review checklist |
