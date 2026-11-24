@@ -32,13 +32,7 @@ The authoritative list is the pinned release's `ecs_nested.yml`. Check every nam
 `ecs.version: "9.5.0"`. The two must match. At a lower pin, `external: ecs` on any field
 added in v9.5.0 fails the build with `field definition not found in schema`, and `gen_ai.request.max_tokens`,
 `gen_ai.request.seed`, `gen_ai.request.choice.count` and `gen_ai.usage.*` resolve to
-`integer`, not `long`.
-
-Verify at any tag:
-```bash
-curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields.csv \
-  | awk -F, '$3=="gen_ai"' | cut -d, -f4,5 | sort
-```
+`integer`, not `long`. To list the fields at any tag, see *How to refresh this file*.
 
 ---
 
@@ -56,7 +50,6 @@ package's field files (see *Field definition rules* below for why some differ fr
 | `gen_ai.request.model` | keyword | `external: ecs` | The name of the GenAI model a request is being made to. | `gpt-4` | The exact name requested, as sent. For a fine-tuned or deployment-aliased model, use the most specific name available. Keyword scalar, never an object (`gen_ai.request.model.id` is wrong). |
 | `gen_ai.response.model` | keyword | `external: ecs` | The name of the model that generated the response. | `gpt-4-0613` | Only from the response, or from a source field documented as the serving model. Do not copy `request.model` into it unless the source documents that its single model field is both. |
 | `gen_ai.response.id` | keyword | `external: ecs` | The unique identifier for the completion. | `chatcmpl-123` | The provider's completion/message id (`chatcmpl-…`, `msg_…`, `resp_…`). A provider request id (`req_…`) is acceptable only when no completion id exists; say so in the pipeline `description`. |
-| `gen_ai.conversation.id` | keyword | **Not usable yet**: only on ECS `main` (rule 3) | The unique identifier for a conversation (session, thread), used to store and correlate messages within this conversation. | `conv_5j66UpCpwteGg4YSxUnt7lPY` | Until an ECS release includes it, keep the source id in the vendor namespace. Once released: only from a real session/thread/conversation id in the source; a generated UUID, trace id or content hash **must not** be used as a fallback. |
 | `gen_ai.output.type` | keyword | `external: ecs` | The content type **requested by the client**. | `text` | Values: `text`, `json`, `image`, `speech`. Set it from the request (for example `response_format`), not from what came back. |
 
 ### Request parameters
@@ -121,16 +114,12 @@ in `gen_ai.input.messages`. Only a separate field (Anthropic `system`, Gemini
 rejected) describes a tool call but not its execution. Set `gen_ai.tool.*` on it, but set
 `gen_ai.operation.name: execute_tool` only on records showing that the tool actually ran.
 
-**One tool call vs many.** `gen_ai.tool.*` describes **a** tool call. Set all of them on
-records that represent a single tool call (`execute_tool` operations, tool decision and
-result events, gateway tool logs): option A of #22225. On an inference record whose response
-holds several tool calls (option B), keep each call as a `tool_call` part in
-`gen_ai.output.messages`, and set only `gen_ai.tool.name`, `gen_ai.tool.type` and
-`gen_ai.tool.call.id` as order-aligned arrays of the response's calls, in generation order, so
-detections can match on them. No count field: `MV_COUNT(gen_ai.tool.call.id)`. Do **not** put
-several calls' arguments or results into the single `gen_ai.tool.call.arguments` /
-`gen_ai.tool.call.result` field. Details, the call-to-result rule and categorization:
-`genai-detection-conventions.md`, sections 4–6.
+**One tool call vs many.** `gen_ai.tool.*` describes **a** tool call. Records of a single tool
+call set all of them (option A of #22225). An inference record whose response holds several
+calls (option B) sets only `gen_ai.tool.name`, `gen_ai.tool.type` and `gen_ai.tool.call.id`, as
+order-aligned arrays, and never puts several calls' arguments or results into
+`gen_ai.tool.call.arguments` / `gen_ai.tool.call.result`. The rules, the call-to-result link
+and categorization are in `genai-detection-conventions.md`, sections 4–6.
 
 ---
 
@@ -202,11 +191,11 @@ operation. The native-to-OTel table for each source of the GenAI epic is in
 
 ### Other enumerations
 
-| Field / property | Values |
+The values of `gen_ai.output.type`, `gen_ai.tool.type` and `gen_ai.token.type` are in their
+rows of the field reference. Inside the message fields:
+
+| Property | Values |
 |---|---|
-| `gen_ai.output.type` | `text`, `json`, `image`, `speech` |
-| `gen_ai.tool.type` | `function`, `extension`, `datastore` |
-| `gen_ai.token.type` | `input`, `output` |
 | message `role` | `system`, `user`, `assistant`, `tool` (other strings allowed, such as `developer`) |
 | output message `finish_reason` | `stop`, `length`, `content_filter`, `tool_call`, `compaction`, `error` (other strings allowed) |
 | blob/file/uri part `modality` | `image`, `video`, `audio`, `document` |
@@ -249,15 +238,12 @@ message, even when the native API sends results inside a user turn (Anthropic `t
 Bedrock Converse `toolResult`). Split that turn: the results become a `role: tool` message, the
 rest of the turn stays a `user` message, in source order (#22225 section 5).
 
-**`finish_reason` on each output message.** #22225 asks for it, "same value as
-`gen_ai.response.finish_reasons`", written when that field was expected to hold OTel values.
-#20738 later kept `gen_ai.response.finish_reasons` verbatim for the detections that compare it,
-so the OTel value (the *Other enumerations* table) goes only into the per-message field. OTel
-semconv-genai deprecated the per-message field on its `main`
-branch in September 2026 (open-telemetry/semantic-conventions-genai#363) in favour of
-`gen_ai.response.finish_reasons`. It is still valid in the schema, so set both:
-`gen_ai.response.finish_reasons` verbatim, the per-message value normalized. A worked mapping
-for Bedrock stop reasons is in the pipeline patterns (*Other formats*).
+**`finish_reason` on each output message** holds the OTel value (the *Other enumerations*
+table), while `gen_ai.response.finish_reasons` keeps the provider's values verbatim for the
+detections that compare them (#22225, as amended by #20738). Set both. OTel deprecated the
+per-message field on its `main` branch in September 2026
+(open-telemetry/semantic-conventions-genai#363), but it is still valid in the schema. A worked
+mapping for Bedrock stop reasons is in the pipeline patterns (*Other formats*).
 
 Reasoning content (Anthropic `thinking` blocks, Gemini parts with `thought: true`, OpenAI
 Responses `reasoning` items with `summary[]`) becomes a `reasoning` part in the output message,
@@ -278,16 +264,21 @@ with ECS.
 Keep these values in the vendor namespace, under the source's own name:
 `<integration>.<data_stream>.<source_field>` (for example
 `anthropic.messages.usage.cache_read_input_tokens`). Don't rename them to look like the OTel
-key. When ECS adds the field, copy the vendor value to it with `external: ecs`.
+key. When an ECS release ships the field, bump the pin and copy the vendor value to it with
+`external: ecs` in the next minor (that is additive).
 
 Research still records these values: they are data the integration should keep, and they show
-what will be mappable once ECS catches up. OTel attributes that sources often provide:
+what will be mappable once ECS catches up. The first four rows are accepted for ECS but not in
+a release (latest release: v9.5.0): RFC 0060 (elastic/ecs#2711) was merged on 2026-11-05, and
+`gen_ai.conversation.id` is on ECS `main` (elastic/ecs#2697). Gap reports list them as "wait
+for an ECS release". The other rows are OTel attributes that sources often provide:
 
 | OTel attribute (reference only) | Typical source |
 |---|---|
-| `gen_ai.usage.cache_read.input_tokens` (RFC 0060: wait for an ECS release) | OpenAI `prompt_tokens_details.cached_tokens`, Anthropic `cache_read_input_tokens`, Gemini `cachedContentTokenCount`, Bedrock `cacheReadInputTokens` |
-| `gen_ai.usage.cache_write.input_tokens` (RFC 0060: wait for an ECS release) | Anthropic `cache_creation_input_tokens`, Bedrock `cacheWriteInputTokens` |
-| `gen_ai.tool.source.name` / `.type` / `.address` (RFC 0060: wait for an ECS release) | MCP server, gateway target, tool registry |
+| `gen_ai.usage.cache_read.input_tokens` (RFC 0060) | OpenAI `prompt_tokens_details.cached_tokens`, Anthropic `cache_read_input_tokens`, Gemini `cachedContentTokenCount`, Bedrock `cacheReadInputTokens` |
+| `gen_ai.usage.cache_write.input_tokens` (RFC 0060) | Anthropic `cache_creation_input_tokens`, Bedrock `cacheWriteInputTokens` |
+| `gen_ai.tool.source.name` / `.type` / `.address` (RFC 0060) | MCP server, gateway target, tool registry |
+| `gen_ai.conversation.id` (ECS `main`) | A real session, thread or conversation id in the source. A generated UUID, trace id or content hash **must not** be used as a fallback, now or once the field is released. |
 | `gen_ai.usage.reasoning.output_tokens` | OpenAI `reasoning_tokens`, Anthropic `thinking_tokens`, Gemini `thoughtsTokenCount` |
 | `gen_ai.request.stream` | `stream` request flag |
 | `gen_ai.request.reasoning.level` | OpenAI `reasoning.effort`, Anthropic `output_config.effort` |
@@ -297,10 +288,8 @@ what will be mappable once ECS catches up. OTel attributes that sources often pr
 | `gen_ai.agent.version` | agent version |
 | `gen_ai.tool.description` | tool description |
 | `gen_ai.data_source.id` | knowledge base id |
-| `gen_ai.conversation.id` (ECS `main`) | session, thread or conversation id |
 
-`gen_ai.tool.call.count` is not on this list because it is not a field anywhere: use
-`MV_COUNT(gen_ai.tool.call.id)`.
+`gen_ai.tool.call.count` is not a field anywhere: use `MV_COUNT(gen_ai.tool.call.id)`.
 
 ---
 
@@ -323,15 +312,11 @@ value"*. A local `keyword` definition passes `elastic-package check`:
     Array of reasons the model stopped generating tokens, corresponding to each generation
     received. Defined locally as keyword because ECS types it as nested without properties
     (elastic/ecs#2560).
-- name: gen_ai.request.stop_sequences
-  type: keyword
-  description: >-
-    List of sequences that the model will use to stop generating further tokens. Defined
-    locally as keyword because ECS types it as nested without properties (elastic/ecs#2560).
 ```
 
-Do not apply the `ecs-field-mappings` guidance on "nested (array-of-objects) ECS fields" to
-these three. They hold strings, not objects.
+Define the other two the same way, each with its ECS description and the same note. Do not
+apply the `ecs-field-mappings` guidance on "nested (array-of-objects) ECS fields" to these
+three. They hold strings, not objects.
 
 ### Rule 2 — `flattened` ECS fields: add `ignore_above: 8191`
 
@@ -341,19 +326,20 @@ not add a default `ignore_above` to `flattened` fields. 8191 characters is the l
 that is safe for any UTF-8 content (4 bytes per character). Longer values stay in `_source` and
 are not indexed. The other keys remain searchable.
 
-What hides the problem in testing:
-
-- **LogsDB** index mode sets a default `ignore_above` of 8191, so a cluster that runs logs data
-  streams in LogsDB never shows the rejection. Standard-mode clusters do.
-- **The failure store** catches rejected documents. A system test that only counts the
-  documents it finds can pass while documents land in `<data stream>::failures`. Check the
-  failure store after the test.
-- **No `_ignored` entry**: a leaf that a `flattened` field skips through `ignore_above` doesn't
-  show up in `_ignored`, so a query can't find records with skipped content. Mark removed or cut
-  content in `tags` instead (`genai-detection-conventions.md`, section 10).
+```yaml
+# fields/ecs.yml: the same for each of the six content fields
+- name: gen_ai.input.messages
+  external: ecs
+  ignore_above: 8191
+```
 
 The same applies to vendor fields mapped as `flattened` in a GenAI stream (raw bodies, payload
 objects): give them `ignore_above: 8191` too. Adding it to a published field is Additive.
+
+A leaf that a `flattened` field skips through `ignore_above` doesn't show up in `_ignored`, so
+a query can't find records with skipped content: mark removed or cut content in `tags` instead
+(`genai-detection-conventions.md`, section 10). LogsDB and the failure store both hide the
+rejection in tests (pipeline patterns, *Test fixtures*).
 
 ### Rule 2b — `flattened` depth limit: 20 levels
 
@@ -366,34 +352,12 @@ value the pipeline writes (the message fields, `gen_ai.tool.definitions`,
 a JSON string made with `Json.dump`. Apply the cap whatever the tags say, and leave values
 within the limit unchanged. The processor is in the pipeline patterns (*Flattened safety*).
 
-```yaml
-# fields/ecs.yml
-- name: gen_ai.input.messages
-  external: ecs
-  ignore_above: 8191
-- name: gen_ai.output.messages
-  external: ecs
-  ignore_above: 8191
-- name: gen_ai.system_instructions
-  external: ecs
-  ignore_above: 8191
-- name: gen_ai.tool.definitions
-  external: ecs
-  ignore_above: 8191
-- name: gen_ai.tool.call.arguments
-  external: ecs
-  ignore_above: 8191
-- name: gen_ai.tool.call.result
-  external: ecs
-  ignore_above: 8191
-```
-
 ### Rule 3 — no field that isn't in a released ECS version
 
 Do not define `gen_ai.conversation.id`, OTel-only attributes, or any other name that is not in
-the pinned ECS release, not even locally with `type: keyword`. Rules 1 and 2 are different: they
-change how an **ECS-defined** field is mapped, not which fields exist. Keep the source value in
-the vendor namespace (*Source values with no ECS field*).
+the pinned ECS release, not even locally with `type: keyword` (*Source values with no ECS
+field*). Rules 1 and 2 are different: they change how an **ECS-defined** field is mapped, not
+which fields exist.
 
 ### Rule 4 — constant provider
 
@@ -411,12 +375,7 @@ The pipeline then does not need to set it. Test fixtures still show it.
 
 ### Rule 5 — everything else: `external: ecs`
 
-```yaml
-- name: gen_ai.request.model
-  external: ecs
-- name: gen_ai.usage.input_tokens
-  external: ecs
-```
+Name and `external: ecs` only. The type and description come from ECS.
 
 ### Vendor fields that were copied to `gen_ai.*`
 
@@ -438,33 +397,17 @@ section 9).
 
 ## Anti-patterns seen in the repository
 
+Names that existing packages use and where their values belong. Every other anti-pattern is an
+item of the review checklist below.
+
 | Seen | Problem | Correct |
 |---|---|---|
 | `gen_ai.system` | Removed in ECS v9.5.0 | `gen_ai.provider.name` |
 | `gen_ai.prompt` / `gen_ai.completion` (text) | Not ECS. `gen_ai.prompt` also collides with the OTel `gen_ai.prompt.name` object. | `gen_ai.input.messages` / `gen_ai.output.messages` |
 | `gen_ai.usage.prompt_tokens` / `completion_tokens` | Old OTel names, not ECS | `gen_ai.usage.input_tokens` / `output_tokens` |
 | `gen_ai.request.model.id`, `.version`, `.instructions` | `gen_ai.request.model` is a keyword, not an object | `gen_ai.request.model`, `gen_ai.system_instructions` |
-| `gen_ai.response.finish_reasons` as `external: ecs` | Maps as `nested`, rejects string arrays | local `keyword` (rule 1) |
-| `flattened` field with no `ignore_above` | Long content rejects documents | rule 2 |
-| Raw vendor body copied into `gen_ai.output.messages` | Not the OTel message shape. Detections cannot rely on `role`/`parts`. | Normalize (pipeline patterns) |
-| Vendor op name in `gen_ai.operation.name` (`acompletion`, `InvokeModel`, `repl_main_thread`) | Not an OTel value | Map through a lookup, raw value in `event.action` |
-| `provider.name: aws_bedrock` / `az.ai.openai` / `vertex_ai` | Not OTel values | `aws.bedrock` / `azure.ai.openai` / `gcp.vertex_ai` |
 | Invented `gen_ai.*` (`gen_ai.threat.*`, `gen_ai.policy.*`, `gen_ai.user.id`, `gen_ai.guardrail_id`) | Not ECS | Vendor namespace, or the proper ECS field set (`user.*`, `rule.*`) |
-| OTel attributes under `gen_ai.*` (`gen_ai.usage.cache_read.input_tokens` in `lite_llm`) | Not ECS. ECS may adopt it under another name or type. | Vendor namespace, under the source's name |
-| `gen_ai.conversation.id` defined locally | Only on ECS `main`, not released | Vendor namespace until released |
-| Anthropic `input_tokens` copied as-is when cache fields exist | Under-counts input tokens | Sum (pipeline patterns) |
-| `gen_ai.usage.cache_creation.input_tokens` | Not ECS | Vendor namespace (`<integration>.<data_stream>.cache_creation_input_tokens`) |
-| Product metadata about a tool call (for example `tool_parameters`) in `gen_ai.tool.call.arguments` | Not the tool's input | The tool input field; metadata stays in the vendor namespace |
-| `constant_keyword` provider on a multi-backend product | Wrong for every non-default backend | Per-record value, or a package variable (provider fallback above) |
-| `gen_ai.tool.call.count` | Not a field in ECS or OTel | `MV_COUNT(gen_ai.tool.call.id)`, documented in the README |
-| Native tool type in `gen_ai.tool.definitions[].type` (`bash_20250124`, `systemTool`, `file_search`, `mcp`) | Not an OTel tool type | `function` / `extension` / `datastore` (detection conventions, section 8) |
-| `tool_call_response` parts in a `user` message | OTel puts tool results under `role: tool` | Split the turn (*Message shapes*) |
-| `execute_tool` or `event.category` on a call derived from a provider log | The model only requested the call | Keep the invocation's operation; leave categorization unset |
-| Result ids of earlier calls added to `gen_ai.tool.call.id` on an invocation record | Mixes answered calls with new ones; `MV_COUNT` over-counts | Only the response's calls (detection conventions, section 5) |
-| `user.name` (or `user.id` used as the baseline key) holding a per-session value, such as an assumed-role session name | A baseline sees a new identity every session | The stable principal (detection conventions, section 7) |
-| Tool arrays sorted or deduplicated in the pipeline | Breaks the name-to-id pairing in `_source` | Generation order, duplicates kept |
-| A generic empty-value cleanup run over `gen_ai.tool.definitions` | Removes `''`/`null` enum values and empty schemas, which are part of the tool interface | Skip the subtree (pipeline patterns, *Flattened safety*) |
-| A published field removed or renamed in the release that adds its replacement | Consumers have no release to move in | Add and deprecate in a minor, remove in the next major (rule 6) |
+| OTel or unreleased names under `gen_ai.*` (`gen_ai.usage.cache_read.input_tokens` in `lite_llm`, `gen_ai.usage.cache_creation.input_tokens`, a local `gen_ai.conversation.id`, `gen_ai.tool.call.count`) | Not in a released ECS. ECS may adopt them under another name or type. | Vendor namespace, under the source's name (rule 3) |
 
 ---
 
@@ -483,19 +426,19 @@ concern value precision at MEDIUM.
 - [ ] `gen_ai.system` emitted on a stream pinned at v9.5.0+ -- **MEDIUM**
 - [ ] `gen_ai.provider.name` value not an OTel well-known value when one exists -- **MEDIUM**
 - [ ] `constant_keyword` provider on a stream that can be served by several providers -- **MEDIUM**
-- [ ] `gen_ai.operation.name` holding a vendor operation name -- **MEDIUM**
-- [ ] Message fields not in the OTel shape (`role` + `parts[]`) -- **MEDIUM**
+- [ ] `gen_ai.operation.name` holding a vendor operation name (`acompletion`, `InvokeModel`, `repl_main_thread`) instead of a lookup with the raw value in `event.action` -- **MEDIUM**
+- [ ] Message fields not in the OTel shape (`role` + `parts[]`), for example a raw vendor body copied into `gen_ai.output.messages` -- **MEDIUM**
 - [ ] `gen_ai.usage.input_tokens` excluding cached tokens when the source reports them separately -- **MEDIUM**
 - [ ] `gen_ai.tool.call.arguments` / `.result` holding several calls -- **MEDIUM**
 - [ ] `gen_ai.tool.call.arguments` holding product metadata instead of the tool input -- **MEDIUM**
-- [ ] `gen_ai.operation.name: execute_tool` on a record where the tool did not run (rejected decision, or a call requested in a provider log) -- **LOW**
+- [ ] `gen_ai.operation.name: execute_tool` on a record where the tool did not run (rejected decision, or a call requested in a provider log), or `event.category` set from a call requested in a provider log -- **LOW**
 - [ ] Source field available in fixtures or vendor docs that maps to a `gen_ai.*` field but is not mapped -- **MEDIUM** (state the source field)
 - [ ] Content is only collected after a vendor-side opt-in and the README does not say how to enable it -- **MEDIUM**
 - [ ] `flattened` value that can nest deeper than 20 levels with no depth cap (deep tool schemas, tool inputs or results, raw copies kept by `preserve_duplicate_custom_fields`) -- **HIGH** (documents rejected)
 - [ ] Removal or rename of a published field with no deprecation release before it, or with no check of the rules and ML jobs that read it -- **HIGH**
 - [ ] `gen_ai.tool.definitions[].type` holding a native tool type -- **MEDIUM**
 - [ ] Tool results under `role: user` in `gen_ai.input.messages` -- **MEDIUM**
-- [ ] Multi-call tool arrays not order-aligned, sorted, deduplicated, or holding calls from the request -- **MEDIUM**
+- [ ] Multi-call tool arrays not order-aligned, sorted, deduplicated, or holding calls from the request (result ids of earlier calls included) -- **MEDIUM**
 - [ ] `user.name` not the stable principal, or its derivation not in the README -- **MEDIUM**
 - [ ] Content removed or cut by the pipeline with no marker in `tags` -- **MEDIUM**
 - [ ] Empty-value cleanup that reaches `gen_ai.tool.definitions` -- **MEDIUM**

@@ -39,14 +39,7 @@ output was indexed into an index mapped per the catalog's field definition rules
 ### Provider
 
 When the stream has a single provider, prefer the `constant_keyword` definition (catalog rule 4)
-and set nothing. Otherwise:
-
-```yaml
-- set:
-    tag: set_gen_ai_provider_name
-    field: gen_ai.provider.name
-    value: aws.bedrock
-```
+and set nothing, or `set` the constant.
 
 Per-record provider (gateways, multi-backend products): map the vendor value through a lookup.
 Unknown values are lowercased, never invented. The keys below are LiteLLM provider names as an
@@ -80,90 +73,29 @@ example. Take the real list from the vendor's documentation.
 
 ### Operation
 
-Map vendor operation names to OTel values. Leave unmapped values unset. The raw value goes to
-`event.action`.
-
-```yaml
-- script:
-    tag: script_set_gen_ai_operation_name
-    description: Map the vendor operation to an OTel gen_ai.operation.name value. Unknown operations leave the field unset.
-    lang: painless
-    if: ctx.vendor?.operation instanceof String
-    params:
-      operations:
-        ChatCompletions_Create: chat
-        Completions_Create: text_completion
-        Embeddings_Create: embeddings
-    source: |
-      def op = params.operations.get(ctx.vendor.operation);
-      if (op != null) {
-        ctx.gen_ai = ctx.gen_ai ?: new HashMap();
-        ctx.gen_ai.operation = ['name': op];
-      }
-```
+Map vendor operation names to OTel values with the same kind of lookup. The difference is the
+fallback: an unmapped value leaves the field unset (`params.operations.get(...)`, and set the
+field only when the result is not null). The raw value goes to `event.action`. The native-to-OTel
+values per source are in `genai-detection-conventions.md`, section 3.
 
 ---
 
 ## Decoding serialized bodies
 
-```yaml
-- json:
-    tag: json_request_body
-    field: vendor.request_body
-    target_field: _temp.request
-    if: ctx.vendor?.request_body instanceof String && ctx.vendor.request_body.startsWith('{')
-    on_failure:
-      - append:
-          field: error.message
-          value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
-```
-
-Handle both encodings when the source sometimes sends an object and sometimes a string: guard
-the `json` processor with `instanceof String`, and add a `set` with `copy_from` guarded by
-`instanceof Map`.
+Decode with a `json` processor into `_temp.*`, guarded by
+`ctx.vendor?.request_body instanceof String && ctx.vendor.request_body.startsWith('{')`, with
+the `on_failure` handler that `ingest-pipelines` defines. When the source sometimes sends an
+object and sometimes a string, also add a `set` with `copy_from` guarded by `instanceof Map`.
 
 ---
 
 ## Scalars and numbers
 
-```yaml
-- set:
-    tag: set_gen_ai_request_model
-    field: gen_ai.request.model
-    copy_from: _temp.request.model
-    ignore_empty_value: true
-- convert:
-    tag: convert_gen_ai_request_temperature
-    field: _temp.request.temperature
-    target_field: gen_ai.request.temperature
-    type: double
-    ignore_missing: true
-    on_failure:
-      - append:
-          field: error.message
-          value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
-```
-
-Counts and `seed` → `type: long`. `temperature`, `top_p`, `top_k`, penalties → `type: double`.
-
-### Arrays of strings (`stop_sequences`, `encoding_formats`)
-
-The source may send a string or an array:
-
-```yaml
-- script:
-    tag: script_set_gen_ai_request_stop_sequences
-    lang: painless
-    if: ctx._temp?.request?.stop != null
-    source: |
-      def s = ctx._temp.request.stop;
-      List out = s instanceof List ? new ArrayList(s) : [s.toString()];
-      if (!out.isEmpty()) {
-        ctx.gen_ai = ctx.gen_ai ?: new HashMap();
-        ctx.gen_ai.request = ctx.gen_ai.request ?: new HashMap();
-        ctx.gen_ai.request.stop_sequences = out;
-      }
-```
+- Scalars: `set` with `copy_from` and `ignore_empty_value: true`.
+- Numbers: `convert` from the decoded body into the `gen_ai.*` field. Counts and `seed` →
+  `type: long`. `temperature`, `top_p`, `top_k`, penalties → `type: double`.
+- Arrays of strings (`stop_sequences`, `encoding_formats`): the source may send a string or an
+  array. Wrap a string into a one-element list in a `script`, and don't write an empty list.
 
 ---
 
@@ -491,18 +423,11 @@ the Bedrock Converse API reference; the OTel value is the closest match where no
 ## Tool execution records
 
 Records that describe **one** tool call (agent gateway logs, tool result events, connector
-calls) set the scalar tool fields directly:
+calls) set the scalar tool fields directly (option A; `genai-detection-conventions.md`,
+sections 4 to 8, say which records get `execute_tool`, a tool type, an outcome and a category).
+Arguments and results need a script:
 
 ```yaml
-- set:
-    tag: set_gen_ai_operation_name_execute_tool
-    field: gen_ai.operation.name
-    value: execute_tool
-- set:
-    tag: set_gen_ai_tool_name
-    field: gen_ai.tool.name
-    copy_from: vendor.tool_name
-    ignore_empty_value: true
 - script:
     tag: script_set_gen_ai_tool_call_result
     description: Decode the tool result and make sure a scalar never reaches the flattened field.
@@ -527,20 +452,12 @@ Use the same script for `gen_ai.tool.call.arguments`.
 
 When a gateway prefixes the tool name with its target (`<target>___<tool>`), split it:
 `gen_ai.tool.name` gets `<tool>`, and the target stays in the vendor namespace until
-`gen_ai.tool.source.*` is released (detection conventions, section 4).
-
-When a product hides the real tool name behind a placeholder (for example `mcp_tool`), resolve
-the real name from the tool parameters before setting `gen_ai.tool.name`, and keep the
-placeholder in the vendor namespace.
+`gen_ai.tool.source.*` is released. When a product hides the real tool name behind a
+placeholder (for example `mcp_tool`), resolve the real name from the tool parameters before
+setting `gen_ai.tool.name`, and keep the placeholder in the vendor namespace.
 
 Extract `file.path`, `url.full`/`url.domain`, `destination.address` and
 `process.command_line` from the decoded arguments of file, fetch and shell tools.
-
-Set `gen_ai.operation.name: execute_tool` only when the record shows that the tool ran. Set
-`gen_ai.tool.type` from the source (`genai-detection-conventions.md`, section 8), keep the native
-verb in `event.action`, and let `event.outcome` / `error.type` describe the tool call. On these
-records `event.category` may follow what the tool did (`genai-detection-conventions.md`,
-section 6). Never set `event.category` on calls taken from a provider log.
 
 ---
 
@@ -567,22 +484,11 @@ caller ARNs, the same rules as `aws.cloudtrail` (from `aws_bedrock` 2.4.0):
       ctx.user?.id instanceof String && ctx.user.id.startsWith('arn:') &&
       (ctx.user.id.contains(':user/') || ctx.user.id.contains(':assumed-role/') || ctx.user.id.contains(':federated-user/'))
     ignore_failure: true
-- append:
-    tag: append_related_user_user_name
-    field: related.user
-    value: '{{{user.name}}}'
-    allow_duplicates: false
-    if: ctx.user?.name != null
-- append:
-    tag: append_related_user_session_name
-    field: related.user
-    value: '{{{_temp.user.session_name}}}'
-    allow_duplicates: false
-    if: ctx._temp?.user?.session_name != null
 ```
 
-When the session name is an email address, `aws_bedrock` also copies it to `user.email`. The
-README states the derivation.
+Then append `user.name` and `_temp.user.session_name` to `related.user` (`allow_duplicates:
+false`). When the session name is an email address, `aws_bedrock` also copies it to
+`user.email`. The README states the derivation.
 
 ---
 
@@ -726,17 +632,6 @@ Name the tag `<field>_removed` or `<field>_truncated` and list the tags in the R
 
 ---
 
-## Finishing
-
-```yaml
-- remove:
-    tag: remove_temp
-    field: _temp
-    ignore_missing: true
-```
-
----
-
 ## Test fixtures
 
 Pipeline test inputs must cover, per vendor format:
@@ -763,7 +658,10 @@ Pipeline test inputs must cover, per vendor format:
 Pipeline tests validate fields against their definitions but do **not** index into the real
 mapping, so they cannot catch `flattened` or `nested` rejections. System tests do. Add at least
 one system test document whose message content is longer than 32766 bytes, and one with a
-tool schema deeper than 20 levels. If the test stack runs logs data streams in LogsDB, the
-length rejection doesn't show: also index the long document into an index in standard mode with
-the package's mappings. Check `<data stream>::failures` after the test (the failure store hides
-rejections).
+tool schema deeper than 20 levels. Two things hide the rejection:
+
+- **LogsDB** index mode sets a default `ignore_above` of 8191, so a stack that runs logs data
+  streams in LogsDB never shows the length rejection. Also index the long document into an
+  index in standard mode with the package's mappings.
+- **The failure store** catches rejected documents, so a system test that only counts the
+  documents it finds can pass. Check `<data stream>::failures` after the test.

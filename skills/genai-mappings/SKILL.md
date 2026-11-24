@@ -55,24 +55,19 @@ mapping fields. If you are not sure, read that file first.
 
 ## ECS availability — read this first
 
-The usable `gen_ai` field set depends on the ECS version the package pins. **ECS v9.5.0 is the
-minimum for GenAI work.**
-
-| ECS pin | What you get |
-|---|---|
-| `< v9.1.0` | No `gen_ai` field set at all. |
-| `v9.1.0` – `v9.4.0` | Old field set: `gen_ai.system` (no `gen_ai.provider.name`), token counts typed `integer`, **no** `input.messages`, `output.messages`, `system_instructions`, `tool.definitions`, `tool.call.arguments`, `tool.call.result`. |
-| `v9.5.0` | Current field set: `gen_ai.system` removed and replaced by `gen_ai.provider.name`, counts typed `long`, the six `flattened` content fields added. |
-| ECS `main` (unreleased) | Adds `gen_ai.conversation.id`. Not usable until an ECS release includes it. |
-| RFC 0060 (accepted, unreleased) | `gen_ai.tool.source.*`, `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`. Wait for an ECS release. |
+**ECS v9.5.0 is the minimum for GenAI work.** Earlier releases have no `gen_ai` field set
+(below v9.1.0) or the old one (v9.1.0 – v9.4.0: `gen_ai.system`, `integer` counts, no content
+fields). Later additions (`gen_ai.conversation.id` on ECS `main`, the RFC 0060 fields) are not
+usable until an ECS release includes them. The matrix is in
+`references/genai-field-catalog.md`.
 
 **Pin rule:** packages with GenAI data streams must set `dependencies.ecs.reference:
 "git@v9.5.0"` (or newer) in `_dev/build/build.yml`, and set the matching `ecs.version` in
 their pipelines. Most in-scope packages are pinned lower today (`v8.11.0`, `v8.17.0`,
 `v9.3.0`); bumping the pin is part of the work.
 
-Three field-definition traps are covered in detail in `references/genai-field-catalog.md`.
-Each of them was reproduced on Elasticsearch 9.5:
+Three field-definition traps, each reproduced on Elasticsearch 9.5 (catalog, *Field definition
+rules*):
 
 1. `gen_ai.response.finish_reasons`, `gen_ai.request.stop_sequences` and
    `gen_ai.request.encoding_formats` are typed `nested` in ECS with no sub-fields
@@ -85,22 +80,21 @@ Each of them was reproduced on Elasticsearch 9.5:
 3. `flattened` fields reject scalars. A plain-string system prompt must be wrapped as
    `[{type: text, content: ...}]`, not copied as a string.
 
-To list the `gen_ai` fields at any tag:
-```bash
-curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields.csv \
-  | awk -F, '$3=="gen_ai"' | cut -d, -f4,5 | sort
-```
-
 ## Core rules
 
 - **Only ECS fields under ECS field sets.** A `gen_ai.*` field (or a field under any other
   ECS field set) is valid only if it is defined in a released ECS version at or below the
-  package's pin. OTel defines more GenAI attributes than ECS, and unreleased ECS `main` has
-  `gen_ai.conversation.id`; neither is a reason to add them. ECS may adopt them under a
-  different name or type, which would then conflict with the package's definition. Anything
-  without an ECS field goes to `<integration>.<data_stream>.<field>`. Check names against the
-  pinned release's `ecs_nested.yml` (`references/genai-detection-conventions.md`, section 1),
-  in gap analyses and in builds alike.
+  package's pin. Attributes that only OTel defines and names that are only on ECS `main` are
+  not: ECS may adopt them under a different name or type, which would then conflict with the
+  package's definition. Their values go to `<integration>.<data_stream>.<field>`. Check names
+  against the pinned release (`references/genai-detection-conventions.md`, section 1), in gap
+  analyses and in builds alike.
+- **Values come from OTel.** ECS `gen_ai` is defined as a match of the OTel GenAI semantic
+  conventions. Use OTel's well-known values for `gen_ai.provider.name`,
+  `gen_ai.operation.name`, `gen_ai.output.type` and `gen_ai.tool.type`, and the OTel JSON
+  schemas for the shape of the message fields. Vendor operation names (`InvokeModel`,
+  `ChatCompletions_Create`, `acompletion`, `query_source`) do not belong in
+  `gen_ai.operation.name`. Keep them in `event.action` or in the vendor namespace.
 - **Detection conventions.** elastic/integrations#22224 and #22225 fix how integrations fill
   `gen_ai.*` for detection rules and ML jobs: provider and operation values per source, one
   record per tool call or order-aligned arrays, call results, the stable principal in
@@ -109,12 +103,6 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
 - **Published fields change in two releases.** Find the rules, ML jobs and dashboards that read
   a field before renaming or removing it. Add the new field and deprecate the old one in a
   minor, and remove it in the next major, after the consumers have moved.
-- **Values come from OTel.** ECS `gen_ai` is defined as a match of the OTel GenAI semantic
-  conventions. Use OTel's well-known values for `gen_ai.provider.name`,
-  `gen_ai.operation.name`, `gen_ai.output.type` and `gen_ai.tool.type`, and the OTel JSON
-  schemas for the shape of the message fields. Vendor operation names (`InvokeModel`,
-  `ChatCompletions_Create`, `acompletion`, `query_source`) do not belong in
-  `gen_ai.operation.name`. Keep them in `event.action` or in the vendor namespace.
 - **Research the source, not the current pipeline.** The most common gap is data that the
   source already sends but the integration stores as an unparsed string (request and response
   bodies, `tool_parameters`, raw API bodies), or data that the source sends only when a
@@ -131,32 +119,18 @@ curl -s https://raw.githubusercontent.com/elastic/ecs/<tag>/generated/csv/fields
 | Mode | How it's triggered | What to load |
 |---|---|---|
 | **Standalone gap analysis** | User invokes `/genai-mappings @packages/<name>` | Read `references/gap-analysis-workflow.md`, then the classification, source-discovery, catalog, detection-conventions and pipeline-patterns references as the workflow phases ask. Dispatch per-stream subagents with `references/analysis-subagent-guidance.md`. |
-| **Build-time** | An orchestrator passes `references/genai-field-catalog.md` and `references/genai-pipeline-patterns.md` by path to the pipeline builder subagent | The builder reads both references, and `references/genai-detection-conventions.md` when the stream has tool calls, a caller identity, or changes a published field. This SKILL.md does not need to be loaded in the orchestrator thread. |
-| **Review-time** | A reviewer finds `gen_ai.*` fields, or a stream classified as GenAI | Reviewer reads `genai-field-catalog.md` (checklist at the end) and `genai-pipeline-patterns.md`. |
-| **Research-time** | `research-integration` (orchestrator reads the classification; the Track G subagent reads both) | Load only `references/genai-datastream-classification.md` and `references/genai-source-discovery.md`. **Do not load the catalog or pipeline patterns during research**: they are implementation material. |
-
-The development workflow loads these references automatically:
-
-- `research-integration` classifies proposed streams with the classification reference,
-  launches Track G with the classification and source-discovery references, and writes
-  `genai-mapping-analysis.md` and section 5.6 of the research brief.
-- `create-integration` (new packages and new data streams) classifies streams in Phase 1 and
-  passes the catalog and pipeline patterns to the pipeline builder, with the `git@v9.5.0` pin.
-- `review-integration` applies the review-time GenAI detection rule and loads the catalog and
-  pipeline patterns; the `genai_ecs_pin_minimum` consistency rule covers the pin.
+| **Build-time** | An orchestrator (`create-integration`, for new packages and new data streams) classifies streams in Phase 1 and passes `references/genai-field-catalog.md` and `references/genai-pipeline-patterns.md` by path to the pipeline builder subagent, with the `git@v9.5.0` pin | The builder reads both references, and `references/genai-detection-conventions.md` when the stream has tool calls, a caller identity, or changes a published field. This SKILL.md does not need to be loaded in the orchestrator thread. |
+| **Review-time** | `review-integration` finds `gen_ai.*` fields, or a stream classified as GenAI | Reviewer reads `genai-field-catalog.md` (checklist at the end) and `genai-pipeline-patterns.md`. The `genai_ecs_pin_minimum` consistency rule covers the pin. |
+| **Research-time** | `research-integration` (the orchestrator reads the classification; the Track G subagent reads both, and writes `genai-mapping-analysis.md` and section 5.6 of the research brief) | Load only `references/genai-datastream-classification.md` and `references/genai-source-discovery.md`. **Do not load the catalog or pipeline patterns during research**: they are implementation material. |
 
 ## Open questions / deferred scope
 
-- **`gen_ai.conversation.id`** is only on ECS `main`. Keep the source's session or thread id
-  in the vendor namespace until an ECS release includes it, then copy it with `external: ecs`.
-- **OTel attributes that ECS has not adopted** (cache and reasoning token counts,
-  `gen_ai.agent.version`, `gen_ai.tool.description`, …) are not used under `gen_ai.*`. The
-  source values stay in the vendor namespace. Research still records them, so that they can be
-  moved once ECS adds the fields.
-- **Wait for an ECS release:** `gen_ai.tool.source.*` and
-  `gen_ai.usage.cache_read.input_tokens` / `cache_write.input_tokens` are accepted in RFC 0060
-  (elastic/ecs#2711) but not in a release. Copy the vendor values to them in the minor after
-  the release that ships them.
+- **Fields ECS has not released** (`gen_ai.conversation.id`, the RFC 0060 fields
+  `gen_ai.tool.source.*` and `gen_ai.usage.cache_read.input_tokens` /
+  `cache_write.input_tokens`, and other OTel attributes such as reasoning token counts,
+  `gen_ai.agent.version` or `gen_ai.tool.description`): the source values stay in the vendor
+  namespace, and research still records them so that they can be moved once ECS adds the
+  fields (catalog, *Source values with no ECS field*).
 - **Tool results on provider logs** (#22225 section 2) were an open question on 2026-11-20.
   Until it is answered, results stay in the input messages (detection conventions, section 5).
 - **`nested`-typed ECS fields**: once elastic/ecs#2560 is fixed, the local `keyword`
@@ -164,22 +138,20 @@ The development workflow loads these references automatically:
 
 ## References
 
-- `references/genai-field-catalog.md` — single source of truth: ECS availability matrix, every
-  field with type, meaning, example and restrictions, well-known values, message shapes,
-  values without an ECS field, field-definition rules, anti-patterns, review checklist
-- `references/genai-source-discovery.md` — research method: where GenAI data hides in each
-  source type, content-capture opt-ins, per-API source-to-field maps, field-by-field
-  questions that must be answered before a field is marked unavailable
-- `references/genai-pipeline-patterns.md` — tested processor patterns: constants, operation
-  mapping, token totals, finish reasons, decoding serialized bodies, normalizing messages,
-  tool calls, reasoning blocks
-- `references/genai-detection-conventions.md` — the #22224 / #22225 conventions: the ECS field
-  check, provider and operation values per source, tool calls and results, categorization,
-  identity, tool definitions, change classes and the release sequence for breaking changes
+- `references/genai-field-catalog.md` — single source of truth for the fields: ECS availability
+  matrix, types, well-known values, message shapes, values without an ECS field,
+  field-definition rules, review checklist
+- `references/genai-detection-conventions.md` — the #22224 / #22225 conventions: which records
+  get which fields (provider and operation per source, tool calls and results, categorization,
+  identity, tool definitions) and how to change a published field
+- `references/genai-pipeline-patterns.md` — tested processors: lookups, token totals, message
+  normalization, tool records, identity, flattened safety, test fixtures
+- `references/genai-source-discovery.md` — research method: where GenAI data hides,
+  content-capture opt-ins, per-API source maps, field-by-field questions
 - `references/genai-datastream-classification.md` — which data streams are in scope and which
   field groups apply to each kind of stream
-- `references/gap-analysis-workflow.md` — standalone audit of an existing package
-- `references/gap-analysis-report-template.md` — report structure for the audit
-- `references/analysis-subagent-guidance.md` — operating manual for per-stream analysis subagents
+- `references/gap-analysis-workflow.md`, `references/gap-analysis-report-template.md`,
+  `references/analysis-subagent-guidance.md` — the standalone audit of an existing package, its
+  report structure, and the manual for its per-stream subagents
 - [ECS gen_ai field reference](https://www.elastic.co/docs/reference/ecs/ecs-gen_ai)
 - [OTel GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai)

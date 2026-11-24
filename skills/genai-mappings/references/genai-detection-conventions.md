@@ -43,15 +43,12 @@ package already writes it, and never a recommendation.
 
 ### Fields to wait for
 
-These are accepted for ECS but not in a release (latest release: v9.5.0). Keep the source value
-in the vendor namespace. When an ECS release ships them, bump the pin and copy the vendor value
-to the ECS name in the next minor (that is additive).
-
-| Field | Status | Until then |
-|---|---|---|
-| `gen_ai.tool.source.name`, `.type`, `.address` | RFC 0060 (elastic/ecs#2711), merged 2026-11-05 | Vendor field, for example the gateway target in `aws.bedrock_agentcore.gateway.target` |
-| `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens` | RFC 0060 (elastic/ecs#2711), merged 2026-11-05 | Vendor field under the source's name, for example `aws_bedrock.invocation.usage.cache_read_input_tokens` |
-| `gen_ai.conversation.id` | ECS `main` (elastic/ecs#2697) | Vendor field with the session or thread id |
+`gen_ai.tool.source.*`, `gen_ai.usage.cache_read.input_tokens` and
+`gen_ai.usage.cache_write.input_tokens` (RFC 0060) and `gen_ai.conversation.id` (ECS `main`)
+are accepted for ECS but not in a release. Their values stay in a vendor field under the
+source's name, for example the gateway target in `aws.bedrock_agentcore.gateway.target` or
+`aws_bedrock.invocation.usage.cache_read_input_tokens`. The catalog's *Source values with no
+ECS field* section has the list and what to do when an ECS release ships them.
 
 Never a field, in ECS or elsewhere:
 
@@ -321,7 +318,8 @@ And where the expected value comes from:
 | `main` | Read in the package source or its sample events, at a named commit |
 | `issue #N` | Stated in a public issue (#22224, #22225, the package's sub-issue) and not re-checked |
 | `PR #N` | Implemented in an open pull request, at a named head commit |
-| `proposal` | This skill's recommendation, not confirmed by an issue or PR |
+| `RFC` | Defined in an accepted ECS RFC that no release includes yet |
+| `proposal` | This skill's own convention or recommendation, not confirmed by an issue or PR |
 
 ### Consumers first
 
@@ -382,16 +380,13 @@ with the ECS field. The row is ⚠️ and Breaking.
   copy of the body: a copy built without proper escaping is not valid JSON. When the source's
   only body is a non-JSON serialization (for example Java `Map.toString()` text), parsing it
   is allowed; the report says the extraction is lossy and which values can be lost.
-- **Shape**: the OTel message schema (catalog, *Message shapes*). Tool results sent back to the
-  model go in a `role: tool` message, even when the native API puts them in a user turn
-  (Bedrock, Anthropic). Each output message gets a normalized `finish_reason`, while
-  `gen_ai.response.finish_reasons` keeps the provider's values verbatim (#20738: detections
-  compare them).
+- **Shape**: the OTel message schema, with tool results under `role: tool` and a normalized
+  `finish_reason` on each output message (catalog, *Message shapes*).
 - **Truncation marker**: when the pipeline removes or cuts content (a body over a size limit, a
   text field cut to a maximum length), it appends a value to `tags` that names the field, for
   example `gen_ai_prompt_removed` or `completion_text_truncated`. Replacing a value by its hash
-counts as removing it. Not a new field. A rule that
-  needs the full content can then tell "no match" from "content removed".
+  counts as removing it. Not a new field. A rule that needs the full content can then tell "no
+  match" from "content removed".
 - **`flattened` caveat**: flattened fields don't keep object boundaries, so a query can't match
   `type: tool_call` and `name: X` on the same part. Per-call detections use `gen_ai.tool.name`
   and `gen_ai.tool.call.id` (section 4), not the message fields.

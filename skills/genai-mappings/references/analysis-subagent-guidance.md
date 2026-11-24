@@ -22,15 +22,12 @@ You do:
 
 You do **not**:
 
-- Write pipeline YAML, Painless or field definitions
-- Modify any package file
+- Write pipeline YAML, Painless or field definitions, or modify any package file
 - Propose any `gen_ai.*` name that is not in the ECS release the package pins, or will pin
-  after the required bump (v9.5.0 at least). Check every
-  name against the field list the orchestrator gave you (or build it as in
-  `genai-detection-conventions.md`, section 1). OTel registry attributes, RFC 0060 fields
-  (`gen_ai.tool.source.*`, `gen_ai.usage.cache_*.input_tokens`), `gen_ai.tool.call.count` and
-  `gen_ai.conversation.id` (ECS `main` only) are not valid. Their values go to
-  `<integration>.<data_stream>.<field>`.
+  after the required bump (v9.5.0 at least). Check every name against the field list the
+  orchestrator gave you (or build it as in `genai-detection-conventions.md`, section 1). OTel
+  registry attributes, RFC 0060 fields, `gen_ai.tool.call.count` and `gen_ai.conversation.id`
+  are not valid: their values go to `<integration>.<data_stream>.<field>`.
 - Mark a field ⛔ because collecting it needs an opt-in, an extra endpoint, a different
   transport or a new data stream. That is 🔍, with the matching recommendation and what is
   needed.
@@ -40,41 +37,41 @@ You do **not**:
 
 ## First steps — read these references
 
-1. `genai-mappings/references/genai-field-catalog.md`: fields, values, shapes, definition
-   rules, checklist
-2. `genai-mappings/references/genai-source-discovery.md`: the three layers, where data hides,
-   per-API maps, field-by-field questions
-3. `genai-mappings/references/genai-datastream-classification.md`: stream kinds
-4. `genai-mappings/references/gap-analysis-workflow.md`: the status table and Phase 4 field list
-5. `genai-mappings/references/genai-pipeline-patterns.md`: expected token totals, message shape
-   and tool-name handling, needed for the definition check (you still don't write processors)
-6. `genai-mappings/references/genai-detection-conventions.md`: provider and operation values per
-   source, tool calls (option A or B), call results, identity, tool definitions, categorization,
-   change classes
+All under `genai-mappings/references/`. Do not start mapping until you have read all six.
 
-Do not start mapping until you have read all six.
+1. `genai-field-catalog.md`: fields, values, shapes, definition rules, checklist
+2. `genai-source-discovery.md`: the three layers, where data hides, per-API maps,
+   field-by-field questions
+3. `genai-datastream-classification.md`: stream kinds
+4. `gap-analysis-workflow.md`: the statuses, the recommendations, the phases you follow
+5. `genai-pipeline-patterns.md`: expected token totals, message shape and tool-name handling,
+   needed for the definition check (you still don't write processors)
+6. `genai-detection-conventions.md`: provider and operation values per source, tool calls
+   (option A or B), call results, identity, tool definitions, categorization, change classes
 
 ---
 
 ## Workflow
 
-1. **Classify** the stream and each record type. If out of scope, check the audit-log trap,
-   write the conclusion, and return.
-2. **Layer 1**: list every `gen_ai.*` field the package defines and sets, with its definition.
-3. **Layer 2**: list everything the stream already receives. Decode JSON strings in fixtures and
-   mock responses. Note fields that are parsed and then dropped or left as strings.
-4. **Layer 3**: fetch vendor docs. List record types, payload schemas, content opt-ins, other
-   transports and endpoints, and accepted request parameters.
-5. **Map** every Phase 4 field with a status and evidence, and give every 🔍 exactly one
-   recommendation from the workflow's table. Decide it by who controls the setting. Answer the
-   field-by-field questions in `genai-source-discovery.md` for every field you do not mark ✅.
-   Give every row its Change and Basis.
-6. **Check** existing definitions and values against the catalog checklist and the detection
-   conventions (workflow Phase 5). Fill the stream's row of the *Detection conventions* table.
-   List the stream's Breaking rows for the orchestrator's consumer check; don't run it.
-7. **Compare** with the tracking issue and any reference table the orchestrator gave, and list
+Run the workflow's phases for your stream only:
+
+1. **Classify** the stream and each record type (Phase 1). If out of scope, check the
+   audit-log trap, write the conclusion, and return.
+2. **Read the package** (Phase 2). Layer 1: every `gen_ai.*` field the package defines and
+   sets, with its definition. Layer 2: everything the stream already receives. Decode JSON
+   strings in fixtures and mock responses. Note fields that are parsed and then dropped or
+   left as strings.
+3. **Read the source** (Phase 3, layer 3): fetch vendor docs. List record types, payload
+   schemas, content opt-ins, other transports and endpoints, and accepted request parameters.
+4. **Map** every Phase 4 field with a status, evidence, Change and Basis, and give every 🔍
+   exactly one recommendation, decided by who controls the setting. Answer the field-by-field
+   questions in `genai-source-discovery.md` for every field you do not mark ✅.
+5. **Check** existing definitions and values (Phase 5). Fill the stream's row of the
+   *Detection conventions* table. List the stream's Breaking rows for the orchestrator's
+   consumer check; don't run it.
+6. **Compare** with the tracking issue and any reference table the orchestrator gave, and list
    the differences with the reason for each.
-8. **Write** the findings using `gap-analysis-report-template.md` (the per-stream sections) to
+7. **Write** the findings using `gap-analysis-report-template.md` (the per-stream sections) to
    the path the orchestrator gave, or `genai-gap-analysis-<package>-<stream>.md` in the current
    working directory. Never write inside the package directory, even if the given path
    points there.
@@ -83,9 +80,9 @@ Do not start mapping until you have read all six.
 
 ## Quality standards
 
-- **Evidence for every status.** Quote the payload path, fixture line or doc URL.
-- **⛔ not available needs all three layers.** Say what you checked in each. ⛔ not
-  applicable needs the stream kind.
+- **Evidence for every status.** Quote the payload path, fixture line or doc URL. ⛔ not
+  available needs what you checked in each of the three layers; ⛔ not applicable needs the
+  stream kind.
 - **Fetch documentation.** Do not rely on training data for API schemas or logging settings.
 - **Values from the catalog.** Provider and operation values must be OTel well-known values,
   and match the per-source tables in the detection conventions. Say so when a vendor value has
