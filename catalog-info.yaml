@@ -12,7 +12,7 @@ metadata:
 
 spec:
   type: buildkite-pipeline
-  owner: group:integration-experience
+  owner: group:sec-data-signals
   system: buildkite
   implementation:
     apiVersion: buildkite.elastic.dev/v1
